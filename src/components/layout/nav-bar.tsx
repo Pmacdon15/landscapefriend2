@@ -23,16 +23,16 @@ export function NavBar() {
           <Show when="signed-in">
             <div className="hidden md:flex items-center gap-6">
               <Link
-                href="/clients-service"
-                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
-              >
-                Service List
-              </Link>
-              <Link
                 href="/client-info-list"
                 className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
               >
                 Manage Clients
+              </Link>
+              <Link
+                href="/clients-service"
+                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+              >
+                Service List
               </Link>
             </div>
           </Show>
