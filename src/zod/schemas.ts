@@ -27,6 +27,15 @@ export const CompletedJobSchema = z.object({
   notes: z.string().nullable().optional(),
 });
 
+export const SiteMapSchema = z.object({
+  id: z.string().uuid(),
+  address_id: z.string().uuid(),
+  name: z.string().nullable().optional(),
+  blob_path: z.string().nullable().optional(),
+  map_data: z.any().nullable().optional(),
+  created_at: z.date(),
+});
+
 export const AddressSchema = z.object({
   id: z.string().uuid(),
   client_id: z.string().uuid(),
@@ -40,6 +49,7 @@ export const AddressSchema = z.object({
   sort_order: z.number().default(0),
   assignment: AssignmentSchema.optional().nullable(),
   completed_job: CompletedJobSchema.optional().nullable(),
+  site_maps: z.array(SiteMapSchema).optional(),
 });
 
 export const AddressInputSchema = z.object({
@@ -75,5 +85,6 @@ export type Address = z.infer<typeof AddressSchema>;
 export type AddressInput = z.infer<typeof AddressInputSchema>;
 export type Schedule = z.infer<typeof ScheduleSchema>;
 export type CompletedJob = z.infer<typeof CompletedJobSchema>;
+export type SiteMap = z.infer<typeof SiteMapSchema>;
 export type Assignment = z.infer<typeof AssignmentSchema>;
 export type CreateClientInput = z.infer<typeof CreateClientInputSchema>;

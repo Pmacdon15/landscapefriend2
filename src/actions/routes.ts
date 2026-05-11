@@ -10,7 +10,7 @@ export async function updateRouteOrderAction(
   const result = await updateRouteOrderDal(addressId, newSortOrder);
 
   // Revalidate paths that show cuts
-  revalidatePath("/client-cut-list");
+  revalidatePath("/clients-service");
 
   return result.match(
     () => ({ success: true, error: null }),

@@ -93,6 +93,7 @@ export function EditClientModal({
                 schedule: existingAddr?.schedule ?? null,
                 assignment: existingAddr?.assignment ?? null,
                 completed_job: existingAddr?.completed_job ?? null,
+                site_maps: existingAddr?.site_maps ?? [],
               };
             }),
         };

@@ -70,4 +70,14 @@ export interface CompletedJobRow {
   updated_at: Date;
 }
 
+export interface SiteMapRow {
+  id: string;
+  address_id: string;
+  name: string | null;
+  blob_path: string | null;
+  map_data: any;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export type { Client, Address, Schedule, CompletedJob, Assignment };

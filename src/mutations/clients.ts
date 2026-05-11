@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import {
   createClientAction,
   deleteClientAction,
+  deleteSiteMapAction,
+  saveSiteMapAction,
   updateAddressAssigneeAction,
   updateClientAction,
 } from "@/actions/clients";
@@ -95,6 +97,59 @@ export function useDeleteClient() {
     },
     onSuccess: () => {
       toast.success("Client deleted");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+export function useSaveSiteMap() {
+  return useMutation({
+    mutationFn: async ({
+      addressId,
+      name,
+      mapData,
+      file,
+    }: {
+      addressId: string;
+      name: string | null;
+      mapData: any | null;
+      file?: File;
+    }) => {
+      const { success, siteMap, error } = await saveSiteMapAction(
+        addressId,
+        name,
+        mapData,
+        file,
+      );
+
+      if (!success || !siteMap) {
+        throw new Error(error ?? "Failed to save site map");
+      }
+      return siteMap;
+    },
+    onSuccess: () => {
+      toast.success("Site map saved");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+export function useDeleteSiteMap() {
+  return useMutation({
+    mutationFn: async (siteMapId: string) => {
+      const { success, error } = await deleteSiteMapAction(siteMapId);
+
+      if (!success) {
+        throw new Error(error ?? "Failed to delete site map");
+      }
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast.success("Site map deleted");
     },
     onError: (error: Error) => {
       toast.error(error.message);

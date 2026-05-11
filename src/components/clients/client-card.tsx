@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { CalendarDays, Mail, MapPin, Phone, Trash, User } from "lucide-react";
 import { startTransition, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
+import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { ScheduleForm } from "@/components/schedules/schedule-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,6 +153,7 @@ export function ClientCard({
                       {address.zip}
                     </span>
                   </a>
+                  <SiteMapContainer address={address} />
                 </div>
 
                 <div className="flex items-center gap-2 pl-6 text-xs text-slate-500">

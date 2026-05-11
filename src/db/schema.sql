@@ -98,3 +98,16 @@ CREATE TABLE IF NOT EXISTS assignments (
 
 CREATE INDEX IF NOT EXISTS idx_assignments_org_date ON assignments(org_id, scheduled_date);
 CREATE INDEX IF NOT EXISTS idx_assignments_address_id ON assignments(address_id);
+
+-- Site Maps
+CREATE TABLE IF NOT EXISTS site_maps (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    address_id UUID NOT NULL REFERENCES addresses(id) ON DELETE CASCADE,
+    name TEXT,
+    blob_path TEXT, -- The path in Vercel Blob
+    map_data JSONB, -- For storing Google Maps drawing coordinates (polygons)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_maps_address_id ON site_maps(address_id);
