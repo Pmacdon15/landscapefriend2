@@ -143,7 +143,8 @@ export async function getClientsForCutListDal(
       let isScheduled = false;
       const freq = schedule.frequency.toLowerCase();
 
-      if (diffDays === 0) isScheduled = true;
+      if (freq === "daily") isScheduled = true;
+      else if (diffDays === 0) isScheduled = true;
       else if (freq === "weekly") isScheduled = diffDays % 7 === 0;
       else if (freq === "bi-weekly") isScheduled = diffDays % 14 === 0;
       else if (freq === "monthly")

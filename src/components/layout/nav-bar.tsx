@@ -26,7 +26,7 @@ export function NavBar() {
                 href="/client-cut-list"
                 className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
               >
-                Daily Cut List
+                Service List
               </Link>
               <Link
                 href="/client-info-list"
@@ -63,7 +63,7 @@ export function NavBar() {
                     href="/client-cut-list"
                     className="text-lg font-medium text-foreground hover:text-primary transition-colors"
                   >
-                    Daily Cut List
+                    Service List
                   </Link>
                   <Link
                     href="/client-info-list"

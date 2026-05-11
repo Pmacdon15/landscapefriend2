@@ -38,7 +38,7 @@ export default function Home() {
             })}
           >
             <CalendarDays className="mr-2 h-5 w-5" />
-            Daily Cut List
+            Service List
           </Link>
         </div>
       </div>
