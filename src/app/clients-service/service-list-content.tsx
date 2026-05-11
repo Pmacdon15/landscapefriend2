@@ -9,7 +9,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { CalendarIcon, CheckCircle2, GripVertical, MapPin } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { use, useState } from "react";
+import { startTransition, use, useOptimistic, useState } from "react";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { SiteMapEditor } from "@/components/clients/site-maps/site-map-editor";
 import { Button } from "@/components/ui/button";
@@ -54,16 +54,16 @@ export function ServiceListContent({
   const initialClients = use(clientsPromise); // This is already your sorted CutListItem[]
 
   const [date, setDate] = useState<Date>(parseISO(defaultDate));
-  const [localCuts, setLocalCuts] = useState(initialClients);
 
-  // Sync local state when the server sends new data (e.g., date change)
+  const [optimisticCuts, setOptimisticCuts] = useOptimistic(
+    initialClients,
+    (_, newCuts: CutListItem[]) => newCuts,
+  );
+
+  // Sync date state when the server sends new data
   const parsedDefaultDate = parseISO(defaultDate);
   if (date.getTime() !== parsedDefaultDate.getTime()) {
     setDate(parsedDefaultDate);
-  }
-
-  if (initialClients !== localCuts) {
-    setLocalCuts(initialClients);
   }
 
   const onDragEnd = (result: DropResult) => {
@@ -72,7 +72,7 @@ export function ServiceListContent({
     const destIndex = result.destination.index;
     if (sourceIndex === destIndex) return;
 
-    const newCuts = Array.from(localCuts);
+    const newCuts = Array.from(optimisticCuts);
     const [moved] = newCuts.splice(sourceIndex, 1);
     newCuts.splice(destIndex, 0, moved);
 
@@ -90,8 +90,11 @@ export function ServiceListContent({
     }
 
     moved.address.sort_order = newSortOrder;
-    setLocalCuts(newCuts);
-    updateRouteOrder({ addressId: moved.address.id, newSortOrder });
+
+    startTransition(() => {
+      setOptimisticCuts(newCuts);
+      updateRouteOrder({ addressId: moved.address.id, newSortOrder });
+    });
   };
 
   const handleMarkComplete = (addressId: string) => {
@@ -182,7 +185,7 @@ export function ServiceListContent({
       </div>
 
       <div className="max-w-4xl mx-auto">
-        {localCuts.length > 0 ? (
+        {optimisticCuts.length > 0 ? (
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="cut-list-droppable">
               {(provided) => (
@@ -191,7 +194,7 @@ export function ServiceListContent({
                   ref={provided.innerRef}
                   className="space-y-4"
                 >
-                  {localCuts.map(({ client, address }, index) => (
+                  {optimisticCuts.map(({ client, address }, index) => (
                     <Draggable
                       key={address.id}
                       draggableId={address.id}
@@ -356,7 +359,7 @@ export function ServiceListContent({
               <Button
                 className="flex-1"
                 onClick={() => {
-                  const addr = localCuts.find(
+                  const addr = optimisticCuts.find(
                     (c) => c.address.id === completingAddressId,
                   )?.address;
                   handleFinishCompletion(addr);
