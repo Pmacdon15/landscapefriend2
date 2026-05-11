@@ -10,7 +10,7 @@ export async function upsertScheduleAction(
 ) {
   const result = await upsertScheduleDal(addressId, frequency, nextCutDate);
   revalidatePath("/client-info-list");
-  revalidatePath("/client-cut-list");
+  revalidatePath("/clients-service");
 
   return result.match(
     (schedule) => ({ success: true, schedule, error: null }),

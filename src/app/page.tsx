@@ -30,7 +30,7 @@ export default function Home() {
             Manage Clients
           </Link>
           <Link
-            href="/client-cut-list"
+            href="/clients-service"
             className={buttonVariants({
               variant: "outline",
               size: "lg",

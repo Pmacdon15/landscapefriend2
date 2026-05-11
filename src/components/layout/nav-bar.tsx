@@ -13,7 +13,7 @@ import {
 
 export function NavBar() {
   return (
-    <nav className="border-b bg-background sticky top-0 z-10 w-full">
+    <nav className="border-b border-slate-200/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-950/50 backdrop-blur-md sticky top-0 z-50 w-full">
       <div className="flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="font-bold text-xl tracking-tight">
@@ -23,7 +23,7 @@ export function NavBar() {
           <Show when="signed-in">
             <div className="hidden md:flex items-center gap-6">
               <Link
-                href="/client-cut-list"
+                href="/clients-service"
                 className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
               >
                 Service List
@@ -60,7 +60,7 @@ export function NavBar() {
                 <SheetTitle>Menu</SheetTitle>
                 <div className="flex flex-col gap-4 mt-6">
                   <Link
-                    href="/client-cut-list"
+                    href="/clients-service"
                     className="text-lg font-medium text-foreground hover:text-primary transition-colors"
                   >
                     Service List

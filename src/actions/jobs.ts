@@ -17,7 +17,7 @@ export async function completeJobAction(
   );
 
   // Revalidate paths that show schedules or cut lists
-  revalidatePath("/client-cut-list");
+  revalidatePath("/clients-service");
   revalidatePath("/client-info-list");
 
   return result.match(

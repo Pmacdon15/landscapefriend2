@@ -9,7 +9,7 @@ export async function upsertAssignmentAction(
   date: string,
 ) {
   const result = await upsertAssignmentDal(addressId, userId, date);
-  revalidatePath("/client-cut-list");
+  revalidatePath("/clients-service");
 
   return result.match(
     (assignment) => ({ success: true, assignment, error: null }),

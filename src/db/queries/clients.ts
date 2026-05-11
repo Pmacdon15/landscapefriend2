@@ -323,3 +323,49 @@ export async function getCompletedJobsDb(
   `;
   return result as unknown as CompletedJobRow[];
 }
+
+export async function getSiteMapsDb(orgId: string): Promise<SiteMapRow[]> {
+  const result = await sql`
+    SELECT sm.* FROM site_maps sm
+    JOIN addresses a ON sm.address_id = a.id
+    JOIN clients c ON a.client_id = c.id
+    WHERE c.org_id = ${orgId}
+  `;
+  return result as unknown as SiteMapRow[];
+}
+
+export async function insertSiteMapDb(
+  addressId: string,
+  name: string | null,
+  blobPath: string | null,
+  mapData: any | null,
+): Promise<SiteMapRow> {
+  // Ensure mapData is passed as a string for JSONB to avoid driver issues with arrays/objects
+  const jsonMapData = mapData ? JSON.stringify(mapData) : null;
+  const result = await sql`
+    INSERT INTO site_maps (address_id, name, blob_path, map_data)
+    VALUES (${addressId}, ${name}, ${blobPath}, ${jsonMapData})
+    RETURNING *
+  `;
+  return result[0] as unknown as SiteMapRow;
+}
+
+export async function deleteSiteMapDb(siteMapId: string): Promise<void> {
+  await sql`
+    DELETE FROM site_maps
+    WHERE id = ${siteMapId}
+  `;
+}
+
+export async function getSiteMapWithOrgDb(
+  siteMapId: string,
+  orgId: string,
+): Promise<SiteMapRow | null> {
+  const result = await sql`
+    SELECT sm.* FROM site_maps sm
+    JOIN addresses a ON sm.address_id = a.id
+    JOIN clients c ON a.client_id = c.id
+    WHERE sm.id = ${siteMapId} AND c.org_id = ${orgId}
+  `;
+  return (result[0] as unknown as SiteMapRow) || null;
+}

@@ -22,15 +22,16 @@ import type { CutListItem } from "@/dal/clients";
 import { cn, getGoogleMapsUrl } from "@/lib/utils";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
+import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 
-interface CutListContentProps {
+interface ServiceListContentProps {
   clientsPromise: Promise<CutListItem[]>;
   datePromise: Promise<string>;
 }
-export function CutListContent({
+export function ServiceListContent({
   clientsPromise,
   datePromise,
-}: CutListContentProps) {
+}: ServiceListContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { mutate: updateRouteOrder } = useUpdateRouteOrder();
@@ -84,7 +85,7 @@ export function CutListContent({
     if (newDate) {
       const params = new URLSearchParams(searchParams);
       params.set("date", format(newDate, "yyyy-MM-dd"));
-      router.push(`/client-cut-list?${params.toString()}`);
+      router.push(`/clients-service?${params.toString()}`);
     }
   };
 
@@ -92,7 +93,7 @@ export function CutListContent({
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 gap-4">
         <h2 className="text-xl font-semibold">
-          Showing cuts for:{" "}
+          Showing services for:{" "}
           <span className="text-primary">{format(date, "PPPP")}</span>
         </h2>
 
@@ -184,6 +185,9 @@ export function CutListContent({
                                         {address.zip}
                                       </span>
                                     </a>
+                                    <div className="mt-2">
+                                      <SiteMapContainer address={address} />
+                                    </div>
                                   </div>
                                 </div>
 

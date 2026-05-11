@@ -7,15 +7,18 @@ import {
   deleteAddressDb,
   deleteAssignmentDb,
   deleteClientDb,
+  deleteSiteMapDb,
   getAddressesDb,
   getAssignmentsDb,
   getClientsDb,
   getCompletedJobsDb,
   getRouteOrdersDb,
   getSchedulesDb,
+  getSiteMapsDb,
   insertAddressDb,
   insertClientDb,
   insertCompletedJobDb,
+  insertSiteMapDb,
   updateAddressAssigneeDb,
   updateAddressDb,
   updateClientDb,
@@ -53,10 +56,11 @@ export async function getClientsForInfoDal(
     throw new Error("Unauthorized: No organization selected");
   }
 
-  const [clients, addresses, schedules] = await Promise.all([
+  const [clients, addresses, schedules, siteMaps] = await Promise.all([
     getClientsDb(orgId),
     getAddressesDb(orgId),
     getSchedulesDb(orgId),
+    getSiteMapsDb(orgId),
   ]);
 
   const mappedClients = clients.map((client: ClientRow) => {
@@ -68,12 +72,16 @@ export async function getClientsForInfoDal(
         const schedule = schedules.find(
           (s: ScheduleRow) => s.address_id === address.id,
         );
+        const addressSiteMaps = siteMaps.filter(
+          (sm) => sm.address_id === address.id,
+        );
         return {
           ...address,
           schedule: schedule || null,
           sort_order: 0,
           assignment: null,
           completed_job: null,
+          site_maps: addressSiteMaps,
         } as Address;
       });
 
@@ -105,6 +113,7 @@ export async function getClientsForCutListDal(
     routeOrders,
     assignments,
     completedJobs,
+    siteMaps,
   ] = await Promise.all([
     getClientsDb(orgId),
     getAddressesDb(orgId),
@@ -112,6 +121,7 @@ export async function getClientsForCutListDal(
     getRouteOrdersDb(orgId),
     getAssignmentsDb(orgId, date),
     getCompletedJobsDb(orgId, date),
+    getSiteMapsDb(orgId),
   ]);
 
   // Create lookup maps for O(1) access
@@ -122,6 +132,12 @@ export async function getClientsForCutListDal(
   const assignmentMap = new Map(assignments.map((a) => [a.address_id, a]));
   const jobMap = new Map(completedJobs.map((j) => [j.address_id, j]));
   const clientMap = new Map(clients.map((c) => [c.id, c]));
+  const siteMapGroupMap = new Map<string, any[]>();
+  for (const sm of siteMaps) {
+    const group = siteMapGroupMap.get(sm.address_id) || [];
+    group.push(sm);
+    siteMapGroupMap.set(sm.address_id, group);
+  }
 
   const targetDate = startOfDay(parseISO(date));
 
@@ -170,6 +186,7 @@ export async function getClientsForCutListDal(
           sort_order: orderMap.get(addr.id) ?? 0,
           assignment: assignment ?? null,
           completed_job: jobMap.get(addr.id) ?? null,
+          site_maps: siteMapGroupMap.get(addr.id) || [],
         } as Address,
       };
     })
@@ -491,5 +508,45 @@ export async function deleteClientDal(
   return ResultAsync.fromPromise(
     deleteClientDb(parsedClientId.data, orgId),
     () => ({ reason: "Failed to delete client" }),
+  );
+}
+
+export async function saveSiteMapDal(
+  addressId: string,
+  name: string | null,
+  blobPath: string | null,
+  mapData: any | null,
+): Promise<Result<SiteMap, { reason: string }>> {
+  const { orgId } = await auth();
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
+
+  const parsedAddressId = z.string().uuid().safeParse(addressId);
+  if (!parsedAddressId.success)
+    return errAsync({ reason: "Invalid address ID" });
+
+  return ResultAsync.fromPromise(
+    insertSiteMapDb(
+      parsedAddressId.data,
+      name,
+      blobPath,
+      mapData,
+    ) as Promise<SiteMap>,
+    () => ({ reason: "Failed to save site map" }),
+  );
+}
+
+export async function deleteSiteMapDal(
+  siteMapId: string,
+): Promise<Result<void, { reason: string }>> {
+  const { orgId } = await auth();
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
+
+  const parsedSiteMapId = z.string().uuid().safeParse(siteMapId);
+  if (!parsedSiteMapId.success)
+    return errAsync({ reason: "Invalid site map ID" });
+
+  return ResultAsync.fromPromise(
+    deleteSiteMapDb(parsedSiteMapId.data),
+    () => ({ reason: "Failed to delete site map" }),
   );
 }

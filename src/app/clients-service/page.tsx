@@ -1,10 +1,10 @@
 import { Loader2 } from "lucide-react";
 import { Suspense } from "react";
 import { getClientsForCutListDal } from "@/dal/clients";
-import { CutListContent } from "./cut-list-content";
+import { ServiceListContent } from "./service-list-content";
 
-export default async function ClientCutListPage(
-  props: PageProps<"/client-cut-list">,
+export default async function ClientsServicePage(
+  props: PageProps<"/clients-service">,
 ) {
   const clientsPromise = props.searchParams.then((p) =>
     getClientsForCutListDal(
@@ -40,7 +40,7 @@ export default async function ClientCutListPage(
           </div>
         }
       >
-        <CutListContent
+        <ServiceListContent
           clientsPromise={clientsPromise}
           datePromise={datePromise}
         />
