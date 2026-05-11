@@ -41,7 +41,7 @@ export function NavBar() {
         <div className="flex items-center gap-4">
           <Show when="signed-in">
             <OrganizationSwitcher />
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </Show>
 
           <Show when="signed-in">

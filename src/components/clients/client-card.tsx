@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Address, Client } from "@/dal/clients";
+import { getGoogleMapsUrl } from "@/lib/utils";
 import { useUpdateAddressAssignee } from "@/mutations/clients";
 
 interface ClientCardProps {
@@ -64,13 +65,18 @@ export function ClientCard({ client, members }: ClientCardProps) {
                 className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 space-y-3"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-                    <span className="text-sm font-medium leading-tight">
+                  <a
+                    href={getGoogleMapsUrl(address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-2 hover:text-primary transition-colors group"
+                  >
+                    <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-medium leading-tight underline-offset-4 group-hover:underline">
                       {address.street}, {address.city} {address.state}{" "}
                       {address.zip}
                     </span>
-                  </div>
+                  </a>
                 </div>
 
                 <div className="flex items-center gap-2 pl-6 text-xs text-slate-500">

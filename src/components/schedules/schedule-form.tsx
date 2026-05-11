@@ -71,7 +71,7 @@ export function ScheduleForm({
             <Label htmlFor="frequency-select">Frequency</Label>
             <Select
               value={field.state.value}
-              onValueChange={(val) => field.handleChange(val)}
+              onValueChange={(val) => field.handleChange(val as string)}
             >
               <SelectTrigger id="frequency-select" onBlur={field.handleBlur}>
                 <SelectValue placeholder="Select a cut frequency" />

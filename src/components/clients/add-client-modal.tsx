@@ -27,6 +27,15 @@ interface AddClientModalProps {
   members: { id: string; name: string }[];
 }
 
+interface AddressFormValue {
+  key: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  assigned_to: string;
+}
+
 export function AddClientModal({ members }: AddClientModalProps) {
   const [open, setOpen] = useState(false);
   const { mutate: createClient, isPending } = useCreateClient();
@@ -38,21 +47,23 @@ export function AddClientModal({ members }: AddClientModalProps) {
       phone: "",
       addresses: [
         {
+          key: crypto.randomUUID(),
           street: "",
           city: "",
           state: "",
           zip: "",
           assigned_to: "unassigned",
         },
-      ],
+      ] as AddressFormValue[],
     },
     onSubmit: async ({ value }) => {
       createClient({
         name: value.name,
         email: value.email || null,
         phone: value.phone || null,
-        addresses: value.addresses.map((addr: any) => ({
-          ...addr,
+        addresses: value.addresses.map((addr: AddressFormValue) => ({
+          street: addr.street,
+          city: addr.city,
           state: addr.state || null,
           zip: addr.zip || null,
           assigned_to:
@@ -76,7 +87,7 @@ export function AddClientModal({ members }: AddClientModalProps) {
         }
       />
 
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-150 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Client</DialogTitle>
           <DialogDescription>
@@ -167,6 +178,7 @@ export function AddClientModal({ members }: AddClientModalProps) {
                 size="sm"
                 onClick={() =>
                   form.pushFieldValue("addresses", {
+                    key: crypto.randomUUID(),
                     street: "",
                     city: "",
                     state: "",
@@ -184,63 +196,36 @@ export function AddClientModal({ members }: AddClientModalProps) {
             <form.Field name="addresses" mode="array">
               {(field) => (
                 <div className="space-y-6">
-                  {field.state.value.map((_: any, i: number) => (
-                    <div
-                      key={i}
-                      className="relative grid gap-4 p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/50"
-                    >
-                      {field.state.value.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={() => form.removeFieldValue("addresses", i)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-
-                      <form.Field
-                        name={`addresses[${i}].street`}
-                        validators={{
-                          onChange: ({ value }) =>
-                            !value ? "Street is required" : undefined,
-                        }}
+                  {field.state.value.map(
+                    (addr: AddressFormValue, i: number) => (
+                      <div
+                        key={addr.key}
+                        className="relative grid gap-4 p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/50"
                       >
-                        {(subField) => (
-                          <div className="grid gap-2">
-                            <Label htmlFor={subField.name}>Street</Label>
-                            <Input
-                              id={subField.name}
-                              name={subField.name}
-                              value={subField.state.value}
-                              onBlur={subField.handleBlur}
-                              onChange={(e) =>
-                                subField.handleChange(e.target.value)
-                              }
-                              placeholder="123 Main St"
-                            />
-                            {subField.state.meta.errors ? (
-                              <p className="text-sm text-destructive">
-                                {subField.state.meta.errors.join(", ")}
-                              </p>
-                            ) : null}
-                          </div>
+                        {field.state.value.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() =>
+                              form.removeFieldValue("addresses", i)
+                            }
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         )}
-                      </form.Field>
 
-                      <div className="grid grid-cols-2 gap-4">
                         <form.Field
-                          name={`addresses[${i}].city`}
+                          name={`addresses[${i}].street`}
                           validators={{
                             onChange: ({ value }) =>
-                              !value ? "City is required" : undefined,
+                              !value ? "Street is required" : undefined,
                           }}
                         >
                           {(subField) => (
                             <div className="grid gap-2">
-                              <Label htmlFor={subField.name}>City</Label>
+                              <Label htmlFor={subField.name}>Street</Label>
                               <Input
                                 id={subField.name}
                                 name={subField.name}
@@ -249,7 +234,7 @@ export function AddClientModal({ members }: AddClientModalProps) {
                                 onChange={(e) =>
                                   subField.handleChange(e.target.value)
                                 }
-                                placeholder="Anytown"
+                                placeholder="123 Main St"
                               />
                               {subField.state.meta.errors ? (
                                 <p className="text-sm text-destructive">
@@ -260,11 +245,17 @@ export function AddClientModal({ members }: AddClientModalProps) {
                           )}
                         </form.Field>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <form.Field name={`addresses[${i}].state`}>
+                        <div className="grid grid-cols-2 gap-4">
+                          <form.Field
+                            name={`addresses[${i}].city`}
+                            validators={{
+                              onChange: ({ value }) =>
+                                !value ? "City is required" : undefined,
+                            }}
+                          >
                             {(subField) => (
                               <div className="grid gap-2">
-                                <Label htmlFor={subField.name}>State</Label>
+                                <Label htmlFor={subField.name}>City</Label>
                                 <Input
                                   id={subField.name}
                                   name={subField.name}
@@ -273,65 +264,95 @@ export function AddClientModal({ members }: AddClientModalProps) {
                                   onChange={(e) =>
                                     subField.handleChange(e.target.value)
                                   }
-                                  placeholder="CA"
+                                  placeholder="Anytown"
                                 />
+                                {subField.state.meta.errors ? (
+                                  <p className="text-sm text-destructive">
+                                    {subField.state.meta.errors.join(", ")}
+                                  </p>
+                                ) : null}
                               </div>
                             )}
                           </form.Field>
-                          <form.Field name={`addresses[${i}].zip`}>
-                            {(subField) => (
-                              <div className="grid gap-2">
-                                <Label htmlFor={subField.name}>Zip</Label>
-                                <Input
-                                  id={subField.name}
-                                  name={subField.name}
-                                  value={subField.state.value}
-                                  onBlur={subField.handleBlur}
-                                  onChange={(e) =>
-                                    subField.handleChange(e.target.value)
-                                  }
-                                  placeholder="12345"
-                                />
-                              </div>
-                            )}
-                          </form.Field>
-                        </div>
-                      </div>
 
-                      <form.Field name={`addresses[${i}].assigned_to`}>
-                        {(subField) => (
-                          <div className="grid gap-2">
-                            <Label htmlFor={subField.name}>
-                              Default Assignee
-                            </Label>
-                            <Select
-                              value={subField.state.value}
-                              onValueChange={(val) =>
-                                subField.handleChange(val)
-                              }
-                            >
-                              <SelectTrigger
-                                id={subField.name}
-                                onBlur={subField.handleBlur}
-                              >
-                                <SelectValue placeholder="Select member" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="unassigned">
-                                  Unassigned
-                                </SelectItem>
-                                {members.map((member: { id: string, name: string }) => (
-                                  <SelectItem key={member.id} value={member.id}>
-                                    {member.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <div className="grid grid-cols-2 gap-2">
+                            <form.Field name={`addresses[${i}].state`}>
+                              {(subField) => (
+                                <div className="grid gap-2">
+                                  <Label htmlFor={subField.name}>State</Label>
+                                  <Input
+                                    id={subField.name}
+                                    name={subField.name}
+                                    value={subField.state.value}
+                                    onBlur={subField.handleBlur}
+                                    onChange={(e) =>
+                                      subField.handleChange(e.target.value)
+                                    }
+                                    placeholder="CA"
+                                  />
+                                </div>
+                              )}
+                            </form.Field>
+                            <form.Field name={`addresses[${i}].zip`}>
+                              {(subField) => (
+                                <div className="grid gap-2">
+                                  <Label htmlFor={subField.name}>Zip</Label>
+                                  <Input
+                                    id={subField.name}
+                                    name={subField.name}
+                                    value={subField.state.value}
+                                    onBlur={subField.handleBlur}
+                                    onChange={(e) =>
+                                      subField.handleChange(e.target.value)
+                                    }
+                                    placeholder="12345"
+                                  />
+                                </div>
+                              )}
+                            </form.Field>
                           </div>
-                        )}
-                      </form.Field>
-                    </div>
-                  ))}
+                        </div>
+
+                        <form.Field name={`addresses[${i}].assigned_to`}>
+                          {(subField) => (
+                            <div className="grid gap-2">
+                              <Label htmlFor={subField.name}>
+                                Default Assignee
+                              </Label>
+                              <Select
+                                value={subField.state.value}
+                                onValueChange={(val) =>
+                                  subField.handleChange(val as string)
+                                }
+                              >
+                                <SelectTrigger
+                                  id={subField.name}
+                                  onBlur={subField.handleBlur}
+                                >
+                                  <SelectValue placeholder="Select member" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">
+                                    Unassigned
+                                  </SelectItem>
+                                  {members.map(
+                                    (member: { id: string; name: string }) => (
+                                      <SelectItem
+                                        key={member.id}
+                                        value={member.id}
+                                      >
+                                        {member.name}
+                                      </SelectItem>
+                                    ),
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </form.Field>
+                      </div>
+                    ),
+                  )}
                 </div>
               )}
             </form.Field>

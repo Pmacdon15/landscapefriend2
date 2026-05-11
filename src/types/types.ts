@@ -1,3 +1,11 @@
+import type {
+  Address,
+  Assignment,
+  Client,
+  CompletedJob,
+  Schedule,
+} from "@/zod/schemas";
+
 export interface ClientRow {
   id: string;
   org_id: string;
@@ -61,3 +69,5 @@ export interface CompletedJobRow {
   created_at: Date;
   updated_at: Date;
 }
+
+export type { Client, Address, Schedule, CompletedJob, Assignment };

@@ -222,6 +222,7 @@ export async function getMockClientsDb(orgId: string): Promise<{
         state: "CA",
         zip: "12345",
         status: "active",
+        assigned_to: null,
         created_at: new Date(),
         updated_at: new Date(),
       });

@@ -6,7 +6,7 @@ import {
   Droppable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { format, isSameDay, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { CalendarIcon, CheckCircle2, GripVertical, MapPin } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { Address, Client } from "@/dal/clients";
-import { cn } from "@/lib/utils";
+import { cn, getGoogleMapsUrl } from "@/lib/utils";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 
@@ -69,11 +69,28 @@ export function CutListContent({
         if (!address.schedule) return;
 
         const scheduleDate = new Date(address.schedule.next_cut_date);
+        const diffDays = differenceInCalendarDays(date, scheduleDate);
 
-        // Check if job is scheduled for this day
-        const isScheduled =
-          isSameDay(scheduleDate, date) ||
-          address.schedule.day_of_week === date.getDay();
+        // If today is before the first scheduled date, it's not scheduled
+        if (diffDays < 0) return;
+
+        // Check if job is scheduled for this day based on frequency
+        let isScheduled = false;
+        const frequency = address.schedule.frequency.toLowerCase();
+
+        if (diffDays === 0) {
+          isScheduled = true;
+        } else if (frequency === "weekly") {
+          isScheduled = diffDays % 7 === 0;
+        } else if (frequency === "bi-weekly") {
+          isScheduled = diffDays % 14 === 0;
+        } else if (frequency === "monthly") {
+          // Simplistic monthly check: same day of the month
+          isScheduled = date.getDate() === scheduleDate.getDate();
+        } else {
+          // Fallback to day of week for unknown frequencies
+          isScheduled = address.schedule.day_of_week === date.getDay();
+        }
 
         if (!isScheduled) return;
 
@@ -222,15 +239,20 @@ export function CutListContent({
                                       </span>
                                     </div>
 
-                                    <div className="flex items-start gap-2 mt-2 text-slate-600 dark:text-slate-400">
-                                      <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                                      <span className="text-sm leading-tight">
+                                    <a
+                                      href={getGoogleMapsUrl(address)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-start gap-2 mt-2 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors group"
+                                    >
+                                      <MapPin className="h-4 w-4 mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
+                                      <span className="text-sm leading-tight underline-offset-4 group-hover:underline">
                                         {address.street}
                                         <br />
                                         {address.city}, {address.state}{" "}
                                         {address.zip}
                                       </span>
-                                    </div>
+                                    </a>
                                   </div>
                                 </div>
 
