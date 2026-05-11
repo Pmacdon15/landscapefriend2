@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { get } from "@vercel/blob";
 import { type NextRequest, NextResponse } from "next/server";
-import { getSiteMapWithOrgDb } from "@/db/queries/clients";
+import { getCompletionPhotoWithOrgDb, getSiteMapWithOrgDb } from "@/db/queries/clients";
 
 export async function GET(
   request: NextRequest,
@@ -14,13 +14,26 @@ export async function GET(
 
   const { id } = await params;
 
+  // Try fetching as a site map first
+  let blobPath: string | null = null;
   const siteMap = await getSiteMapWithOrgDb(id, orgId);
-  if (!siteMap || !siteMap.blob_path) {
+
+  if (siteMap?.blob_path) {
+    blobPath = siteMap.blob_path;
+  } else {
+    // If not found, try fetching as a completion photo
+    const completionPhoto = await getCompletionPhotoWithOrgDb(id, orgId);
+    if (completionPhoto?.blob_path) {
+      blobPath = completionPhoto.blob_path;
+    }
+  }
+
+  if (!blobPath) {
     return new NextResponse("Not Found", { status: 404 });
   }
 
   try {
-    const result = await get(siteMap.blob_path, {
+    const result = await get(blobPath, {
       access: "private",
       ifNoneMatch: request.headers.get("if-none-match") ?? undefined,
     });

@@ -12,12 +12,14 @@ import {
   getAssignmentsDb,
   getClientsDb,
   getCompletedJobsDb,
+  getCompletedJobsHistoryDb,
   getRouteOrdersDb,
   getSchedulesDb,
   getSiteMapsDb,
   insertAddressDb,
   insertClientDb,
   insertCompletedJobDb,
+  insertCompletionPhotoDb,
   insertSiteMapDb,
   updateAddressAssigneeDb,
   updateAddressDb,
@@ -56,12 +58,14 @@ export async function getClientsForInfoDal(
     throw new Error("Unauthorized: No organization selected");
   }
 
-  const [clients, addresses, schedules, siteMaps] = await Promise.all([
-    getClientsDb(orgId),
-    getAddressesDb(orgId),
-    getSchedulesDb(orgId),
-    getSiteMapsDb(orgId),
-  ]);
+  const [clients, addresses, schedules, siteMaps, jobHistory] =
+    await Promise.all([
+      getClientsDb(orgId),
+      getAddressesDb(orgId),
+      getSchedulesDb(orgId),
+      getSiteMapsDb(orgId),
+      getCompletedJobsHistoryDb(orgId),
+    ]);
 
   const mappedClients = clients.map((client: ClientRow) => {
     const clientAddresses = addresses
@@ -75,12 +79,15 @@ export async function getClientsForInfoDal(
         const addressSiteMaps = siteMaps.filter(
           (sm) => sm.address_id === address.id,
         );
+        // Find latest completed job for basic preview, but we could provide the whole array
+        const latestJob = jobHistory.find((j) => j.address_id === address.id);
+
         return {
           ...address,
           schedule: schedule || null,
           sort_order: 0,
           assignment: null,
-          completed_job: null,
+          completed_job: latestJob || null,
           site_maps: addressSiteMaps,
         } as Address;
       });
@@ -388,6 +395,9 @@ export async function completeJobDal(
   serviceType: "grass" | "snow",
   assignedTo?: string | null,
   notes?: string | null,
+  photoBlobPath?: string | null,
+  capturedAt?: Date | null,
+  completedAt?: Date | null,
 ): Promise<Result<CompletedJob, { reason: string }>> {
   const { orgId, userId } = await auth();
 
@@ -402,15 +412,24 @@ export async function completeJobDal(
     return errAsync({ reason: "Invalid service type" });
 
   return ResultAsync.fromPromise(
-    insertCompletedJobDb(
-      parsedAddressId.data,
-      orgId,
-      parsedServiceType.data,
-      userId,
-      assignedTo,
-      new Date(),
-      notes,
-    ) as Promise<CompletedJob>,
+    (async () => {
+      const job = await insertCompletedJobDb(
+        parsedAddressId.data,
+        orgId,
+        parsedServiceType.data,
+        userId,
+        assignedTo,
+        completedAt || new Date(),
+        capturedAt || null,
+        notes,
+      );
+
+      if (photoBlobPath) {
+        await insertCompletionPhotoDb(job.id, photoBlobPath, capturedAt || null);
+      }
+
+      return job as CompletedJob;
+    })(),
     () => ({ reason: "Failed to complete job" }),
   );
 }

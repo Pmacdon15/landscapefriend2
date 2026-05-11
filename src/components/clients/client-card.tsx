@@ -1,6 +1,14 @@
 "use client";
 import { format } from "date-fns";
-import { CalendarDays, Mail, MapPin, Phone, Trash, User } from "lucide-react";
+import {
+  CalendarDays,
+  FileImage,
+  Mail,
+  MapPin,
+  Phone,
+  Trash,
+  User,
+} from "lucide-react";
 import { startTransition, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
@@ -28,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Address, Client } from "@/dal/clients";
+import type { Address, Client, SiteMap } from "@/dal/clients";
 import { getGoogleMapsUrl } from "@/lib/utils";
 import { useDeleteClient, useUpdateAddressAssignee } from "@/mutations/clients";
 import type { OptimisticAction } from "./client-info/client-info-container";
@@ -46,6 +54,7 @@ export function ClientCard({
 }: ClientCardProps) {
   const [openAddressId, setOpenAddressId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
   const addresses = client.addresses || [];
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
   const { mutate: deleteClient } = useDeleteClient();
@@ -153,7 +162,28 @@ export function ClientCard({
                       {address.zip}
                     </span>
                   </a>
-                  <SiteMapContainer address={address} />
+                  <div className="flex items-center gap-2">
+                    <SiteMapContainer address={address} />
+                    {address.completed_job?.photos?.[0] && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-[10px] gap-1.5 text-slate-500 hover:text-primary"
+                        onClick={() =>
+                          setViewingSiteMap({
+                            id: address.completed_job!.photos![0].id,
+                            address_id: address.id,
+                            blob_path: address.completed_job!.photos![0].blob_path,
+                            name: "Latest Service Photo",
+                            created_at: address.completed_job!.photos![0].created_at,
+                          })
+                        }
+                      >
+                        <FileImage className="h-3 w-3" />
+                        Latest Photo
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 pl-6 text-xs text-slate-500">
@@ -262,6 +292,25 @@ export function ClientCard({
           </div>
         )}
       </CardContent>
+
+      <Dialog
+        open={!!viewingSiteMap}
+        onOpenChange={(open) => !open && setViewingSiteMap(null)}
+      >
+        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex items-center justify-center text-white">
+          {viewingSiteMap && (
+            <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
+              {viewingSiteMap.blob_path && (
+                /* biome-ignore lint/a11y/useAltText: viewing existing sitemap or completion photo */
+                <img
+                  src={`/api/site-maps/image/${viewingSiteMap.id}`}
+                  className="max-w-full max-h-full object-contain shadow-2xl rounded-sm transition-all duration-300"
+                />
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

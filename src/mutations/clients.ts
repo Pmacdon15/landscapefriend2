@@ -114,15 +114,16 @@ export function useSaveSiteMap() {
     }: {
       addressId: string;
       name: string | null;
-      mapData: any | null;
+      mapData: { x: number; y: number }[] | null;
       file?: File;
     }) => {
-      const { success, siteMap, error } = await saveSiteMapAction(
-        addressId,
-        name,
-        mapData,
-        file,
-      );
+      const formData = new FormData();
+      formData.append("addressId", addressId);
+      if (name) formData.append("name", name);
+      if (mapData) formData.append("mapData", JSON.stringify(mapData));
+      if (file) formData.append("file", file);
+
+      const { success, siteMap, error } = await saveSiteMapAction(formData);
 
       if (!success || !siteMap) {
         throw new Error(error ?? "Failed to save site map");
@@ -137,6 +138,7 @@ export function useSaveSiteMap() {
     },
   });
 }
+
 
 export function useDeleteSiteMap() {
   return useMutation({

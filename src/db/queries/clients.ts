@@ -303,11 +303,12 @@ export async function insertCompletedJobDb(
   completedBy?: string | null,
   assignedTo?: string | null,
   completedAt: Date = new Date(),
+  capturedAt: Date | null = null,
   notes?: string | null,
 ): Promise<CompletedJobRow> {
   const result = await sql`
-    INSERT INTO completed_jobs (address_id, org_id, service_type, completed_by, assigned_to, completed_at, notes)
-    VALUES (${addressId}, ${orgId}, ${serviceType}, ${completedBy || null}, ${assignedTo || null}, ${completedAt}, ${notes || null})
+    INSERT INTO completed_jobs (address_id, org_id, service_type, completed_by, assigned_to, completed_at, captured_at, notes)
+    VALUES (${addressId}, ${orgId}, ${serviceType}, ${completedBy || null}, ${assignedTo || null}, ${completedAt}, ${capturedAt}, ${notes || null})
     RETURNING *
   `;
   return result[0] as unknown as CompletedJobRow;
@@ -318,10 +319,44 @@ export async function getCompletedJobsDb(
   date: string,
 ): Promise<CompletedJobRow[]> {
   const result = await sql`
-    SELECT * FROM completed_jobs
-    WHERE org_id = ${orgId} AND completed_at::date = ${date}::date
+    SELECT cj.*, 
+           COALESCE(
+             (SELECT json_agg(cp.*) FROM completion_photos cp WHERE cp.completed_job_id = cj.id),
+             '[]'::json
+           ) as photos
+    FROM completed_jobs cj
+    WHERE cj.org_id = ${orgId} AND cj.completed_at::date = ${date}::date
   `;
   return result as unknown as CompletedJobRow[];
+}
+
+export async function getCompletedJobsHistoryDb(
+  orgId: string,
+): Promise<CompletedJobRow[]> {
+  const result = await sql`
+    SELECT cj.*, 
+           COALESCE(
+             (SELECT json_agg(cp.*) FROM completion_photos cp WHERE cp.completed_job_id = cj.id),
+             '[]'::json
+           ) as photos
+    FROM completed_jobs cj
+    WHERE cj.org_id = ${orgId}
+    ORDER BY cj.completed_at DESC
+  `;
+  return result as unknown as CompletedJobRow[];
+}
+
+export async function insertCompletionPhotoDb(
+  completedJobId: string,
+  blobPath: string,
+  capturedAt: Date | null = null,
+): Promise<CompletionPhotoRow> {
+  const result = await sql`
+    INSERT INTO completion_photos (completed_job_id, blob_path, captured_at)
+    VALUES (${completedJobId}, ${blobPath}, ${capturedAt})
+    RETURNING *
+  `;
+  return result[0] as unknown as CompletionPhotoRow;
 }
 
 export async function getSiteMapsDb(orgId: string): Promise<SiteMapRow[]> {
@@ -368,4 +403,18 @@ export async function getSiteMapWithOrgDb(
     WHERE sm.id = ${siteMapId} AND c.org_id = ${orgId}
   `;
   return (result[0] as unknown as SiteMapRow) || null;
+}
+
+export async function getCompletionPhotoWithOrgDb(
+  photoId: string,
+  orgId: string,
+): Promise<{ id: string; blob_path: string } | null> {
+  const result = await sql`
+    SELECT cp.id, cp.blob_path FROM completion_photos cp
+    JOIN completed_jobs cj ON cp.completed_job_id = cj.id
+    JOIN addresses a ON cj.address_id = a.id
+    JOIN clients c ON a.client_id = c.id
+    WHERE cp.id = ${photoId} AND cj.org_id = ${orgId}
+  `;
+  return (result[0] as { id: string; blob_path: string }) || null;
 }
