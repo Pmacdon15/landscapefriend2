@@ -1,9 +1,19 @@
 "use client";
-
-import { use } from "react";
-import type { Client } from "@/types/types";
+import { use, useOptimistic } from "react";
+import type { Client, Schedule } from "@/dal/clients";
 import { AddClientModal } from "../add-client-modal";
 import { ClientCard } from "../client-card";
+
+export type OptimisticAction =
+  | { type: "update-assignee"; addressId: string; userId: string | null }
+  | {
+      type: "update-schedule";
+      addressId: string;
+      frequency: string;
+      nextCutDate: Date;
+    }
+  | { type: "add-client"; client: Client }
+  | { type: "edit-client"; client: Client };
 
 export default function ClientInfoContainer({
   clientsPromise,
@@ -12,19 +22,75 @@ export default function ClientInfoContainer({
   clientsPromise: Promise<Client[]>;
   membersPromise: Promise<{ id: string; name: string }[]>;
 }) {
-  const paginatedClients = use(clientsPromise);
+  const initialClients = use(clientsPromise);
   const members = use(membersPromise);
+
+  const [optimisticClients, setOptimistic] = useOptimistic(
+    initialClients,
+    (state: Client[], action: OptimisticAction) => {
+      switch (action.type) {
+        case "add-client":
+          return [action.client, ...state];
+        case "edit-client":
+          return state.map((c) =>
+            c.id === action.client.id ? action.client : c,
+          );
+        case "update-assignee":
+        case "update-schedule":
+          return state.map((client) => {
+            if (!client.addresses) return client;
+
+            const hasTargetAddress = client.addresses.some(
+              (a) => a.id === action.addressId,
+            );
+            if (!hasTargetAddress) return client;
+
+            return {
+              ...client,
+              addresses: client.addresses.map((address) => {
+                if (address.id !== action.addressId) return address;
+
+                if (action.type === "update-assignee") {
+                  return { ...address, assigned_to: action.userId };
+                }
+
+                if (action.type === "update-schedule") {
+                  const newSchedule: Schedule = {
+                    id: address.schedule?.id || crypto.randomUUID(),
+                    address_id: address.id,
+                    frequency: action.frequency,
+                    next_cut_date: action.nextCutDate,
+                    day_of_week: action.nextCutDate.getDay(),
+                  };
+                  return { ...address, schedule: newSchedule };
+                }
+
+                return address;
+              }),
+            };
+          });
+        default:
+          return state;
+      }
+    },
+  );
+
   return (
     <div className="w-full flex flex-col p-4 gap-4">
       <div className="ml-auto">
-        <AddClientModal members={members} />
+        <AddClientModal members={members} setOptimistic={setOptimistic} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 mb-10">
-        {paginatedClients.map((client: Client) => (
-          <ClientCard key={client.id} client={client} members={members} />
+        {optimisticClients.map((client: Client) => (
+          <ClientCard
+            key={client.id}
+            client={client}
+            members={members}
+            setOptimistic={setOptimistic}
+          />
         ))}
 
-        {paginatedClients.length === 0 && (
+        {optimisticClients.length === 0 && (
           <div className="col-span-full text-center py-20 bg-white/50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-800">
             <h3 className="text-xl font-semibold mb-2">No clients found</h3>
             <p className="text-muted-foreground">

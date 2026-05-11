@@ -1,10 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { upsertAssignmentAction } from "@/actions/assignments";
 
 export function useUpsertAssignment() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       addressId,
@@ -15,18 +13,22 @@ export function useUpsertAssignment() {
       userId: string | null;
       date: string;
     }) => {
-      const result = await upsertAssignmentAction(addressId, userId, date);
-      if (!result.success) {
-        throw new Error(result.error);
+      const { success, assignment, error } = await upsertAssignmentAction(
+        addressId,
+        userId,
+        date,
+      );
+
+      if (!success) {
+        throw new Error(error ?? "Failed to save assignment");
       }
-      return result.assignment;
+      return assignment;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
-      toast.success("Assignment updated");
+      toast.success("Assignment saved");
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to update assignment");
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 }

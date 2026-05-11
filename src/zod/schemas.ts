@@ -43,7 +43,7 @@ export const AddressSchema = z.object({
 });
 
 export const AddressInputSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.uuid().optional(),
   street: z.string().min(1, "Street is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().nullable().optional(),
@@ -53,12 +53,21 @@ export const AddressInputSchema = z.object({
 });
 
 export const ClientSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   org_id: z.string(),
   name: z.string().min(1, "Name is required"),
   email: z.string().email().nullable().optional(),
   phone: z.string().nullable().optional(),
   addresses: z.array(AddressSchema).optional(),
+});
+
+export const CreateClientInputSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.email().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  addresses: z
+    .array(AddressInputSchema)
+    .min(1, "At least one address is required"),
 });
 
 export type Client = z.infer<typeof ClientSchema>;
@@ -67,3 +76,4 @@ export type AddressInput = z.infer<typeof AddressInputSchema>;
 export type Schedule = z.infer<typeof ScheduleSchema>;
 export type CompletedJob = z.infer<typeof CompletedJobSchema>;
 export type Assignment = z.infer<typeof AssignmentSchema>;
+export type CreateClientInput = z.infer<typeof CreateClientInputSchema>;

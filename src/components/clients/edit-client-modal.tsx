@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Edit2, Loader2, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,13 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import type { Client } from "@/dal/clients";
 import { useUpdateClient } from "@/mutations/clients";
-import type { Client } from "@/types/types";
+import type { OptimisticAction } from "./client-info/client-info-container";
 
 interface EditClientModalProps {
   client: Client;
   members: { id: string; name: string }[];
+  setOptimistic?: (action: OptimisticAction) => void;
 }
 
 interface EditAddressFormValue {
@@ -41,7 +42,11 @@ interface EditAddressFormValue {
   assigned_to: string;
 }
 
-export function EditClientModal({ client, members }: EditClientModalProps) {
+export function EditClientModal({
+  client,
+  members,
+  setOptimistic,
+}: EditClientModalProps) {
   const [open, setOpen] = useState(false);
   const { mutateAsync: updateClient, isPending } = useUpdateClient();
 
@@ -62,28 +67,59 @@ export function EditClientModal({ client, members }: EditClientModalProps) {
       })) as EditAddressFormValue[],
     },
     onSubmit: async ({ value }) => {
-      try {
-        await updateClient({
-          clientId: client.id,
-          data: {
-            name: value.name,
-            email: value.email || null,
-            phone: value.phone || null,
-            addresses: value.addresses.map((addr: EditAddressFormValue) => ({
-              id: addr.id,
-              street: addr.street,
-              city: addr.city,
-              state: addr.state || null,
-              zip: addr.zip || null,
-              assigned_to:
-                addr.assigned_to === "unassigned" ? null : addr.assigned_to,
-              status: addr.status,
-            })),
-          },
+      if (setOptimistic) {
+        const optimisticClient: Client = {
+          ...client,
+          name: value.name,
+          email: value.email || null,
+          phone: value.phone || null,
+          addresses: value.addresses
+            .filter((addr) => addr.status !== "deleted")
+            .map((addr) => {
+              const existingAddr = client.addresses?.find(
+                (a) => a.id === addr.id,
+              );
+              return {
+                id: addr.id || crypto.randomUUID(),
+                client_id: client.id,
+                street: addr.street,
+                city: addr.city,
+                state: addr.state || null,
+                zip: addr.zip || null,
+                status: addr.status,
+                assigned_to:
+                  addr.assigned_to === "unassigned" ? null : addr.assigned_to,
+                sort_order: existingAddr?.sort_order ?? 0,
+                schedule: existingAddr?.schedule ?? null,
+                assignment: existingAddr?.assignment ?? null,
+                completed_job: existingAddr?.completed_job ?? null,
+              };
+            }),
+        };
+
+        startTransition(() => {
+          setOpen(false);
+          setOptimistic({ type: "edit-client", client: optimisticClient });
+
+          updateClient({
+            clientId: client.id,
+            data: {
+              name: value.name,
+              email: value.email || null,
+              phone: value.phone || null,
+              addresses: value.addresses.map((addr: EditAddressFormValue) => ({
+                id: addr.id,
+                street: addr.street,
+                city: addr.city,
+                state: addr.state || null,
+                zip: addr.zip || null,
+                assigned_to:
+                  addr.assigned_to === "unassigned" ? null : addr.assigned_to,
+                status: addr.status,
+              })),
+            },
+          });
         });
-        setOpen(false);
-      } catch (_error) {
-        // Error handled in mutation
       }
     },
   });

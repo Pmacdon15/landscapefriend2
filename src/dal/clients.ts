@@ -1,4 +1,5 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
 import type {
   AddressRow,
@@ -29,10 +30,12 @@ import {
 } from "../db/queries/clients";
 import {
   type Address,
-  AddressInputSchema,
+  type AddressInputSchema,
   type Assignment,
   type Client,
   type CompletedJob,
+  type CreateClientInput,
+  CreateClientInputSchema,
   type Schedule,
 } from "../zod/schemas";
 
@@ -145,65 +148,73 @@ export async function getClientsForCutListDal(date: string): Promise<Client[]> {
 export async function updateRouteOrderDal(
   addressId: string,
   newSortOrder: number,
-): Promise<void> {
+): Promise<Result<void, { reason: string }>> {
   const { orgId } = await auth();
 
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  // Validate inputs
-  const parsedAddressId = z.string().uuid().parse(addressId);
-  const parsedSortOrder = z.number().parse(newSortOrder);
+  const parsedAddressId = z.string().uuid().safeParse(addressId);
+  if (!parsedAddressId.success)
+    return errAsync({ reason: "Invalid address ID" });
 
-  await updateRouteOrderDb(parsedAddressId, orgId, parsedSortOrder);
+  const parsedSortOrder = z.number().safeParse(newSortOrder);
+  if (!parsedSortOrder.success)
+    return errAsync({ reason: "Invalid sort order" });
+
+  return ResultAsync.fromPromise(
+    updateRouteOrderDb(parsedAddressId.data, orgId, parsedSortOrder.data),
+    () => ({ reason: "Failed to update route order" }),
+  );
 }
 
-export async function createClientDal(data: {
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  addresses: z.infer<typeof AddressInputSchema>[];
-}): Promise<Client> {
+export async function createClientDal(
+  data: CreateClientInput,
+): Promise<Result<Client, { reason: string }>> {
   const { orgId } = await auth();
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+  const result = CreateClientInputSchema.safeParse(data);
+  if (!result.success) return errAsync({ reason: result.error.message });
 
-  const parsedName = z.string().min(1, "Name is required").parse(data.name);
-  const parsedEmail = data.email ? z.string().email().parse(data.email) : null;
-  const parsedPhone = data.phone ? z.string().parse(data.phone) : null;
-  const parsedAddresses = z
-    .array(AddressInputSchema)
-    .min(1, "At least one address is required")
-    .parse(data.addresses);
+  const { name, email, phone, addresses } = result.data;
 
-  const newClient = await insertClientDb(
-    orgId,
-    parsedName,
-    parsedEmail,
-    parsedPhone,
+  // Wrap the entire DB transaction logic
+  return ResultAsync.fromPromise(
+    (async () => {
+      const client = await insertClientDb(
+        orgId,
+        name,
+        email ?? null,
+        phone ?? null,
+      );
+
+      const createdAddresses = await Promise.all(
+        addresses.map((addr) =>
+          insertAddressDb(
+            client.id,
+            addr.street,
+            addr.city,
+            addr.state,
+            addr.zip,
+            addr.status,
+            addr.assigned_to,
+          ),
+        ),
+      );
+
+      return {
+        ...client,
+        addresses: createdAddresses.map((addr) => ({
+          ...addr,
+          sort_order: 0,
+          schedule: null,
+          assignment: null,
+          completed_job: null,
+        })),
+      } as Client;
+    })(),
+    () => ({ reason: "Database command failed" }),
   );
-
-  const createdAddresses = await Promise.all(
-    parsedAddresses.map((addr) =>
-      insertAddressDb(
-        newClient.id,
-        addr.street,
-        addr.city,
-        addr.state,
-        addr.zip,
-        addr.status,
-        addr.assigned_to,
-      ),
-    ),
-  );
-
-  return {
-    ...newClient,
-    addresses: createdAddresses.map((addr) => ({ ...addr, sort_order: 0 })),
-  } as unknown as Client;
 }
 
 export async function updateClientDal(
@@ -214,94 +225,112 @@ export async function updateClientDal(
     phone?: string | null;
     addresses: z.infer<typeof AddressInputSchema>[];
   },
-): Promise<Client> {
+): Promise<Result<Client, { reason: string }>> {
   const { orgId } = await auth();
 
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  const parsedClientId = z.string().uuid().parse(clientId);
-  const parsedName = z.string().min(1, "Name is required").parse(data.name);
-  const parsedEmail = data.email ? z.string().email().parse(data.email) : null;
-  const parsedPhone = data.phone ? z.string().parse(data.phone) : null;
-  const parsedAddresses = z
-    .array(AddressInputSchema)
-    .min(1, "At least one address is required")
-    .parse(data.addresses);
+  const clientIdResult = z.string().uuid().safeParse(clientId);
+  if (!clientIdResult.success) return errAsync({ reason: "Invalid client ID" });
 
-  const updatedClient = await updateClientDb(
-    parsedClientId,
-    orgId,
-    parsedName,
-    parsedEmail,
-    parsedPhone,
-  );
+  const result = CreateClientInputSchema.safeParse(data);
+  if (!result.success) return errAsync({ reason: result.error.message });
 
-  const finalAddresses: Address[] = [];
+  const { name, email, phone, addresses } = result.data;
+  const parsedClientId = clientIdResult.data;
 
-  for (const addr of parsedAddresses) {
-    if (addr.id) {
-      if (addr.status === "deleted") {
-        await deleteAddressDb(addr.id, parsedClientId);
-      } else {
-        const updatedAddr = await updateAddressDb(
-          addr.id,
-          parsedClientId,
-          addr.street,
-          addr.city,
-          addr.state,
-          addr.zip,
-          addr.status,
-          addr.assigned_to,
-        );
-        finalAddresses.push({
-          ...updatedAddr,
-          sort_order: 0,
-        } as unknown as Address);
-      }
-    } else if (addr.status !== "deleted") {
-      const newAddr = await insertAddressDb(
+  return ResultAsync.fromPromise(
+    (async () => {
+      const updatedClient = await updateClientDb(
         parsedClientId,
-        addr.street,
-        addr.city,
-        addr.state,
-        addr.zip,
-        addr.status,
-        addr.assigned_to,
+        orgId,
+        name,
+        email || null,
+        phone || null,
       );
-      finalAddresses.push({ ...newAddr, sort_order: 0 } as unknown as Address);
-    }
-  }
 
-  return {
-    ...updatedClient,
-    addresses: finalAddresses,
-  } as unknown as Client;
+      const finalAddresses: Address[] = [];
+
+      for (const addr of addresses) {
+        if (addr.id) {
+          if (addr.status === "deleted") {
+            await deleteAddressDb(addr.id, parsedClientId);
+          } else {
+            const updatedAddr = await updateAddressDb(
+              addr.id,
+              parsedClientId,
+              addr.street,
+              addr.city,
+              addr.state,
+              addr.zip,
+              addr.status,
+              addr.assigned_to,
+            );
+            finalAddresses.push({
+              ...updatedAddr,
+              sort_order: 0,
+              schedule: null,
+              assignment: null,
+              completed_job: null,
+            } as Address);
+          }
+        } else if (addr.status !== "deleted") {
+          const newAddr = await insertAddressDb(
+            parsedClientId,
+            addr.street,
+            addr.city,
+            addr.state,
+            addr.zip,
+            addr.status,
+            addr.assigned_to,
+          );
+          finalAddresses.push({
+            ...newAddr,
+            sort_order: 0,
+            schedule: null,
+            assignment: null,
+            completed_job: null,
+          } as Address);
+        }
+      }
+
+      return {
+        ...updatedClient,
+        addresses: finalAddresses,
+      } as Client;
+    })(),
+    () => ({ reason: "Failed to update client" }),
+  );
 }
 
 export async function upsertScheduleDal(
   addressId: string,
   frequency: string,
   nextCutDate: Date,
-): Promise<Schedule> {
+): Promise<Result<Schedule, { reason: string }>> {
   const { orgId } = await auth();
 
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  const parsedAddressId = z.string().uuid().parse(addressId);
-  const parsedFrequency = z.string().min(1).parse(frequency);
-  const parsedDate = z.date().parse(nextCutDate);
+  const parsedAddressId = z.string().uuid().safeParse(addressId);
+  if (!parsedAddressId.success)
+    return errAsync({ reason: "Invalid address ID" });
 
-  const schedule = await upsertScheduleDb(
-    parsedAddressId,
-    parsedFrequency,
-    parsedDate,
+  const parsedFrequency = z.string().min(1).safeParse(frequency);
+  if (!parsedFrequency.success)
+    return errAsync({ reason: "Invalid frequency" });
+
+  const parsedDate = z.date().safeParse(nextCutDate);
+  if (!parsedDate.success) return errAsync({ reason: "Invalid date" });
+
+  return ResultAsync.fromPromise(
+    upsertScheduleDb(
+      parsedAddressId.data,
+      parsedFrequency.data,
+      parsedDate.data,
+    ) as Promise<Schedule>,
+    () => ({ reason: "Failed to update schedule" }),
   );
-
-  return schedule as unknown as Schedule;
 }
 
 export async function completeJobDal(
@@ -309,27 +338,31 @@ export async function completeJobDal(
   serviceType: "grass" | "snow",
   assignedTo?: string | null,
   notes?: string | null,
-): Promise<CompletedJob> {
+): Promise<Result<CompletedJob, { reason: string }>> {
   const { orgId, userId } = await auth();
 
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  const parsedAddressId = z.string().uuid().parse(addressId);
-  const parsedServiceType = z.enum(["grass", "snow"]).parse(serviceType);
+  const parsedAddressId = z.string().uuid().safeParse(addressId);
+  if (!parsedAddressId.success)
+    return errAsync({ reason: "Invalid address ID" });
 
-  const completedJob = await insertCompletedJobDb(
-    parsedAddressId,
-    orgId,
-    parsedServiceType,
-    userId,
-    assignedTo,
-    new Date(),
-    notes,
+  const parsedServiceType = z.enum(["grass", "snow"]).safeParse(serviceType);
+  if (!parsedServiceType.success)
+    return errAsync({ reason: "Invalid service type" });
+
+  return ResultAsync.fromPromise(
+    insertCompletedJobDb(
+      parsedAddressId.data,
+      orgId,
+      parsedServiceType.data,
+      userId,
+      assignedTo,
+      new Date(),
+      notes,
+    ) as Promise<CompletedJob>,
+    () => ({ reason: "Failed to complete job" }),
   );
-
-  return completedJob as unknown as CompletedJob;
 }
 
 export async function getOrganizationMembersDal(): Promise<
@@ -364,43 +397,50 @@ export async function upsertAssignmentDal(
   addressId: string,
   userId: string | null,
   date: string,
-): Promise<Assignment | null> {
+): Promise<Result<Assignment | null, { reason: string }>> {
   const { orgId } = await auth();
 
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  const parsedAddressId = z.string().uuid().parse(addressId);
+  const parsedAddressId = z.string().uuid().safeParse(addressId);
+  if (!parsedAddressId.success)
+    return errAsync({ reason: "Invalid address ID" });
 
   if (!userId || userId === "unassigned") {
-    await deleteAssignmentDb(parsedAddressId, date);
-    return null;
+    return ResultAsync.fromPromise(
+      deleteAssignmentDb(parsedAddressId.data, date).then(() => null),
+      () => ({ reason: "Failed to delete assignment" }),
+    );
   }
 
-  const assignment = await upsertAssignmentDb(
-    parsedAddressId,
-    orgId,
-    userId,
-    date,
+  return ResultAsync.fromPromise(
+    upsertAssignmentDb(
+      parsedAddressId.data,
+      orgId,
+      userId,
+      date,
+    ) as Promise<Assignment>,
+    () => ({ reason: "Failed to upsert assignment" }),
   );
-
-  return assignment as unknown as Assignment;
 }
 
 export async function updateAddressAssigneeDal(
   addressId: string,
   userId: string | null,
-): Promise<void> {
+): Promise<Result<void, { reason: string }>> {
   const { orgId } = await auth();
 
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  const parsedAddressId = z.string().uuid().parse(addressId);
-  await updateAddressAssigneeDb(
-    parsedAddressId,
-    userId === "unassigned" ? null : userId,
+  const parsedAddressId = z.string().uuid().safeParse(addressId);
+  if (!parsedAddressId.success)
+    return errAsync({ reason: "Invalid address ID" });
+
+  return ResultAsync.fromPromise(
+    updateAddressAssigneeDb(
+      parsedAddressId.data,
+      userId === "unassigned" ? null : userId,
+    ),
+    () => ({ reason: "Failed to update address assignee" }),
   );
 }

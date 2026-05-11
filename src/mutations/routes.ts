@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { updateRouteOrderAction } from "@/actions/routes";
 
 export function useUpdateRouteOrder() {
@@ -10,11 +11,18 @@ export function useUpdateRouteOrder() {
       addressId: string;
       newSortOrder: number;
     }) => {
-      const result = await updateRouteOrderAction(addressId, newSortOrder);
-      if (!result.success) {
-        throw new Error(result.error);
+      const { success, error } = await updateRouteOrderAction(
+        addressId,
+        newSortOrder,
+      );
+
+      if (!success) {
+        throw new Error(error ?? "Failed to update route order");
       }
-      return result;
+      return { success: true };
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 }

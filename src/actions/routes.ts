@@ -7,15 +7,13 @@ export async function updateRouteOrderAction(
   addressId: string,
   newSortOrder: number,
 ) {
-  try {
-    await updateRouteOrderDal(addressId, newSortOrder);
+  const result = await updateRouteOrderDal(addressId, newSortOrder);
 
-    // Revalidate paths that show cuts
-    revalidatePath("/client-cut-list");
+  // Revalidate paths that show cuts
+  revalidatePath("/client-cut-list");
 
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to update route order:", error);
-    return { success: false, error: "Failed to update route order" };
-  }
+  return result.match(
+    () => ({ success: true, error: null }),
+    (err) => ({ success: false, error: err.reason }),
+  );
 }

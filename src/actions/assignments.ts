@@ -8,14 +8,11 @@ export async function upsertAssignmentAction(
   userId: string | null,
   date: string,
 ) {
-  try {
-    const assignment = await upsertAssignmentDal(addressId, userId, date);
-    revalidatePath("/client-cut-list");
-    return { success: true, assignment };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to save assignment";
-    console.error("Assignment failed:", error);
-    return { success: false, error: message };
-  }
+  const result = await upsertAssignmentDal(addressId, userId, date);
+  revalidatePath("/client-cut-list");
+
+  return result.match(
+    (assignment) => ({ success: true, assignment, error: null }),
+    (err) => ({ success: false, assignment: null, error: err.reason }),
+  );
 }

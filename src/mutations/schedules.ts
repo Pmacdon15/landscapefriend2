@@ -1,10 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { upsertScheduleAction } from "@/actions/schedules";
 
 export function useUpsertSchedule() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       addressId,
@@ -15,22 +13,22 @@ export function useUpsertSchedule() {
       frequency: string;
       nextCutDate: Date;
     }) => {
-      const result = await upsertScheduleAction(
+      const { success, schedule, error } = await upsertScheduleAction(
         addressId,
         frequency,
         nextCutDate,
       );
-      if (!result.success) {
-        throw new Error(result.error);
+
+      if (!success || !schedule) {
+        throw new Error(error ?? "Failed to update schedule");
       }
-      return result.schedule;
+      return schedule;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
-      toast.success("Schedule updated successfully");
+      toast.success("Schedule updated");
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to update schedule");
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 }

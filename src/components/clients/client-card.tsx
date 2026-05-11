@@ -1,6 +1,7 @@
 "use client";
 import { format } from "date-fns";
 import { CalendarDays, Mail, MapPin, Phone, User } from "lucide-react";
+import { startTransition } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { ScheduleForm } from "@/components/schedules/schedule-form";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,13 +21,19 @@ import {
 import type { Address, Client } from "@/dal/clients";
 import { getGoogleMapsUrl } from "@/lib/utils";
 import { useUpdateAddressAssignee } from "@/mutations/clients";
+import type { OptimisticAction } from "./client-info/client-info-container";
 
 interface ClientCardProps {
   client: Client;
   members: { id: string; name: string }[];
+  setOptimistic: (action: OptimisticAction) => void;
 }
 
-export function ClientCard({ client, members }: ClientCardProps) {
+export function ClientCard({
+  client,
+  members,
+  setOptimistic,
+}: ClientCardProps) {
   const addresses = client.addresses || [];
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
 
@@ -35,7 +42,11 @@ export function ClientCard({ client, members }: ClientCardProps) {
       <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
         <CardTitle className="text-xl font-bold flex items-center justify-between">
           <span>{client.name}</span>
-          <EditClientModal client={client} members={members} />
+          <EditClientModal
+            client={client}
+            members={members}
+            setOptimistic={setOptimistic}
+          />
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4 grid gap-4">
@@ -83,14 +94,22 @@ export function ClientCard({ client, members }: ClientCardProps) {
                   <User className="h-3 w-3" />
                   <Select
                     value={address.assigned_to || "unassigned"}
-                    onValueChange={(val) =>
-                      updateAssignee({
-                        addressId: address.id,
-                        userId: val === "unassigned" ? null : val,
-                      })
-                    }
+                    onValueChange={(val) => {
+                      const userId = val === "unassigned" ? null : val;
+                      startTransition(() => {
+                        setOptimistic({
+                          type: "update-assignee",
+                          addressId: address.id,
+                          userId: userId,
+                        });
+                        updateAssignee({
+                          addressId: address.id,
+                          userId: userId,
+                        });
+                      });
+                    }}
                   >
-                    <SelectTrigger className="h-7 w-[140px] text-[10px] bg-transparent border-none p-0 focus:ring-0">
+                    <SelectTrigger className="h-7 w-35 text-[10px] bg-transparent border-none p-0 focus:ring-0">
                       <SelectValue placeholder="Assignee" />
                     </SelectTrigger>
                     <SelectContent>
@@ -153,6 +172,7 @@ export function ClientCard({ client, members }: ClientCardProps) {
                               ? new Date(address.schedule.next_cut_date)
                               : undefined
                           }
+                          setOptimistic={setOptimistic}
                         />
                       </div>
                     </PopoverContent>

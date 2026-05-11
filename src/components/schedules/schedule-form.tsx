@@ -3,6 +3,7 @@
 import { useForm } from "@tanstack/react-form";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import { startTransition } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
@@ -20,19 +21,20 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useUpsertSchedule } from "@/mutations/schedules";
+import type { OptimisticAction } from "../clients/client-info/client-info-container";
 
 interface ScheduleFormProps {
   addressId: string;
   initialFrequency?: string;
   initialDate?: Date;
-  onSuccess?: () => void;
+  setOptimistic?: (action: OptimisticAction) => void;
 }
 
 export function ScheduleForm({
   addressId,
   initialFrequency,
   initialDate,
-  onSuccess,
+  setOptimistic,
 }: ScheduleFormProps) {
   const { mutateAsync: upsertSchedule, isPending: isSubmitting } =
     useUpsertSchedule();
@@ -43,15 +45,21 @@ export function ScheduleForm({
       startDate: initialDate || new Date(),
     },
     onSubmit: async ({ value }) => {
-      try {
-        await upsertSchedule({
-          addressId,
-          frequency: value.frequency,
-          nextCutDate: value.startDate,
+      if (setOptimistic) {
+        startTransition(() => {
+          setOptimistic({
+            type: "update-schedule",
+            addressId,
+            frequency: value.frequency,
+            nextCutDate: value.startDate,
+          });
+
+          upsertSchedule({
+            addressId,
+            frequency: value.frequency,
+            nextCutDate: value.startDate,
+          });
         });
-        if (onSuccess) onSuccess();
-      } catch (_error) {
-        // Error handled in mutation
       }
     },
   });

@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,10 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Address, Client } from "@/dal/clients";
 import { useCreateClient } from "@/mutations/clients";
+import type { OptimisticAction } from "./client-info/client-info-container";
 
 interface AddClientModalProps {
   members: { id: string; name: string }[];
+  setOptimistic?: (action: OptimisticAction) => void;
 }
 
 interface AddressFormValue {
@@ -36,7 +39,10 @@ interface AddressFormValue {
   assigned_to: string;
 }
 
-export function AddClientModal({ members }: AddClientModalProps) {
+export function AddClientModal({
+  members,
+  setOptimistic,
+}: AddClientModalProps) {
   const [open, setOpen] = useState(false);
   const { mutate: createClient, isPending } = useCreateClient();
 
@@ -57,11 +63,10 @@ export function AddClientModal({ members }: AddClientModalProps) {
       ] as AddressFormValue[],
     },
     onSubmit: async ({ value }) => {
-      createClient({
-        name: value.name,
-        email: value.email || null,
-        phone: value.phone || null,
-        addresses: value.addresses.map((addr: AddressFormValue) => ({
+      const addresses: Address[] = value.addresses.map(
+        (addr: AddressFormValue) => ({
+          id: crypto.randomUUID(),
+          client_id: "temp-client-id",
           street: addr.street,
           city: addr.city,
           state: addr.state || null,
@@ -69,10 +74,59 @@ export function AddClientModal({ members }: AddClientModalProps) {
           assigned_to:
             addr.assigned_to === "unassigned" ? null : addr.assigned_to,
           status: "active" as const,
-        })),
-      });
-      setOpen(false);
-      form.reset();
+          sort_order: 0,
+          schedule: null,
+          assignment: null,
+          completed_job: null,
+        }),
+      );
+
+      const optimisticClient: Client = {
+        id: "temp-client-id",
+        org_id: "temp-org-id",
+        name: value.name,
+        email: value.email || null,
+        phone: value.phone || null,
+        addresses,
+      };
+
+      if (setOptimistic) {
+        startTransition(() => {
+          setOpen(false);
+          form.reset();
+          setOptimistic({ type: "add-client", client: optimisticClient });
+          createClient({
+            name: value.name,
+            email: value.email || null,
+            phone: value.phone || null,
+            addresses: value.addresses.map((addr: AddressFormValue) => ({
+              street: addr.street,
+              city: addr.city,
+              state: addr.state || null,
+              zip: addr.zip || null,
+              assigned_to:
+                addr.assigned_to === "unassigned" ? null : addr.assigned_to,
+              status: "active" as const,
+            })),
+          });
+        });
+      } else {
+        createClient({
+          name: value.name,
+          email: value.email || null,
+          phone: value.phone || null,
+          addresses: value.addresses.map((addr: AddressFormValue) => ({
+            street: addr.street,
+            city: addr.city,
+            state: addr.state || null,
+            zip: addr.zip || null,
+            assigned_to:
+              addr.assigned_to === "unassigned" ? null : addr.assigned_to,
+            status: "active" as const,
+          })),
+        });
+        setOpen(false);
+      }
     },
   });
 

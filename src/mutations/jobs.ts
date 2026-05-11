@@ -1,10 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { completeJobAction } from "@/actions/jobs";
 
 export function useCompleteJob() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       addressId,
@@ -17,23 +15,23 @@ export function useCompleteJob() {
       assignedTo?: string | null;
       notes?: string | null;
     }) => {
-      const result = await completeJobAction(
+      const { success, job, error } = await completeJobAction(
         addressId,
         serviceType,
         assignedTo,
         notes,
       );
-      if (!result.success) {
-        throw new Error(result.error);
+
+      if (!success || !job) {
+        throw new Error(error ?? "Failed to complete job");
       }
-      return result.job;
+      return job;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
-      toast.success("Job marked as complete");
+      toast.success("Job completed");
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to mark job as complete");
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 }
