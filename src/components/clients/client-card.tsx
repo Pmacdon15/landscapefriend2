@@ -1,7 +1,7 @@
 "use client";
 import { format } from "date-fns";
 import { CalendarDays, Mail, MapPin, Phone, User } from "lucide-react";
-import { startTransition } from "react";
+import { startTransition, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { ScheduleForm } from "@/components/schedules/schedule-form";
 import { buttonVariants } from "@/components/ui/button";
@@ -34,6 +34,7 @@ export function ClientCard({
   members,
   setOptimistic,
 }: ClientCardProps) {
+  const [openAddressId, setOpenAddressId] = useState<string | null>(null);
   const addresses = client.addresses || [];
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
 
@@ -143,7 +144,12 @@ export function ClientCard({
                     )}
                   </div>
 
-                  <Popover>
+                  <Popover
+                    open={openAddressId === address.id}
+                    onOpenChange={(open) =>
+                      setOpenAddressId(open ? address.id : null)
+                    }
+                  >
                     <PopoverTrigger
                       className={buttonVariants({
                         variant: "outline",
@@ -173,6 +179,7 @@ export function ClientCard({
                               : undefined
                           }
                           setOptimistic={setOptimistic}
+                          onSuccess={() => setOpenAddressId(null)}
                         />
                       </div>
                     </PopoverContent>

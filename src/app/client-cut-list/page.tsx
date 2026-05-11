@@ -1,30 +1,28 @@
-import { auth } from "@clerk/nextjs/server";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Suspense } from "react";
-import {
-  getClientsForCutListDal,
-  getOrganizationMembersDal,
-} from "@/dal/clients";
+import { getClientsForCutListDal } from "@/dal/clients";
 import { CutListContent } from "./cut-list-content";
 
-interface PageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}
+export default async function ClientCutListPage(
+  props: PageProps<"/client-cut-list">,
+) {
 
-export default async function ClientCutListPage({ searchParams }: PageProps) {
-  const { userId } = await auth();
-  const resolvedParams = await searchParams;
-  const dateParam =
-    typeof resolvedParams.date === "string"
-      ? resolvedParams.date
-      : format(new Date(), "yyyy-MM-dd");
+  const clientsPromise = props.searchParams.then((p) =>
+    getClientsForCutListDal(
+      String(
+        (Array.isArray(p.date) ? p.date[0] : p.date) ??
+          new Date().toISOString().split("T")[0],
+      ),
+    ),
+  );
 
-  // Fetch data in parallel
-  const [clients, _members] = await Promise.all([
-    getClientsForCutListDal(dateParam),
-    getOrganizationMembersDal(),
-  ]);
+  const datePromise = props.searchParams.then((p) =>
+    String(
+      (Array.isArray(p.date) ? p.date[0] : p.date) ??
+        new Date().toISOString().split("T")[0],
+    ),
+  );
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-12">
@@ -45,9 +43,8 @@ export default async function ClientCutListPage({ searchParams }: PageProps) {
         }
       >
         <CutListContent
-          initialClients={clients}
-          defaultDate={dateParam}
-          currentUserId={userId}
+          clientsPromise={clientsPromise}
+          datePromise={datePromise}
         />
       </Suspense>
     </div>

@@ -28,6 +28,7 @@ interface ScheduleFormProps {
   initialFrequency?: string;
   initialDate?: Date;
   setOptimistic?: (action: OptimisticAction) => void;
+  onSuccess?: () => void;
 }
 
 export function ScheduleForm({
@@ -35,6 +36,7 @@ export function ScheduleForm({
   initialFrequency,
   initialDate,
   setOptimistic,
+  onSuccess,
 }: ScheduleFormProps) {
   const { mutateAsync: upsertSchedule, isPending: isSubmitting } =
     useUpsertSchedule();
@@ -61,6 +63,7 @@ export function ScheduleForm({
           });
         });
       }
+      onSuccess?.();
     },
   });
 

@@ -1,14 +1,8 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { differenceInCalendarDays, format, parseISO, startOfDay } from "date-fns";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
-import type {
-  AddressRow,
-  AssignmentRow,
-  ClientRow,
-  CompletedJobRow,
-  RouteOrderRow,
-  ScheduleRow,
-} from "@/types/types";
+import type { AddressRow, ClientRow, ScheduleRow } from "@/types/types";
 import {
   deleteAddressDb,
   deleteAssignmentDb,
@@ -40,6 +34,14 @@ import {
 } from "../zod/schemas";
 
 export type { Client, Address, Schedule, CompletedJob, Assignment };
+
+export interface CutListItem {
+  client: {
+    id: string;
+    name: string;
+  };
+  address: Address;
+}
 
 export async function getClientsForInfoDal(
   page: number,
@@ -89,12 +91,11 @@ export async function getClientsForInfoDal(
   return { clients: paginatedClients, totalPages };
 }
 
-export async function getClientsForCutListDal(date: string): Promise<Client[]> {
-  const { orgId } = await auth();
-
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+export async function getClientsForCutListDal(
+  date: string,
+): Promise<CutListItem[]> {
+  const { orgId, userId } = await auth();
+  if (!orgId || !userId) throw new Error("Unauthorized");
 
   const [
     clients,
@@ -112,37 +113,67 @@ export async function getClientsForCutListDal(date: string): Promise<Client[]> {
     getCompletedJobsDb(orgId, date),
   ]);
 
-  const mappedClients = clients.map((client: ClientRow) => {
-    const clientAddresses = addresses
-      .filter(
-        (a: AddressRow) => a.client_id === client.id && a.status !== "deleted",
-      )
-      .map((address: AddressRow) => {
-        const schedule = schedules.find(
-          (s: ScheduleRow) => s.address_id === address.id,
-        );
-        const routeOrder = routeOrders?.find(
-          (r: RouteOrderRow) => r.address_id === address.id,
-        );
-        const assignment = assignments.find(
-          (as: AssignmentRow) => as.address_id === address.id,
-        );
-        const completedJob = completedJobs.find(
-          (cj: CompletedJobRow) => cj.address_id === address.id,
-        );
-        return {
-          ...address,
-          schedule: schedule || null,
-          sort_order: routeOrder?.sort_order ?? 0,
-          assignment: assignment || null,
-          completed_job: completedJob || null,
-        } as Address;
-      });
+  // Create lookup maps for O(1) access
+  const scheduleMap = new Map(schedules.map((s) => [s.address_id, s]));
+  const orderMap = new Map(
+    routeOrders?.map((r) => [r.address_id, r.sort_order]),
+  );
+  const assignmentMap = new Map(assignments.map((a) => [a.address_id, a]));
+  const jobMap = new Map(completedJobs.map((j) => [j.address_id, j]));
+  const clientMap = new Map(clients.map((c) => [c.id, c]));
 
-    return { ...client, addresses: clientAddresses } as Client;
-  });
+  const targetDate = startOfDay(parseISO(date));
 
-  return mappedClients;
+  // Map directly over addresses instead of nesting under clients
+  const results = addresses
+    .filter((addr) => addr.status !== "deleted")
+    .map((addr) => {
+      const schedule = scheduleMap.get(addr.id);
+      if (!schedule) return null;
+
+      // Normalize dates to avoid timezone issues (use UTC to avoid local day shifts)
+      const scheduleDateStr = schedule.next_cut_date instanceof Date 
+        ? schedule.next_cut_date.toISOString().split('T')[0]
+        : String(schedule.next_cut_date).split('T')[0];
+      const scheduleDate = parseISO(scheduleDateStr);
+      const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
+      if (diffDays < 0) return null;
+
+      let isScheduled = false;
+      const freq = schedule.frequency.toLowerCase();
+
+      if (diffDays === 0) isScheduled = true;
+      else if (freq === "weekly") isScheduled = diffDays % 7 === 0;
+      else if (freq === "bi-weekly") isScheduled = diffDays % 14 === 0;
+      else if (freq === "monthly")
+        isScheduled = targetDate.getUTCDate() === scheduleDate.getUTCDate();
+      else isScheduled = schedule.day_of_week === targetDate.getUTCDay();
+
+      if (!isScheduled) return null;
+
+      // Check Assignment
+      const assignment = assignmentMap.get(addr.id);
+      const assigneeId = assignment?.user_id || addr.assigned_to;
+
+      if (assigneeId !== userId) return null;
+
+      const client = clientMap.get(addr.client_id);
+      if (!client) return null;
+
+      return {
+        client: { id: client.id, name: client.name },
+        address: {
+          ...addr,
+          schedule,
+          sort_order: orderMap.get(addr.id) ?? 0,
+          assignment: assignment ?? null,
+          completed_job: jobMap.get(addr.id) ?? null,
+        } as Address,
+      };
+    })
+    .filter((item): item is CutListItem => item !== null);
+
+  return results.sort((a, b) => a.address.sort_order - b.address.sort_order);
 }
 
 export async function updateRouteOrderDal(

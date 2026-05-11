@@ -6,10 +6,10 @@ import {
   Droppable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { CalendarIcon, CheckCircle2, GripVertical, MapPin } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { use, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,108 +18,42 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { Address, Client } from "@/dal/clients";
+import type { CutListItem } from "@/dal/clients";
 import { cn, getGoogleMapsUrl } from "@/lib/utils";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 
 interface CutListContentProps {
-  initialClients: Client[];
-  defaultDate?: string;
-  members: { id: string; name: string }[];
-  currentUserId: string | null;
+  clientsPromise: Promise<CutListItem[]>;
+  datePromise: Promise<string>;
 }
-
 export function CutListContent({
-  initialClients,
-  defaultDate,
-  currentUserId,
-}: Omit<CutListContentProps, "members">) {
+  clientsPromise,
+  datePromise,
+}: CutListContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { mutate: updateRouteOrder } = useUpdateRouteOrder();
   const { mutate: completeJob, isPending: isCompleting } = useCompleteJob();
 
-  // Hydration safety for DnD
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => setIsMounted(true), []);
+  const defaultDate = use(datePromise);
+  const initialClients = use(clientsPromise); // This is already your sorted CutListItem[]
 
-  // Parse initial date from URL or default to today
-  const [date, setDate] = useState<Date>(
-    defaultDate ? parseISO(defaultDate) : new Date(),
-  );
+  const [date, setDate] = useState<Date>(parseISO(defaultDate));
+  const [localCuts, setLocalCuts] = useState(initialClients);
 
-  const handleDateChange = (newDate: Date | undefined) => {
-    if (newDate) {
-      setDate(newDate);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("date", format(newDate, "yyyy-MM-dd"));
-      router.push(`/client-cut-list?${params.toString()}`);
-    }
-  };
+  // Sync local state when the server sends new data (e.g., date change)
+  const parsedDefaultDate = parseISO(defaultDate);
+  if (date.getTime() !== parsedDefaultDate.getTime()) {
+    setDate(parsedDefaultDate);
+  }
 
-  // Filter clients and addresses based on the selected date AND assignment to current user
-  const cutsForDay = useMemo(() => {
-    const results: Array<{ client: Client; address: Address }> = [];
-
-    initialClients.forEach((client: Client) => {
-      if (!client.addresses) return;
-
-      client.addresses.forEach((address: Address) => {
-        if (!address.schedule) return;
-
-        const scheduleDate = new Date(address.schedule.next_cut_date);
-        const diffDays = differenceInCalendarDays(date, scheduleDate);
-
-        // If today is before the first scheduled date, it's not scheduled
-        if (diffDays < 0) return;
-
-        // Check if job is scheduled for this day based on frequency
-        let isScheduled = false;
-        const frequency = address.schedule.frequency.toLowerCase();
-
-        if (diffDays === 0) {
-          isScheduled = true;
-        } else if (frequency === "weekly") {
-          isScheduled = diffDays % 7 === 0;
-        } else if (frequency === "bi-weekly") {
-          isScheduled = diffDays % 14 === 0;
-        } else if (frequency === "monthly") {
-          // Simplistic monthly check: same day of the month
-          isScheduled = date.getDate() === scheduleDate.getDate();
-        } else {
-          // Fallback to day of week for unknown frequencies
-          isScheduled = address.schedule.day_of_week === date.getDay();
-        }
-
-        if (!isScheduled) return;
-
-        // NEW: Access Control - Only show if assigned to current user
-        // Priority: Daily Override (assignment) > Default Assignee (assigned_to)
-        const assigneeId = address.assignment?.user_id || address.assigned_to;
-
-        if (assigneeId === currentUserId) {
-          results.push({ client, address });
-        }
-      });
-    });
-
-    // Initial sort by the absolute sort_order
-    return results.sort(
-      (a, b) => (a.address.sort_order ?? 0) - (b.address.sort_order ?? 0),
-    );
-  }, [initialClients, date, currentUserId]);
-
-  // Local state for optimistic updates during drag and drop
-  const [localCuts, setLocalCuts] = useState(cutsForDay);
-
-  useEffect(() => {
-    setLocalCuts(cutsForDay);
-  }, [cutsForDay]);
+  if (initialClients !== localCuts) {
+    setLocalCuts(initialClients);
+  }
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-
     const sourceIndex = result.source.index;
     const destIndex = result.destination.index;
     if (sourceIndex === destIndex) return;
@@ -128,34 +62,31 @@ export function CutListContent({
     const [moved] = newCuts.splice(sourceIndex, 1);
     newCuts.splice(destIndex, 0, moved);
 
-    // Calculate new LexoRank float order
+    // LexoRank Float Logic
     let newSortOrder = 0;
     if (destIndex === 0) {
-      // Dropped at the very top
       newSortOrder = (newCuts[1]?.address.sort_order ?? 1000) - 1000;
     } else if (destIndex === newCuts.length - 1) {
-      // Dropped at the very bottom
       newSortOrder =
         (newCuts[newCuts.length - 2]?.address.sort_order ?? 0) + 1000;
     } else {
-      // Dropped in between two items
-      const prevOrder = newCuts[destIndex - 1].address.sort_order ?? 0;
-      const nextOrder = newCuts[destIndex + 1].address.sort_order ?? 0;
-      newSortOrder = (prevOrder + nextOrder) / 2;
+      const prev = newCuts[destIndex - 1].address.sort_order;
+      const next = newCuts[destIndex + 1].address.sort_order;
+      newSortOrder = (prev + next) / 2;
     }
 
-    // Optimistically update local state
     moved.address.sort_order = newSortOrder;
     setLocalCuts(newCuts);
-
-    // Fire background mutation to persist to DB
-    updateRouteOrder({
-      addressId: moved.address.id,
-      newSortOrder,
-    });
+    updateRouteOrder({ addressId: moved.address.id, newSortOrder });
   };
 
-  if (!isMounted) return null; // Avoid hydration mismatch with DnD
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (newDate) {
+      const params = new URLSearchParams(searchParams);
+      params.set("date", format(newDate, "yyyy-MM-dd"));
+      router.push(`/client-cut-list?${params.toString()}`);
+    }
+  };
 
   return (
     <div className="space-y-8">
