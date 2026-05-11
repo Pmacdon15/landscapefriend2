@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS completed_jobs (
     assigned_to TEXT, -- Clerk user_id
     completed_by TEXT, -- Clerk user_id
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    captured_at TIMESTAMP WITH TIME ZONE, -- The exact time completion was recorded on client
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -111,3 +112,14 @@ CREATE TABLE IF NOT EXISTS site_maps (
 );
 
 CREATE INDEX IF NOT EXISTS idx_site_maps_address_id ON site_maps(address_id);
+
+-- Completion Photos
+CREATE TABLE IF NOT EXISTS completion_photos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    completed_job_id UUID NOT NULL REFERENCES completed_jobs(id) ON DELETE CASCADE,
+    blob_path TEXT NOT NULL,
+    captured_at TIMESTAMP WITH TIME ZONE, -- The time the photo was taken on the client device
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_completion_photos_job_id ON completion_photos(completed_job_id);

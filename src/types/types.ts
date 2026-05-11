@@ -80,4 +80,11 @@ export interface SiteMapRow {
   updated_at: Date;
 }
 
+export interface CompletionPhotoRow {
+  id: string;
+  completed_job_id: string;
+  blob_path: string;
+  created_at: Date;
+}
+
 export type { Client, Address, Schedule, CompletedJob, Assignment };

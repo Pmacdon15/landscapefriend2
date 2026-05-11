@@ -73,12 +73,14 @@ export async function deleteClientAction(clientId: string) {
   );
 }
 
-export async function saveSiteMapAction(
-  addressId: string,
-  name: string | null,
-  mapData: any | null,
-  file?: File,
-) {
+export async function saveSiteMapAction(formData: FormData) {
+  const addressId = formData.get("addressId") as string;
+  const name = formData.get("name") as string | null;
+  const mapDataRaw = formData.get("mapData") as string | null;
+  const file = formData.get("file") as File | null;
+
+  const mapData = mapDataRaw ? JSON.parse(mapDataRaw) : null;
+
   if (file && file.size > 1024 * 1024) {
     return {
       success: false,

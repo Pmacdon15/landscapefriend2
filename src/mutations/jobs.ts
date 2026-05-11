@@ -9,18 +9,28 @@ export function useCompleteJob() {
       serviceType,
       assignedTo,
       notes,
+      photoFile,
+      capturedAt,
+      completedAt,
     }: {
       addressId: string;
       serviceType: "grass" | "snow";
       assignedTo?: string | null;
       notes?: string | null;
+      photoFile?: File;
+      capturedAt?: Date | null;
+      completedAt?: Date | null;
     }) => {
-      const { success, job, error } = await completeJobAction(
-        addressId,
-        serviceType,
-        assignedTo,
-        notes,
-      );
+      const formData = new FormData();
+      formData.append("addressId", addressId);
+      formData.append("serviceType", serviceType);
+      if (assignedTo) formData.append("assignedTo", assignedTo);
+      if (notes) formData.append("notes", notes);
+      if (photoFile) formData.append("photoFile", photoFile);
+      if (capturedAt) formData.append("capturedAt", capturedAt.toISOString());
+      if (completedAt) formData.append("completedAt", completedAt.toISOString());
+
+      const { success, job, error } = await completeJobAction(formData);
 
       if (!success || !job) {
         throw new Error(error ?? "Failed to complete job");

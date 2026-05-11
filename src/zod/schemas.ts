@@ -16,6 +16,13 @@ export const AssignmentSchema = z.object({
   scheduled_date: z.string(), // ISO date string
 });
 
+export const CompletionPhotoSchema = z.object({
+  id: z.string().uuid(),
+  completed_job_id: z.string().uuid(),
+  blob_path: z.string(),
+  created_at: z.date(),
+});
+
 export const CompletedJobSchema = z.object({
   id: z.string().uuid(),
   address_id: z.string().uuid(),
@@ -25,6 +32,7 @@ export const CompletedJobSchema = z.object({
   completed_by: z.string().nullable().optional(),
   completed_at: z.date(),
   notes: z.string().nullable().optional(),
+  photos: z.array(CompletionPhotoSchema).optional(),
 });
 
 export const SiteMapSchema = z.object({
