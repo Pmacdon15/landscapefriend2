@@ -1,5 +1,5 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { differenceInCalendarDays, format, parseISO, startOfDay } from "date-fns";
+import { differenceInCalendarDays, parseISO, startOfDay } from "date-fns";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
 import type { AddressRow, ClientRow, ScheduleRow } from "@/types/types";
@@ -37,6 +37,7 @@ import {
   type CreateClientInput,
   CreateClientInputSchema,
   type Schedule,
+  type SiteMap,
 } from "../zod/schemas";
 
 export type { Client, Address, Schedule, CompletedJob, Assignment };
@@ -156,9 +157,10 @@ export async function getClientsForCutListDal(
       if (!schedule) return null;
 
       // Normalize dates to avoid timezone issues (use UTC to avoid local day shifts)
-      const scheduleDateStr = schedule.next_cut_date instanceof Date 
-        ? schedule.next_cut_date.toISOString().split('T')[0]
-        : String(schedule.next_cut_date).split('T')[0];
+      const scheduleDateStr =
+        schedule.next_cut_date instanceof Date
+          ? schedule.next_cut_date.toISOString().split("T")[0]
+          : String(schedule.next_cut_date).split("T")[0];
       const scheduleDate = parseISO(scheduleDateStr);
       const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
       if (diffDays < 0) return null;
@@ -425,7 +427,11 @@ export async function completeJobDal(
       );
 
       if (photoBlobPath) {
-        await insertCompletionPhotoDb(job.id, photoBlobPath, capturedAt || null);
+        await insertCompletionPhotoDb(
+          job.id,
+          photoBlobPath,
+          capturedAt || null,
+        );
       }
 
       return job as CompletedJob;
@@ -564,8 +570,7 @@ export async function deleteSiteMapDal(
   if (!parsedSiteMapId.success)
     return errAsync({ reason: "Invalid site map ID" });
 
-  return ResultAsync.fromPromise(
-    deleteSiteMapDb(parsedSiteMapId.data),
-    () => ({ reason: "Failed to delete site map" }),
-  );
+  return ResultAsync.fromPromise(deleteSiteMapDb(parsedSiteMapId.data), () => ({
+    reason: "Failed to delete site map",
+  }));
 }

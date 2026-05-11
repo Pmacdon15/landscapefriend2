@@ -3,8 +3,10 @@ import type {
   AssignmentRow,
   ClientRow,
   CompletedJobRow,
+  CompletionPhotoRow,
   RouteOrderRow,
   ScheduleRow,
+  SiteMapRow,
 } from "@/types/types";
 import { sql } from "../client";
 
