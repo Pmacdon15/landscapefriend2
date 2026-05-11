@@ -36,9 +36,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Address, Client, SiteMap } from "@/dal/clients";
+import type { Address, Client } from "@/dal/clients";
 import { getGoogleMapsUrl } from "@/lib/utils";
 import { useDeleteClient, useUpdateAddressAssignee } from "@/mutations/clients";
+import type { SiteMap } from "@/zod/schemas";
 import type { OptimisticAction } from "./client-info/client-info-container";
 
 interface ClientCardProps {
@@ -173,9 +174,11 @@ export function ClientCard({
                           setViewingSiteMap({
                             id: address.completed_job!.photos![0].id,
                             address_id: address.id,
-                            blob_path: address.completed_job!.photos![0].blob_path,
+                            blob_path:
+                              address.completed_job!.photos![0].blob_path,
                             name: "Latest Service Photo",
-                            created_at: address.completed_job!.photos![0].created_at,
+                            created_at:
+                              address.completed_job!.photos![0].created_at,
                           })
                         }
                       >
