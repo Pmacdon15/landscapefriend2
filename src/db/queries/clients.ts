@@ -94,6 +94,18 @@ export async function deleteAddressDb(
   `;
 }
 
+export async function deleteClientDb(
+  clientId: string,
+  orgId: string,
+): Promise<void> {
+  // Rely on ON DELETE CASCADE for schedules, route_orders, completed_jobs, assignments, and addresses.
+  // We just need to delete the client record.
+  await sql`
+    DELETE FROM clients
+    WHERE id = ${clientId} AND org_id = ${orgId}
+  `;
+}
+
 export async function getAddressesDb(orgId: string): Promise<AddressRow[]> {
   const result = await sql`
     SELECT a.* FROM addresses a

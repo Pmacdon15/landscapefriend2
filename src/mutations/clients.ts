@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   createClientAction,
+  deleteClientAction,
   updateAddressAssigneeAction,
   updateClientAction,
 } from "@/actions/clients";
@@ -75,6 +76,25 @@ export function useUpdateAddressAssignee() {
     },
     onSuccess: () => {
       toast.success("Assignee updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+export function useDeleteClient() {
+  return useMutation({
+    mutationFn: async (clientId: string) => {
+      const { success, error } = await deleteClientAction(clientId);
+
+      if (!success) {
+        throw new Error(error ?? "Failed to delete client");
+      }
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast.success("Client deleted");
     },
     onError: (error: Error) => {
       toast.error(error.message);

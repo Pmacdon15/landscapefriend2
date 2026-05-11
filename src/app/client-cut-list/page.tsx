@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Suspense } from "react";
 import { getClientsForCutListDal } from "@/dal/clients";
@@ -7,7 +6,6 @@ import { CutListContent } from "./cut-list-content";
 export default async function ClientCutListPage(
   props: PageProps<"/client-cut-list">,
 ) {
-
   const clientsPromise = props.searchParams.then((p) =>
     getClientsForCutListDal(
       String(

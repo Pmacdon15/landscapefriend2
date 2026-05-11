@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { CreateClientInput } from "@/zod/schemas";
 import {
   createClientDal,
+  deleteClientDal,
   updateAddressAssigneeDal,
   updateClientDal,
 } from "../dal/clients";
@@ -49,6 +50,17 @@ export async function updateAddressAssigneeAction(
   userId: string | null,
 ) {
   const result = await updateAddressAssigneeDal(addressId, userId);
+  revalidatePath("/client-info-list");
+  revalidatePath("/client-cut-list");
+
+  return result.match(
+    () => ({ success: true, error: null }),
+    (err) => ({ success: false, error: err.reason }),
+  );
+}
+
+export async function deleteClientAction(clientId: string) {
+  const result = await deleteClientDal(clientId);
   revalidatePath("/client-info-list");
   revalidatePath("/client-cut-list");
 

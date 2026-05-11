@@ -1,11 +1,20 @@
 "use client";
 import { format } from "date-fns";
-import { CalendarDays, Mail, MapPin, Phone, User } from "lucide-react";
+import { CalendarDays, Mail, MapPin, Phone, Trash, User } from "lucide-react";
 import { startTransition, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { ScheduleForm } from "@/components/schedules/schedule-form";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -20,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import type { Address, Client } from "@/dal/clients";
 import { getGoogleMapsUrl } from "@/lib/utils";
-import { useUpdateAddressAssignee } from "@/mutations/clients";
+import { useDeleteClient, useUpdateAddressAssignee } from "@/mutations/clients";
 import type { OptimisticAction } from "./client-info/client-info-container";
 
 interface ClientCardProps {
@@ -35,19 +44,73 @@ export function ClientCard({
   setOptimistic,
 }: ClientCardProps) {
   const [openAddressId, setOpenAddressId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const addresses = client.addresses || [];
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
+  const { mutate: deleteClient } = useDeleteClient();
 
   return (
     <Card className="hover:shadow-lg transition-shadow duration-300 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
       <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
         <CardTitle className="text-xl font-bold flex items-center justify-between">
           <span>{client.name}</span>
-          <EditClientModal
-            client={client}
-            members={members}
-            setOptimistic={setOptimistic}
-          />
+          <div className="flex items-center gap-2">
+            <EditClientModal
+              client={client}
+              members={members}
+              setOptimistic={setOptimistic}
+            />
+            <Dialog
+              open={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
+            >
+              <DialogTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash className="h-4 w-4" />
+                    <span className="sr-only">Delete Client</span>
+                  </Button>
+                }
+              />
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Client</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to delete {client.name}? This will
+                    permanently remove the client and all associated addresses,
+                    schedules, and history. This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDeleteDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      startTransition(() => {
+                        setOptimistic({
+                          type: "delete-client",
+                          clientId: client.id,
+                        });
+                        deleteClient(client.id);
+                        setIsDeleteDialogOpen(false);
+                      });
+                    }}
+                  >
+                    Delete Client
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4 grid gap-4">
@@ -110,8 +173,15 @@ export function ClientCard({
                       });
                     }}
                   >
-                    <SelectTrigger className="h-7 w-35 text-[10px] bg-transparent border-none p-0 focus:ring-0">
-                      <SelectValue placeholder="Assignee" />
+                    <SelectTrigger className="h-7 w-fit text-[10px] bg-transparent border-none p-0 focus:ring-0">
+                      <SelectValue placeholder="Assignee">
+                        {members.find((m) => m.id === address.assigned_to)
+                          ?.name ||
+                          (address.assigned_to === "unassigned" ||
+                          !address.assigned_to
+                            ? "Unassigned"
+                            : address.assigned_to)}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unassigned">Unassigned</SelectItem>

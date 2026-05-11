@@ -6,6 +6,7 @@ import type { AddressRow, ClientRow, ScheduleRow } from "@/types/types";
 import {
   deleteAddressDb,
   deleteAssignmentDb,
+  deleteClientDb,
   getAddressesDb,
   getAssignmentsDb,
   getClientsDb,
@@ -473,5 +474,21 @@ export async function updateAddressAssigneeDal(
       userId === "unassigned" ? null : userId,
     ),
     () => ({ reason: "Failed to update address assignee" }),
+  );
+}
+
+export async function deleteClientDal(
+  clientId: string,
+): Promise<Result<void, { reason: string }>> {
+  const { orgId } = await auth();
+
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
+
+  const parsedClientId = z.string().uuid().safeParse(clientId);
+  if (!parsedClientId.success) return errAsync({ reason: "Invalid client ID" });
+
+  return ResultAsync.fromPromise(
+    deleteClientDb(parsedClientId.data, orgId),
+    () => ({ reason: "Failed to delete client" }),
   );
 }

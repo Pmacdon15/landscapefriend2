@@ -13,7 +13,8 @@ export type OptimisticAction =
       nextCutDate: Date;
     }
   | { type: "add-client"; client: Client }
-  | { type: "edit-client"; client: Client };
+  | { type: "edit-client"; client: Client }
+  | { type: "delete-client"; clientId: string };
 
 export default function ClientInfoContainer({
   clientsPromise,
@@ -35,6 +36,8 @@ export default function ClientInfoContainer({
           return state.map((c) =>
             c.id === action.client.id ? action.client : c,
           );
+        case "delete-client":
+          return state.filter((c) => c.id !== action.clientId);
         case "update-assignee":
         case "update-schedule":
           return state.map((client) => {

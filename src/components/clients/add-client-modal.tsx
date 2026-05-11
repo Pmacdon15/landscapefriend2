@@ -383,7 +383,14 @@ export function AddClientModal({
                                   id={subField.name}
                                   onBlur={subField.handleBlur}
                                 >
-                                  <SelectValue placeholder="Select member" />
+                                  <SelectValue placeholder="Select member">
+                                    {members.find(
+                                      (m) => m.id === subField.state.value,
+                                    )?.name ||
+                                      (subField.state.value === "unassigned"
+                                        ? "Unassigned"
+                                        : subField.state.value)}
+                                  </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="unassigned">
