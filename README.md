@@ -40,16 +40,58 @@ A modern scheduling and client management application built with Next.js.
    ```
 
 2. Install dependencies:
-   ```bash
-   npm install
-   ```
+
+<details open>
+<summary><b>npm</b></summary>
+
+```bash
+npm install
+```
+</details>
+
+<details>
+<summary><b>bun</b></summary>
+
+```bash
+bun install
+```
+</details>
+
+<details>
+<summary><b>yarn</b></summary>
+
+```bash
+yarn install
+```
+</details>
 
 3. Configure environment variables (see [Environment Configuration Template](#environment-configuration-template)).
 
 4. Run the development server:
-   ```bash
-   npm run dev
-   ```
+
+<details open>
+<summary><b>npm</b></summary>
+
+```bash
+npm run dev
+```
+</details>
+
+<details>
+<summary><b>bun</b></summary>
+
+```bash
+bun run dev
+```
+</details>
+
+<details>
+<summary><b>yarn</b></summary>
+
+```bash
+yarn dev
+```
+</details>
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
@@ -76,8 +118,32 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
 
 ## Scripts
 
+<details open>
+<summary><b>npm</b></summary>
+
 - `npm run dev`: Starts the development server.
 - `npm run build`: Builds the application for production.
 - `npm run start`: Starts the production server.
 - `npm run lint`: Runs Biome linter.
 - `npm run format`: Formats code with Biome.
+</details>
+
+<details>
+<summary><b>bun</b></summary>
+
+- `bun run dev`: Starts the development server.
+- `bun run build`: Builds the application for production.
+- `bun run start`: Starts the production server.
+- `bun run lint`: Runs Biome linter.
+- `bun run format`: Formats code with Biome.
+</details>
+
+<details>
+<summary><b>yarn</b></summary>
+
+- `yarn dev`: Starts the development server.
+- `yarn build`: Builds the application for production.
+- `yarn start`: Starts the production server.
+- `yarn lint`: Runs Biome linter.
+- `yarn format`: Formats code with Biome.
+</details>
