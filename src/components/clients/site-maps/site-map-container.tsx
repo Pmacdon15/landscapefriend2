@@ -3,13 +3,11 @@
 import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
 import {
-  Download,
   FileImage,
   Map as MapIcon,
   Plus,
   Trash2,
 } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +31,7 @@ import type { Address } from "@/dal/clients";
 import { useDeleteSiteMap, useSaveSiteMap } from "@/mutations/clients";
 import type { SiteMap } from "@/zod/schemas";
 import { SiteMapEditor } from "./site-map-editor";
+import { SiteMapViewer } from "../site-map-viewer";
 
 interface SiteMapContainerProps {
   address: Address;
@@ -104,225 +103,183 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
     );
   };
 
-  const handleDownload = async () => {
-    if (!viewingSiteMap) return;
-    try {
-      const response = await fetch(`/api/site-maps/image/${viewingSiteMap.id}`);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${viewingSiteMap.name || "site-map"}.png`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error("Download failed:", error);
-    }
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-[10px] gap-1.5 text-slate-500 hover:text-primary"
-          >
-            <MapIcon className="h-3 w-3" />
-            Site Maps ({address.site_maps?.length || 0})
-          </Button>
-        }
-      />
-      <DialogContent className="sm:max-w-[700px]">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Site Maps for {address.street}</DialogTitle>
-            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              <DialogTrigger
-                render={
-                  <Button size="sm" className="h-8 gap-1.5">
-                    <Plus className="h-4 w-4" />
-                    Add Site Map
-                  </Button>
-                }
-              />
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add New Site Map</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-6 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Name / Description</Label>
-                    <Input
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g., Front Yard Area"
-                    />
-                  </div>
-
-                  <div className="flex gap-4 border-b">
-                    <button
-                      type="button"
-                      className={`pb-2 px-1 text-sm font-medium transition-colors ${
-                        activeTab === "upload"
-                          ? "border-b-2 border-primary text-primary"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
-                      onClick={() => setActiveTab("upload")}
-                    >
-                      Upload Image
-                    </button>
-                    <button
-                      type="button"
-                      className={`pb-2 px-1 text-sm font-medium transition-colors ${
-                        activeTab === "draw"
-                          ? "border-b-2 border-primary text-primary"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
-                      onClick={() => setActiveTab("draw")}
-                    >
-                      Draw Area
-                    </button>
-                  </div>
-
-                  {activeTab === "upload" ? (
-                    <div className="grid gap-2">
-                      <Label htmlFor="file">
-                        Upload Image{" "}
-                        <span className="text-[10px] font-normal text-muted-foreground">
-                          (Max 1MB, will be compressed)
-                        </span>
-                      </Label>
-                      <Input
-                        id="file"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      />
-                      <Button
-                        onClick={() => handleSave()}
-                        disabled={isSaving || !file}
-                      >
-                        {isSaving
-                          ? compressionStatus || "Saving..."
-                          : "Save Upload"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <SiteMapEditor
-                      address={`${address.street}, ${address.city}, ${address.state}`}
-                      onSave={(data, file) => handleSave(data, file)}
-                    />
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </DialogHeader>
-
-        <div className="border rounded-lg mt-4 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Date Added</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {address.site_maps && address.site_maps.length > 0 ? (
-                address.site_maps.map((sm) => (
-                  <TableRow key={sm.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {sm.map_data ? (
-                          <MapIcon className="h-4 w-4 text-emerald-500" />
-                        ) : sm.blob_path ? (
-                          <FileImage className="h-4 w-4 text-primary" />
-                        ) : null}
-                        {sm.name || "Unnamed Site Map"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(sm.created_at), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {(sm.blob_path || sm.map_data) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => setViewingSiteMap(sm)}
-                          >
-                            View
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => {
-                            if (window.confirm("Delete this site map?")) {
-                              deleteSiteMap(sm.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={3}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    No site maps found for this address.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </DialogContent>
-
-      <Dialog
-        open={!!viewingSiteMap}
-        onOpenChange={(open) => !open && setViewingSiteMap(null)}
-      >
-        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white">
-          {viewingSiteMap?.blob_path && (
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger
+          render={
             <Button
               variant="ghost"
-              size="icon"
-              className="h-10 w-10 text-white transition-colors ml-auto mr-8 z-50"
-              onClick={handleDownload}
+              size="sm"
+              className="h-7 text-[10px] gap-1.5 text-slate-500 hover:text-primary"
             >
-              <Download className="h-5 w-5" />
-              <span className="sr-only">Download</span>
+              <MapIcon className="h-3 w-3" />
+              Site Maps ({address.site_maps?.length || 0})
             </Button>
-          )}
+          }
+        />
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Site Maps for {address.street}</DialogTitle>
+              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                <DialogTrigger
+                  render={
+                    <Button size="sm" className="h-8 gap-1.5">
+                      <Plus className="h-4 w-4" />
+                      Add Site Map
+                    </Button>
+                  }
+                />
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add New Site Map</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-6 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Name / Description</Label>
+                      <Input
+                        id="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g., Front Yard Area"
+                      />
+                    </div>
 
-          {viewingSiteMap?.blob_path && (
-            <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
-              <Image
-                src={`/api/site-maps/image/${viewingSiteMap?.id}`}
-                alt="Viewing existing sitemap"
-                fill
-                unoptimized
-                className="object-contain shadow-2xl rounded-sm transition-all duration-300"
-              />
+                    <div className="flex gap-4 border-b">
+                      <button
+                        type="button"
+                        className={`pb-2 px-1 text-sm font-medium transition-colors ${
+                          activeTab === "upload"
+                            ? "border-b-2 border-primary text-primary"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                        onClick={() => setActiveTab("upload")}
+                      >
+                        Upload Image
+                      </button>
+                      <button
+                        type="button"
+                        className={`pb-2 px-1 text-sm font-medium transition-colors ${
+                          activeTab === "draw"
+                            ? "border-b-2 border-primary text-primary"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                        onClick={() => setActiveTab("draw")}
+                      >
+                        Draw Area
+                      </button>
+                    </div>
+
+                    {activeTab === "upload" ? (
+                      <div className="grid gap-2">
+                        <Label htmlFor="file">
+                          Upload Image{" "}
+                          <span className="text-[10px] font-normal text-muted-foreground">
+                            (Max 1MB, will be compressed)
+                          </span>
+                        </Label>
+                        <Input
+                          id="file"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setFile(e.target.files?.[0] || null)}
+                        />
+                        <Button
+                          onClick={() => handleSave()}
+                          disabled={isSaving || !file}
+                        >
+                          {isSaving
+                            ? compressionStatus || "Saving..."
+                            : "Save Upload"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <SiteMapEditor
+                        address={`${address.street}, ${address.city}, ${address.state}`}
+                        onSave={(data, file) => handleSave(data, file)}
+                      />
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
-          )}
+          </DialogHeader>
+
+          <div className="border rounded-lg mt-4 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Date Added</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {address.site_maps && address.site_maps.length > 0 ? (
+                  address.site_maps.map((sm) => (
+                    <TableRow key={sm.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {sm.map_data ? (
+                            <MapIcon className="h-4 w-4 text-emerald-500" />
+                          ) : sm.blob_path ? (
+                            <FileImage className="h-4 w-4 text-primary" />
+                          ) : null}
+                          {sm.name || "Unnamed Site Map"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(sm.created_at), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {(sm.blob_path || sm.map_data) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => setViewingSiteMap(sm)}
+                            >
+                              View
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              if (window.confirm("Delete this site map?")) {
+                                deleteSiteMap(sm.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={3}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No site maps found for this address.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </DialogContent>
       </Dialog>
-    </Dialog>
+
+      <SiteMapViewer
+        viewingSiteMap={viewingSiteMap}
+        onClose={() => setViewingSiteMap(null)}
+      />
+    </>
   );
 }

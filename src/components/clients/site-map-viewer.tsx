@@ -33,15 +33,15 @@ export function SiteMapViewer({ viewingSiteMap, onClose }: SiteMapViewerProps) {
 
   return (
     <Dialog open={!!viewingSiteMap} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white">
+      <DialogContent className="fixed inset-0 top-0 left-0 translate-x-0 translate-y-0 max-w-none w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white rounded-none sm:max-w-none">
         {viewingSiteMap?.blob_path && (
           <Button
             variant="ghost"
-            size="icon-sm"
-            className="absolute top-2 right-10 h-8 w-8 text-white hover:bg-white/20 transition-colors z-50"
+            size="icon"
+            className="absolute top-2 right-12 h-10 w-10 text-white hover:bg-white/20 transition-colors z-50 rounded-full"
             onClick={handleDownload}
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-5 w-5" />
             <span className="sr-only">Download</span>
           </Button>
         )}

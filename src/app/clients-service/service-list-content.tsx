@@ -8,14 +8,21 @@ import {
 } from "@hello-pangea/dnd";
 import imageCompression from "browser-image-compression";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, CheckCircle2, GripVertical, MapPin } from "lucide-react";
+import {
+  CalendarIcon,
+  CheckCircle2,
+  GripVertical,
+  MapPin,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
-import { PhotoViewer } from "@/components/clients/client-card-components/PhotoViewer";
+import { SiteMapViewer } from "@/components/clients/site-map-viewer";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { CameraCapture } from "@/components/ui/camera-capture";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -139,24 +146,6 @@ export function ServiceListContent({
       const params = new URLSearchParams(searchParams);
       params.set("date", format(newDate, "yyyy-MM-dd"));
       router.push(`/clients-service?${params.toString()}`);
-    }
-  };
-
-  const handleDownload = async () => {
-    if (!viewingSiteMap) return;
-    try {
-      const response = await fetch(`/api/site-maps/image/${viewingSiteMap.id}`);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${viewingSiteMap.name || "photo"}.png`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error("Download failed:", error);
     }
   };
 
@@ -337,8 +326,25 @@ export function ServiceListContent({
         )}
       </div>
 
-      
-      <PhotoViewer
+      <Dialog
+        open={!!completingAddressId}
+        onOpenChange={(open) => !open && setCompletingAddressId(null)}
+      >
+        <DialogContent
+          className="fixed inset-0 top-0 left-0 translate-x-0 translate-y-0 max-w-none w-full h-full p-0 border-none bg-black overflow-hidden flex items-center justify-center rounded-none sm:max-w-none"
+          showCloseButton={false}
+        >
+          {completingAddressId && (
+            <CameraCapture
+              onCapture={onPhotoCapture}
+              onClose={() => setCompletingAddressId(null)}
+              isPending={isCompleting}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <SiteMapViewer
         viewingSiteMap={viewingSiteMap}
         onClose={() => setViewingSiteMap(null)}
       />
