@@ -3,6 +3,7 @@ import { use, useOptimistic } from "react";
 import type { Client, Schedule } from "@/dal/clients";
 import { AddClientModal } from "../add-client-modal";
 import { ClientCard } from "../client-card";
+import { ClientSearchBar } from "../client-search-bar";
 
 export type OptimisticAction =
   | { type: "update-assignee"; addressId: string; userId: string | null }
@@ -14,7 +15,8 @@ export type OptimisticAction =
     }
   | { type: "add-client"; client: Client }
   | { type: "edit-client"; client: Client }
-  | { type: "delete-client"; clientId: string };
+  | { type: "delete-client"; clientId: string }
+  | { type: "optimistic-search"; clients: Client[] };
 
 export default function ClientInfoContainer({
   clientsPromise,
@@ -30,6 +32,8 @@ export default function ClientInfoContainer({
     initialClients,
     (state: Client[], action: OptimisticAction) => {
       switch (action.type) {
+        case "optimistic-search":
+          return action.clients;
         case "add-client":
           return [action.client, ...state];
         case "edit-client":
@@ -80,8 +84,11 @@ export default function ClientInfoContainer({
 
   return (
     <div className="w-full flex flex-col p-4 gap-4">
-      <div className="ml-auto">
-        <AddClientModal members={members} setOptimistic={setOptimistic} />
+      <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
+        <ClientSearchBar setOptimistic={setOptimistic} />
+        <div className="ml-auto">
+          <AddClientModal members={members} setOptimistic={setOptimistic} />
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 mb-10">
         {optimisticClients.map((client: Client) => (

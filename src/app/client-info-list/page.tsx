@@ -10,6 +10,7 @@ export default async function ClientInfoListPage(
   const clientsPromise = props.searchParams.then((params) =>
     getClientsForInfoDal(
       Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
+      Array.isArray(params.search) ? params.search[0] : (params.search ?? undefined),
     ).then((data) => data.clients),
   );
   const membersPromise = getOrganizationMembersDal();
@@ -20,6 +21,7 @@ export default async function ClientInfoListPage(
   const totalPagesPromise = props.searchParams.then((params) =>
     getClientsForInfoDal(
       Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
+      Array.isArray(params.search) ? params.search[0] : (params.search ?? undefined),
     ).then((data) => data.totalPages),
   );
 
