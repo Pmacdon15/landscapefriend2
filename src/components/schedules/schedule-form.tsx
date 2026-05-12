@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useUpsertSchedule } from "@/mutations/schedules";
-import type { OptimisticAction } from "../clients/client-info/client-info-container";
+import type { OptimisticAction } from "@/types/types";
 
 interface ScheduleFormProps {
   addressId: string;

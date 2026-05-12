@@ -1,22 +1,9 @@
 "use client";
 import { use, useOptimistic } from "react";
-import type { Client, Schedule } from "@/dal/clients";
+import type { Client, OptimisticAction, Schedule } from "@/types/types";
 import { AddClientModal } from "../add-client-modal";
 import { ClientCard } from "../client-card";
 import { ClientSearchBar } from "../client-search-bar";
-
-export type OptimisticAction =
-  | { type: "update-assignee"; addressId: string; userId: string | null }
-  | {
-      type: "update-schedule";
-      addressId: string;
-      frequency: string;
-      nextCutDate: Date;
-    }
-  | { type: "add-client"; client: Client }
-  | { type: "edit-client"; client: Client }
-  | { type: "delete-client"; clientId: string }
-  | { type: "optimistic-search"; clients: Client[] };
 
 export default function ClientInfoContainer({
   clientsPromise,

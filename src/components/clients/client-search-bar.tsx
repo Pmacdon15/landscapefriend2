@@ -5,9 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useEffect, useRef, useState } from "react";
-import type { Client } from "@/dal/clients";
+import type { Client, OptimisticAction } from "@/types/types";
 import { Button } from "../ui/button";
-import type { OptimisticAction } from "./client-info/client-info-container";
 
 export function ClientSearchBar({
   setOptimistic,

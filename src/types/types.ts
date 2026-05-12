@@ -87,4 +87,29 @@ export interface CompletionPhotoRow {
   created_at: Date;
 }
 
+export type OptimisticAction =
+  | { type: "update-assignee"; addressId: string; userId: string | null }
+  | {
+      type: "update-schedule";
+      addressId: string;
+      frequency: string;
+      nextCutDate: Date;
+    }
+  | { type: "add-client"; client: Client }
+  | { type: "edit-client"; client: Client }
+  | { type: "delete-client"; clientId: string }
+  | { type: "optimistic-search"; clients: Client[] };
+
 export type { Client, Address, Schedule, CompletedJob, Assignment };
+
+
+export interface ClientCardProps {
+  client: Client;
+  members: { id: string; name: string }[];
+  setOptimistic: (action: OptimisticAction) => void;
+}
+
+export interface ClientCardContactProps {
+  email: string | null | undefined;
+  phone: string | null | undefined;
+}

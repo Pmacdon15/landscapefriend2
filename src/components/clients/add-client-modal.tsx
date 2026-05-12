@@ -21,9 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Address, Client } from "@/dal/clients";
+import type { Address, Client, OptimisticAction } from "@/types/types";
 import { useCreateClient } from "@/mutations/clients";
-import type { OptimisticAction } from "./client-info/client-info-container";
 
 interface AddClientModalProps {
   members: { id: string; name: string }[];

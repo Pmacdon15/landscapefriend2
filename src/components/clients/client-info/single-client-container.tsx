@@ -2,8 +2,7 @@
 
 import { useOptimistic } from "react";
 import { ClientCard } from "@/components/clients/client-card";
-import type { Client, Schedule } from "@/dal/clients";
-import type { OptimisticAction } from "./client-info-container";
+import type { Client, OptimisticAction, Schedule } from "@/types/types";
 
 export function SingleClientContainer({
   client,
