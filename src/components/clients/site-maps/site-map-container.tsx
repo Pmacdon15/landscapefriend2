@@ -8,7 +8,6 @@ import {
   Map as MapIcon,
   Plus,
   Trash2,
-  X,
 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -298,47 +297,28 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
         open={!!viewingSiteMap}
         onOpenChange={(open) => !open && setViewingSiteMap(null)}
       >
-        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex items-center justify-center text-white">
-          {viewingSiteMap && (
+        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white">
+          {viewingSiteMap?.blob_path && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-white transition-colors ml-auto mr-8 z-50"
+              onClick={handleDownload}
+            >
+              <Download className="h-5 w-5" />
+              <span className="sr-only">Download</span>
+            </Button>
+          )}
+
+          {viewingSiteMap?.blob_path && (
             <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
-              <div className="absolute top-4 right-4 flex items-center gap-2 z-50">
-                {viewingSiteMap.blob_path && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
-                    onClick={handleDownload}
-                  >
-                    <Download className="h-5 w-5" />
-                    <span className="sr-only">Download</span>
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
-                  onClick={() => setViewingSiteMap(null)}
-                >
-                  <X className="h-5 w-5" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </div>
-              {viewingSiteMap.blob_path ? (
-                <Image
-                  src={`/api/site-maps/image/${viewingSiteMap.id}`}
-                  alt="Viewing existing sitemap"
-                  fill
-                  unoptimized
-                  className="object-contain shadow-2xl rounded-sm transition-all duration-300"
-                />
-              ) : viewingSiteMap.map_data ? (
-                <div className="w-full max-w-5xl aspect-[12/8] bg-white rounded-lg overflow-hidden shadow-2xl">
-                  <SiteMapEditor
-                    address={`${address.street}, ${address.city}, ${address.state}`}
-                    readOnlyPoints={viewingSiteMap.map_data}
-                  />
-                </div>
-              ) : null}
+              <Image
+                src={`/api/site-maps/image/${viewingSiteMap?.id}`}
+                alt="Viewing existing sitemap"
+                fill
+                unoptimized
+                className="object-contain shadow-2xl rounded-sm transition-all duration-300"
+              />
             </div>
           )}
         </DialogContent>
