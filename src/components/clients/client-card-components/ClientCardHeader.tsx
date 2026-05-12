@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash } from "lucide-react";
-import { useState, startTransition } from "react";
+import { startTransition, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { Button } from "@/components/ui/button";
 import { CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Client, OptimisticAction } from "@/types/types";
 import { useDeleteClient } from "@/mutations/clients";
+import type { Client, OptimisticAction } from "@/types/types";
 
 interface ClientCardHeaderProps {
   client: Client;

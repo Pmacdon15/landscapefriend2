@@ -21,8 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Client, OptimisticAction } from "@/types/types";
 import { useUpdateClient } from "@/mutations/clients";
+import type { Client, OptimisticAction } from "@/types/types";
 
 interface EditClientModalProps {
   client: Client;

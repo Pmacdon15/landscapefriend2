@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { CalendarDays, FileImage, MapPin, User } from "lucide-react";
-import { useState, startTransition } from "react";
+import { startTransition, useState } from "react";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { ScheduleForm } from "@/components/schedules/schedule-form";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -18,9 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Address, OptimisticAction } from "@/types/types";
 import { getGoogleMapsUrl } from "@/lib/utils";
 import { useUpdateAddressAssignee } from "@/mutations/clients";
+import type { Address, OptimisticAction } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
 
 interface AddressItemProps {

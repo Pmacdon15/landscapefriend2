@@ -1,27 +1,47 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Check, RotateCcw, X } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./button";
 
 interface CameraCaptureProps {
   onCapture: (file: File, capturedAt: Date) => void;
   onClose: () => void;
+  isPending?: boolean;
 }
 
-export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
+export function CameraCapture({
+  onCapture,
+  onClose,
+  isPending,
+}: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [_stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [capturedFile, setCapturedFile] = useState<File | null>(null);
+  const [capturedAt, setCapturedAt] = useState<Date | null>(null);
 
   useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    let currentStream: MediaStream | null = null;
+
     async function startCamera() {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" }, // Prefer back camera
           audio: false,
         });
+        currentStream = mediaStream;
         setStream(mediaStream);
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
@@ -34,16 +54,18 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       }
     }
 
-    startCamera();
+    if (!previewUrl) {
+      startCamera();
+    }
 
     return () => {
-      if (stream) {
-        for (const track of stream.getTracks()) {
+      if (currentStream) {
+        for (const track of currentStream.getTracks()) {
           track.stop();
         }
       }
     };
-  }, [stream]);
+  }, [previewUrl]);
 
   const takePhoto = () => {
     const video = videoRef.current;
@@ -63,21 +85,38 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
         const file = new File([blob], `capture-${now.getTime()}.png`, {
           type: "image/png",
         });
-        onCapture(file, now);
+        setCapturedFile(file);
+        setCapturedAt(now);
+        setPreviewUrl(URL.createObjectURL(blob));
       }
     }, "image/png");
   };
 
+  const handleRetake = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    setCapturedFile(null);
+    setCapturedAt(null);
+  };
+
+  const handleConfirm = () => {
+    if (capturedFile && capturedAt) {
+      onCapture(capturedFile, capturedAt);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
+    <div className="relative w-full h-full bg-black flex flex-col items-center justify-center">
       <div className="absolute top-4 right-4 z-[110]">
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="text-white hover:bg-white/20"
+          className="text-white hover:bg-white/20 h-12 w-12 rounded-full"
         >
-          <X className="h-6 w-6" />
+          <X className="h-8 w-8" />
         </Button>
       </div>
 
@@ -87,6 +126,39 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
+        </div>
+      ) : previewUrl ? (
+        <div className="relative w-full h-full flex flex-col items-center justify-center">
+          <Image
+            src={previewUrl}
+            alt="Captured preview"
+            fill
+            unoptimized
+            className="object-cover max-w-4xl max-h-[80vh] mx-auto"
+          />
+          <div className="absolute bottom-8 flex items-center justify-center w-full gap-8">
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-16 w-16 rounded-full bg-white/10 text-white hover:bg-white/20 border-2 border-white"
+              onClick={handleRetake}
+              disabled={isPending}
+            >
+              <RotateCcw className="h-8 w-8" />
+            </Button>
+            <Button
+              size="lg"
+              className="h-20 w-20 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 border-4 border-white"
+              onClick={handleConfirm}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <span className="text-xs font-bold">Saving...</span>
+              ) : (
+                <Check className="h-10 w-10" />
+              )}
+            </Button>
+          </div>
         </div>
       ) : (
         <>

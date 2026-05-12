@@ -31,10 +31,7 @@ export function PhotoViewer({ viewingSiteMap, onClose }: PhotoViewerProps) {
   };
 
   return (
-    <Dialog
-      open={!!viewingSiteMap}
-      onOpenChange={(open) => !open && onClose()}
-    >
+    <Dialog open={!!viewingSiteMap} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white">
         {viewingSiteMap?.blob_path && (
           <Button

@@ -102,7 +102,6 @@ export type OptimisticAction =
 
 export type { Client, Address, Schedule, CompletedJob, Assignment };
 
-
 export interface ClientCardProps {
   client: Client;
   members: { id: string; name: string }[];

@@ -53,8 +53,6 @@ export function ServiceListContent({
   const [completingAddressId, setCompletingAddressId] = useState<string | null>(
     null,
   );
-  const [capturedPhoto, setCapturedPhoto] = useState<File | null>(null);
-  const [capturedAt, setCapturedAt] = useState<Date | null>(null);
   const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
 
   const defaultDate = use(datePromise);
@@ -108,26 +106,22 @@ export function ServiceListContent({
     setCompletingAddressId(addressId);
   };
 
-  const onPhotoCapture = (file: File, timestamp: Date) => {
-    setCapturedPhoto(file);
-    setCapturedAt(timestamp);
-  };
+  const onPhotoCapture = async (file: File, timestamp: Date) => {
+    const addr = optimisticCuts.find(
+      (c) => c.address.id === completingAddressId,
+    )?.address;
+    if (!completingAddressId || !addr) return;
 
-  const handleFinishCompletion = async (
-    address: CutListItem["address"] | undefined,
-  ) => {
-    if (!completingAddressId || !address) return;
+    let fileToUpload: File | Blob = file;
 
-    let fileToUpload = capturedPhoto || undefined;
-
-    if (fileToUpload && fileToUpload.size > 1024 * 1024) {
+    if (fileToUpload.size > 1024 * 1024) {
       try {
         const options = {
           maxSizeMB: 0.9,
           maxWidthOrHeight: 1920,
           useWebWorker: true,
         };
-        fileToUpload = await imageCompression(fileToUpload, options);
+        fileToUpload = await imageCompression(file, options);
       } catch (error) {
         console.error("Compression error:", error);
       }
@@ -137,16 +131,14 @@ export function ServiceListContent({
       {
         addressId: completingAddressId,
         serviceType: "grass",
-        assignedTo: address.assignment?.user_id || address.assigned_to || null,
-        photoFile: fileToUpload,
-        capturedAt: capturedAt,
-        completedAt: date, // Use the date of the service list
+        assignedTo: addr.assignment?.user_id || addr.assigned_to || null,
+        photoFile: fileToUpload as File,
+        capturedAt: timestamp,
+        completedAt: date,
       },
       {
         onSuccess: () => {
           setCompletingAddressId(null);
-          setCapturedPhoto(null);
-          setCapturedAt(null);
         },
       },
     );
@@ -355,53 +347,23 @@ export function ServiceListContent({
         )}
       </div>
 
-      {completingAddressId && !capturedPhoto && (
-        <CameraCapture
-          onCapture={onPhotoCapture}
-          onClose={() => setCompletingAddressId(null)}
-        />
-      )}
-
-      {completingAddressId && capturedPhoto && (
-        <div className="fixed inset-0 z-[110] bg-black/90 flex flex-col items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl max-w-lg w-full space-y-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-center">
-              Confirm Completion
-            </h3>
-            <div className="aspect-square w-full relative rounded-lg overflow-hidden border">
-              <Image
-                src={URL.createObjectURL(capturedPhoto)}
-                alt="confirmation preview"
-                fill
-                unoptimized
-                className="object-cover"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setCapturedPhoto(null)}
-                disabled={isCompleting}
-              >
-                Retake
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => {
-                  const addr = optimisticCuts.find(
-                    (c) => c.address.id === completingAddressId,
-                  )?.address;
-                  handleFinishCompletion(addr);
-                }}
-                disabled={isCompleting}
-              >
-                {isCompleting ? "Saving..." : "Confirm & Finish"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={!!completingAddressId}
+        onOpenChange={(open) => !open && setCompletingAddressId(null)}
+      >
+        <DialogContent
+          className="max-w-none w-screen h-screen p-0 border-none bg-black overflow-hidden flex items-center justify-center rounded-none"
+          showCloseButton={false}
+        >
+          {completingAddressId && (
+            <CameraCapture
+              onCapture={onPhotoCapture}
+              onClose={() => setCompletingAddressId(null)}
+              isPending={isCompleting}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={!!viewingSiteMap}
