@@ -4,12 +4,10 @@ import { Suspense } from "react";
 import { SingleClientContainer } from "@/components/clients/client-info/single-client-container";
 import { buttonVariants } from "@/components/ui/button";
 import { getClientByIdDal, getOrganizationMembersDal } from "@/dal/clients";
-import type { PageProps } from "@/types/types";
 
-export default async function ClientPage(props: PageProps<"/client/[id]">) {
-  const { id } = await props.params;
+export default async function ClientPage(props: PageProps<"/client/[id]">) {  
 
-  const clientPromise = getClientByIdDal(id);
+  const clientPromise =  props.params.then((params)=>getClientByIdDal(params.id));
   const membersPromise = getOrganizationMembersDal();
 
   return (
