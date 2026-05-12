@@ -83,7 +83,7 @@ export default function ClientInfoContainer({
   );
 
   return (
-    <div className="w-full flex flex-col p-4 gap-4">
+    <div className="w-full flex flex-col md:p-4 gap-4">
       <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
         <ClientSearchBar setOptimistic={setOptimistic} />
         <div className="ml-auto">

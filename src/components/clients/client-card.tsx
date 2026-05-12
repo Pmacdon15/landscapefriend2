@@ -151,7 +151,7 @@ export function ClientCard({
                 key={address.id}
                 className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 space-y-3"
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <a
                     href={getGoogleMapsUrl(address)}
                     target="_blank"
