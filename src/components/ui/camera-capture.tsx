@@ -18,19 +18,12 @@ export function CameraCapture({
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [_stream, setStream] = useState<MediaStream | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [capturedAt, setCapturedAt] = useState<Date | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
+  const [isVideoReady, setIsVideoReady] = useState(false);
 
   useEffect(() => {
     let currentStream: MediaStream | null = null;
@@ -54,9 +47,7 @@ export function CameraCapture({
       }
     }
 
-    if (!previewUrl) {
-      startCamera();
-    }
+    startCamera();
 
     return () => {
       if (currentStream) {
@@ -65,31 +56,44 @@ export function CameraCapture({
         }
       }
     };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
   }, [previewUrl]);
 
   const takePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!video || !canvas || !isVideoReady) return;
 
     const context = canvas.getContext("2d");
     if (!context) return;
 
+    // Use the video's actual resolution
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const now = new Date();
-        const file = new File([blob], `capture-${now.getTime()}.png`, {
-          type: "image/png",
-        });
-        setCapturedFile(file);
-        setCapturedAt(now);
-        setPreviewUrl(URL.createObjectURL(blob));
-      }
-    }, "image/png");
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          const now = new Date();
+          const file = new File([blob], `capture-${now.getTime()}.png`, {
+            type: "image/png",
+          });
+          setCapturedFile(file);
+          setCapturedAt(now);
+          setPreviewUrl(URL.createObjectURL(blob));
+        }
+      },
+      "image/png",
+      0.9,
+    );
   };
 
   const handleRetake = () => {
@@ -108,7 +112,7 @@ export function CameraCapture({
   };
 
   return (
-    <div className="relative w-full h-full bg-black flex flex-col items-center justify-center">
+    <div className="relative w-full h-full bg-black flex flex-col items-center justify-center overflow-hidden">
       <div className="absolute top-4 right-4 z-[110]">
         <Button
           variant="ghost"
@@ -127,60 +131,70 @@ export function CameraCapture({
             Close
           </Button>
         </div>
-      ) : previewUrl ? (
-        <div className="relative w-full h-full flex flex-col items-center justify-center">
-          <Image
-            src={previewUrl}
-            alt="Captured preview"
-            fill
-            unoptimized
-            className="object-cover max-w-4xl max-h-[80vh] mx-auto"
-          />
-          <div className="absolute bottom-8 flex items-center justify-center w-full gap-8">
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-16 w-16 rounded-full bg-white/10 text-white hover:bg-white/20 border-2 border-white"
-              onClick={handleRetake}
-              disabled={isPending}
-            >
-              <RotateCcw className="h-8 w-8" />
-            </Button>
-            <Button
-              size="lg"
-              className="h-20 w-20 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 border-4 border-white"
-              onClick={handleConfirm}
-              disabled={isPending}
-            >
-              {isPending ? (
-                <span className="text-xs font-bold">Saving...</span>
-              ) : (
-                <Check className="h-10 w-10" />
-              )}
-            </Button>
-          </div>
-        </div>
       ) : (
-        <>
+        <div className="relative w-full h-full flex flex-col items-center justify-center">
+          {/* Video always stays in the DOM to prevent hardware release/flash */}
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover max-w-4xl max-h-[80vh]"
+            onLoadedMetadata={() => setIsVideoReady(true)}
+            className="w-full h-full object-cover max-w-4xl max-h-[100vh]"
           />
           <canvas ref={canvasRef} className="hidden" />
 
-          <div className="absolute bottom-8 flex items-center justify-center w-full gap-6">
-            <Button
-              size="lg"
-              className="h-20 w-20 rounded-full bg-white text-black hover:bg-slate-200 border-4 border-slate-300"
-              onClick={takePhoto}
-            >
-              <div className="h-14 w-14 rounded-full border-2 border-black" />
-            </Button>
+          {/* Preview Overlay */}
+          {previewUrl && (
+            <div className="absolute inset-0 z-[100] bg-black">
+              <Image
+                src={previewUrl}
+                alt="Captured preview"
+                fill
+                unoptimized
+                className="object-cover max-w-4xl mx-auto"
+              />
+            </div>
+          )}
+
+          {/* Controls Overlay */}
+          <div className="absolute bottom-8 flex items-center justify-center w-full gap-8 z-[120]">
+            {previewUrl ? (
+              <>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-16 w-16 rounded-full bg-white/10 text-white hover:bg-white/20 border-2 border-white"
+                  onClick={handleRetake}
+                  disabled={isPending}
+                >
+                  <RotateCcw className="h-8 w-8" />
+                </Button>
+                <Button
+                  size="lg"
+                  className="h-20 w-20 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 border-4 border-white"
+                  onClick={handleConfirm}
+                  disabled={isPending}
+                >
+                  {isPending ? (
+                    <span className="text-xs font-bold">Saving...</span>
+                  ) : (
+                    <Check className="h-10 w-10" />
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="lg"
+                className="h-20 w-20 rounded-full bg-white text-black hover:bg-slate-200 border-4 border-slate-300"
+                onClick={takePhoto}
+                disabled={!isVideoReady}
+              >
+                <div className="h-14 w-14 rounded-full border-2 border-black" />
+              </Button>
+            )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
