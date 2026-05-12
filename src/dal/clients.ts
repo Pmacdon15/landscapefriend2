@@ -61,7 +61,7 @@ export async function getClientsForInfoDal(
   page: number,
   searchQuery?: string,
 ): Promise<{ clients: Client[]; totalPages: number }> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
   if (!orgId) {
     throw new Error("Unauthorized: No organization selected");
   }
@@ -127,7 +127,7 @@ export async function getClientsForInfoDal(
 export async function getClientsForCutListDal(
   date: string,
 ): Promise<CutListItem[]> {
-  const { orgId, userId } = await auth();
+  const { orgId, userId } = await auth.protect();
   if (!orgId || !userId) throw new Error("Unauthorized");
 
   const [
@@ -224,7 +224,7 @@ export async function updateRouteOrderDal(
   addressId: string,
   newSortOrder: number,
 ): Promise<Result<void, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
@@ -245,7 +245,7 @@ export async function updateRouteOrderDal(
 export async function createClientDal(
   data: CreateClientInput,
 ): Promise<Result<Client, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
   const result = CreateClientInputSchema.safeParse(data);
@@ -301,7 +301,7 @@ export async function updateClientDal(
     addresses: z.infer<typeof AddressInputSchema>[];
   },
 ): Promise<Result<Client, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
@@ -383,7 +383,7 @@ export async function upsertScheduleDal(
   frequency: string,
   nextCutDate: Date,
 ): Promise<Result<Schedule, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
@@ -417,7 +417,7 @@ export async function completeJobDal(
   capturedAt?: Date | null,
   completedAt?: Date | null,
 ): Promise<Result<CompletedJob, { reason: string }>> {
-  const { orgId, userId } = await auth();
+  const { orgId, userId } = await auth.protect();
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
@@ -459,7 +459,7 @@ export async function completeJobDal(
 export async function getOrganizationMembersDal(): Promise<
   { id: string; name: string }[]
 > {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
 
   if (!orgId) {
     throw new Error("Unauthorized: No organization selected");
@@ -489,7 +489,7 @@ export async function upsertAssignmentDal(
   userId: string | null,
   date: string,
 ): Promise<Result<Assignment | null, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
@@ -519,7 +519,7 @@ export async function updateAddressAssigneeDal(
   addressId: string,
   userId: string | null,
 ): Promise<Result<void, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
@@ -539,7 +539,7 @@ export async function updateAddressAssigneeDal(
 export async function deleteClientDal(
   clientId: string,
 ): Promise<Result<void, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
@@ -558,7 +558,7 @@ export async function saveSiteMapDal(
   blobPath: string | null,
   mapData: Record<string, unknown> | null,
 ): Promise<Result<SiteMap, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
   const parsedAddressId = z.string().uuid().safeParse(addressId);
@@ -579,7 +579,7 @@ export async function saveSiteMapDal(
 export async function deleteSiteMapDal(
   siteMapId: string,
 ): Promise<Result<void, { reason: string }>> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
   const parsedSiteMapId = z.string().uuid().safeParse(siteMapId);
@@ -592,7 +592,7 @@ export async function deleteSiteMapDal(
 }
 
 export async function getClientByIdDal(id: string): Promise<Client | null> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
   if (!orgId) throw new Error("Unauthorized");
 
   const [clientRow, addresses, schedules, siteMaps, jobHistory] =
@@ -631,7 +631,7 @@ export async function getClientByIdDal(id: string): Promise<Client | null> {
 }
 
 export async function searchClientsDal(query: string): Promise<Client[]> {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
   if (!orgId) throw new Error("Unauthorized");
 
   const members = await getOrganizationMembersDal();

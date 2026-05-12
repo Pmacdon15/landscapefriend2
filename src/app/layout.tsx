@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NavBar } from "@/components/layout/nav-bar";
+import { Footer } from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "@/providers/query-provider";
 import "./globals.css";
@@ -45,6 +46,7 @@ export default function RootLayout({
           <Providers>
             <NavBar />
             <main className="flex-1 flex flex-col">{children}</main>
+            <Footer />
             <Toaster />
           </Providers>
         </body>
