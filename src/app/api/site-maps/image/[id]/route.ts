@@ -10,7 +10,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { orgId } = await auth();
+  const { orgId } = await auth.protect();
   if (!orgId) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
