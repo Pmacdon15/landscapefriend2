@@ -1,10 +1,10 @@
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
-import { getClientByIdDal, getOrganizationMembersDal } from "@/dal/clients";
-import { buttonVariants } from "@/components/ui/button";
 import { SingleClientContainer } from "@/components/clients/client-info/single-client-container";
-import { PageProps } from "@/types/types";
+import { buttonVariants } from "@/components/ui/button";
+import { getClientByIdDal, getOrganizationMembersDal } from "@/dal/clients";
+import type { PageProps } from "@/types/types";
 
 export default async function ClientPage(props: PageProps<"/client/[id]">) {
   const { id } = await props.params;
@@ -15,9 +15,12 @@ export default async function ClientPage(props: PageProps<"/client/[id]">) {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-12">
       <div className="mb-10 flex flex-col items-start gap-4">
-        <Link 
-          href="/client-info-list" 
-          className={buttonVariants({ variant: "ghost", className: "mb-2 -ml-4" })}
+        <Link
+          href="/client-info-list"
+          className={buttonVariants({
+            variant: "ghost",
+            className: "mb-2 -ml-4",
+          })}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Clients

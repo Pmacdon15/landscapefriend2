@@ -1,7 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { get } from "@vercel/blob";
 import { type NextRequest, NextResponse } from "next/server";
-import { getCompletionPhotoWithOrgDb, getSiteMapWithOrgDb } from "@/db/queries/clients";
+import {
+  getCompletionPhotoWithOrgDb,
+  getSiteMapWithOrgDb,
+} from "@/db/queries/clients";
 
 export async function GET(
   request: NextRequest,

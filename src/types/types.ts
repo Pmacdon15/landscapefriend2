@@ -75,7 +75,7 @@ export interface SiteMapRow {
   address_id: string;
   name: string | null;
   blob_path: string | null;
-  map_data: any;
+  map_data: Record<string, unknown> | null;
   created_at: Date;
   updated_at: Date;
 }

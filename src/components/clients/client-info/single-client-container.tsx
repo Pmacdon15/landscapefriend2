@@ -53,7 +53,7 @@ export function SingleClientContainer({
         };
       }
       return state;
-    }
+    },
   );
 
   return (
@@ -61,7 +61,7 @@ export function SingleClientContainer({
       <ClientCard
         client={optimisticClient}
         members={members}
-        setOptimistic={setOptimistic as any}
+        setOptimistic={setOptimistic as (action: OptimisticAction) => void}
       />
     </div>
   );

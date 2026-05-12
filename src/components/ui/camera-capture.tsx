@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, RefreshCw, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./button";
 
@@ -28,7 +28,9 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
         }
       } catch (err) {
         console.error("Camera error:", err);
-        setError("Could not access camera. Please ensure permissions are granted.");
+        setError(
+          "Could not access camera. Please ensure permissions are granted.",
+        );
       }
     }
 
@@ -41,7 +43,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
         }
       }
     };
-  }, []);
+  }, [stream]);
 
   const takePhoto = () => {
     const video = videoRef.current;
@@ -69,7 +71,12 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
       <div className="absolute top-4 right-4 z-[110]">
-        <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="text-white hover:bg-white/20"
+        >
           <X className="h-6 w-6" />
         </Button>
       </div>
@@ -77,7 +84,9 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       {error ? (
         <div className="text-white text-center p-8 space-y-4">
           <p className="text-lg font-medium">{error}</p>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
         </div>
       ) : (
         <>
@@ -85,6 +94,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
             ref={videoRef}
             autoPlay
             playsInline
+            muted
             className="w-full h-full object-cover max-w-4xl max-h-[80vh]"
           />
           <canvas ref={canvasRef} className="hidden" />

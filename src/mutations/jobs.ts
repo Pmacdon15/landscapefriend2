@@ -28,7 +28,8 @@ export function useCompleteJob() {
       if (notes) formData.append("notes", notes);
       if (photoFile) formData.append("photoFile", photoFile);
       if (capturedAt) formData.append("capturedAt", capturedAt.toISOString());
-      if (completedAt) formData.append("completedAt", completedAt.toISOString());
+      if (completedAt)
+        formData.append("completedAt", completedAt.toISOString());
 
       const { success, job, error } = await completeJobAction(formData);
 

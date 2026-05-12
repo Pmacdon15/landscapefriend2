@@ -375,7 +375,7 @@ export async function insertSiteMapDb(
   addressId: string,
   name: string | null,
   blobPath: string | null,
-  mapData: any | null,
+  mapData: Record<string, unknown> | null,
 ): Promise<SiteMapRow> {
   // Ensure mapData is passed as a string for JSONB to avoid driver issues with arrays/objects
   const jsonMapData = mapData ? JSON.stringify(mapData) : null;

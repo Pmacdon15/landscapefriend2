@@ -9,6 +9,7 @@ import {
   Trash,
   User,
 } from "lucide-react";
+import Image from "next/image";
 import { startTransition, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
@@ -172,13 +173,13 @@ export function ClientCard({
                         className="h-7 text-[10px] gap-1.5 text-slate-500 hover:text-primary"
                         onClick={() =>
                           setViewingSiteMap({
-                            id: address.completed_job!.photos![0].id,
+                            id: address.completed_job?.photos?.[0].id,
                             address_id: address.id,
                             blob_path:
-                              address.completed_job!.photos![0].blob_path,
+                              address.completed_job?.photos?.[0].blob_path,
                             name: "Latest Service Photo",
                             created_at:
-                              address.completed_job!.photos![0].created_at,
+                              address.completed_job?.photos?.[0].created_at,
                           })
                         }
                       >
@@ -304,10 +305,12 @@ export function ClientCard({
           {viewingSiteMap && (
             <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
               {viewingSiteMap.blob_path && (
-                /* biome-ignore lint/a11y/useAltText: viewing existing sitemap or completion photo */
-                <img
+                <Image
                   src={`/api/site-maps/image/${viewingSiteMap.id}`}
-                  className="max-w-full max-h-full object-contain shadow-2xl rounded-sm transition-all duration-300"
+                  alt="Viewing existing sitemap or completion photo"
+                  fill
+                  unoptimized
+                  className="object-contain shadow-2xl rounded-sm transition-all duration-300"
                 />
               )}
             </div>

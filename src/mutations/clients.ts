@@ -139,7 +139,6 @@ export function useSaveSiteMap() {
   });
 }
 
-
 export function useDeleteSiteMap() {
   return useMutation({
     mutationFn: async (siteMapId: string) => {
