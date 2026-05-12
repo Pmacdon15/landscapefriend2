@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
             <h3 className="font-bold text-lg tracking-tight text-slate-900 dark:text-slate-100">
-              Scheduler App
+              Landscape Friend
             </h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xs">
               Efficient scheduling and management for your service business.
