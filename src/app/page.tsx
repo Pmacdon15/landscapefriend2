@@ -51,36 +51,6 @@ export default function Home() {
             Service Routes
           </Link>
         </div>
-
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-left max-w-4xl mx-auto">
-          <div className="bg-white/60 dark:bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-slate-200 dark:border-slate-800">
-            <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-slate-100">
-              Smart Scheduling
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              Set custom intervals based on start dates. The system
-              automatically plans upcoming cuts.
-            </p>
-          </div>
-          <div className="bg-white/60 dark:bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-slate-200 dark:border-slate-800">
-            <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-slate-100">
-              Route Optimization
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              View daily service lists to ensure your crew follows the most
-              efficient path.
-            </p>
-          </div>
-          <div className="bg-white/60 dark:bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-slate-200 dark:border-slate-800">
-            <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-slate-100">
-              Client CRM
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              Keep track of property details, gates, pets, and specific client
-              requests all in one place.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
