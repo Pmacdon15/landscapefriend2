@@ -4,7 +4,7 @@ A modern scheduling and client management application built with Next.js.
 
 ## Tech Stack
 
-- **Framework:** [Next.js 15+](https://nextjs.org/) (App Router)
+- **Framework:** [Next.js 16+](https://nextjs.org/) (App Router)
 - **Authentication:** [Clerk](https://clerk.com/)
 - **Database:** [Neon DB](https://neon.tech/) (PostgreSQL)
 - **Storage:** [Vercel Blob](https://vercel.com/storage/blob)
