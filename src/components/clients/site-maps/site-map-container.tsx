@@ -2,7 +2,7 @@
 
 import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
-import { FileImage, Map as MapIcon, Plus, Trash2 } from "lucide-react";
+import { Download, FileImage, Map as MapIcon, Plus, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -96,6 +96,24 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
         },
       },
     );
+  };
+
+  const handleDownload = async () => {
+    if (!viewingSiteMap) return;
+    try {
+      const response = await fetch(`/api/site-maps/image/${viewingSiteMap.id}`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${viewingSiteMap.name || "site-map"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
   };
 
   return (
@@ -276,6 +294,28 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
         <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex items-center justify-center text-white">
           {viewingSiteMap && (
             <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
+              <div className="absolute top-4 right-4 flex items-center gap-2 z-50">
+                {viewingSiteMap.blob_path && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
+                    onClick={handleDownload}
+                  >
+                    <Download className="h-5 w-5" />
+                    <span className="sr-only">Download</span>
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
+                  onClick={() => setViewingSiteMap(null)}
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </div>
               {viewingSiteMap.blob_path ? (
                 <Image
                   src={`/api/site-maps/image/${viewingSiteMap.id}`}

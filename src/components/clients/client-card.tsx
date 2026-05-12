@@ -2,6 +2,7 @@
 import { format } from "date-fns";
 import {
   CalendarDays,
+  Download,
   FileImage,
   Mail,
   MapPin,
@@ -60,6 +61,24 @@ export function ClientCard({
   const addresses = client.addresses || [];
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
   const { mutate: deleteClient } = useDeleteClient();
+
+  const handleDownload = async () => {
+    if (!viewingSiteMap) return;
+    try {
+      const response = await fetch(`/api/site-maps/image/${viewingSiteMap.id}`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${viewingSiteMap.name || "photo"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
 
   return (
     <Card className="hover:shadow-lg transition-shadow duration-300 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
@@ -304,7 +323,18 @@ export function ClientCard({
         open={!!viewingSiteMap}
         onOpenChange={(open) => !open && setViewingSiteMap(null)}
       >
-        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex items-center justify-center text-white">
+        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white">
+          {viewingSiteMap?.blob_path && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-white  transition-colors ml-auto mr-8"
+              onClick={handleDownload}
+            >
+              <Download className="h-5 w-5" />
+              <span className="sr-only">Download</span>
+            </Button>
+          )}
           {viewingSiteMap && (
             <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
               {viewingSiteMap.blob_path && (

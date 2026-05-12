@@ -8,7 +8,14 @@ import {
 } from "@hello-pangea/dnd";
 import imageCompression from "browser-image-compression";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, CheckCircle2, GripVertical, MapPin } from "lucide-react";
+import {
+  CalendarIcon,
+  CheckCircle2,
+  Download,
+  GripVertical,
+  MapPin,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
@@ -153,8 +160,26 @@ export function ServiceListContent({
     }
   };
 
+  const handleDownload = async () => {
+    if (!viewingSiteMap) return;
+    try {
+      const response = await fetch(`/api/site-maps/image/${viewingSiteMap.id}`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${viewingSiteMap.name || "photo"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 gap-4">
         <h2 className="text-xl font-semibold">
           Showing services for:{" "}
@@ -385,6 +410,28 @@ export function ServiceListContent({
         <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-none bg-black/95 overflow-hidden flex items-center justify-center text-white">
           {viewingSiteMap && (
             <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
+              <div className="absolute top-4 right-4 flex items-center gap-2 z-50">
+                {viewingSiteMap.blob_path && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
+                    onClick={handleDownload}
+                  >
+                    <Download className="h-5 w-5" />
+                    <span className="sr-only">Download</span>
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
+                  onClick={() => setViewingSiteMap(null)}
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </div>
               {viewingSiteMap.blob_path ? (
                 <Image
                   src={`/api/site-maps/image/${viewingSiteMap.id}`}
