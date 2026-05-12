@@ -266,20 +266,21 @@ export function ServiceListContent({
                                         variant="link"
                                         size="sm"
                                         className="text-xs h-auto p-0 text-slate-500 hover:text-primary"
-                                        onClick={() =>
+                                        onClick={() => {
+                                          const photo =
+                                            address.completed_job?.photos?.[0];
+                                          if (!photo) return;
                                           setViewingSiteMap({
-                                            id: address.completed_job
-                                              ?.photos?.[0].id,
+                                            id: photo.id,
                                             address_id: address.id,
-                                            blob_path:
-                                              address.completed_job?.photos?.[0]
-                                                .blob_path,
+                                            blob_path: photo.blob_path,
+                                            map_data: null,
                                             name: "Completion Photo",
-                                            created_at:
-                                              address.completed_job?.photos?.[0]
-                                                .created_at,
-                                          })
-                                        }
+                                            created_at: photo.created_at
+                                              ? new Date(photo.created_at)
+                                              : new Date(),
+                                          });
+                                        }}
                                       >
                                         View Photo
                                       </Button>

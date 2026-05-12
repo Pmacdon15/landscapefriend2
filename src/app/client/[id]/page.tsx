@@ -5,9 +5,10 @@ import { SingleClientContainer } from "@/components/clients/client-info/single-c
 import { buttonVariants } from "@/components/ui/button";
 import { getClientByIdDal, getOrganizationMembersDal } from "@/dal/clients";
 
-export default async function ClientPage(props: PageProps<"/client/[id]">) {  
-
-  const clientPromise =  props.params.then((params)=>getClientByIdDal(params.id));
+export default async function ClientPage(props: PageProps<"/client/[id]">) {
+  const clientPromise = props.params.then((params) =>
+    getClientByIdDal(params.id),
+  );
   const membersPromise = getOrganizationMembersDal();
 
   return (

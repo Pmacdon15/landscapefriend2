@@ -62,7 +62,9 @@ export async function getClientsForInfoDal(
   searchQuery?: string,
 ): Promise<{ clients: Client[]; totalPages: number }> {
   const { orgId } = await auth();
-  // await new Promise((resolve) => setTimeout(resolve, 2000));
+  if (!orgId) {
+    throw new Error("Unauthorized: No organization selected");
+  }
   let matchedAssigneeIds: string[] = [];
   if (searchQuery) {
     const members = await getOrganizationMembersDal();
