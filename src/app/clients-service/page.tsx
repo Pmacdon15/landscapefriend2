@@ -1,7 +1,14 @@
 import { Loader2 } from "lucide-react";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getClientsForCutListDal } from "@/dal/clients";
 import { ServiceListContent } from "./service-list-content";
+
+export const metadata: Metadata = {
+  title: "Daily Service Routes",
+  description:
+    "View your daily landscaping service lists and optimize your lawn care routes.",
+};
 
 export default async function ClientsServicePage(
   props: PageProps<"/clients-service">,

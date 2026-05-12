@@ -1,8 +1,15 @@
 import { Loader2 } from "lucide-react";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import ClientInfoContainer from "@/components/clients/client-info/client-info-container";
 import PaginationButtons from "@/components/pagination-buttons";
 import { getClientsForInfoDal, getOrganizationMembersDal } from "@/dal/clients";
+
+export const metadata: Metadata = {
+  title: "Client Roster",
+  description:
+    "View and manage your entire list of landscaping clients. Keep track of service schedules and property details.",
+};
 
 export default async function ClientInfoListPage(
   props: PageProps<"/client-info-list">,

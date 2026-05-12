@@ -1,9 +1,18 @@
 import { ArrowLeft, Loader2 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { SingleClientContainer } from "@/components/clients/client-info/single-client-container";
 import { buttonVariants } from "@/components/ui/button";
 import { getClientByIdDal, getOrganizationMembersDal } from "@/dal/clients";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Client Profile",
+    description:
+      "Manage specific client information, property details, and landscaping service history.",
+  };
+}
 
 export default async function ClientPage(props: PageProps<"/client/[id]">) {
   const clientPromise = props.params.then((params) =>
