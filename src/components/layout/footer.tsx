@@ -91,6 +91,9 @@ export function Footer() {
         </div>
 
         <div className="mt-8 pt-8 border-t border-slate-200/50 dark:border-slate-800/50">
+          <p className="text-xs text-slate-500 dark:text-slate-500 text-center leading-relaxed mb-4">
+            Built with professional software and website development services by Patrick Macdonald. For custom software solutions, contact: <a href="mailto:patrick@patmac.ca" className="underline hover:text-primary transition-colors">patrick@patmac.ca</a>
+          </p>
           <p className="text-xs text-slate-500 dark:text-slate-500 text-center leading-relaxed">
             Your data is safe and will never be sold. We only store it for the benefit of using the app and share it only with essential service providers like Neon DB. Features on the free tier may change without warning.
           </p>

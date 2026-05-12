@@ -17,11 +17,11 @@ export function NavBar() {
       <div className="flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="font-bold text-xl tracking-tight">
-            Scheduler App
+            Landscape Friend
           </Link>
 
           <Show when="signed-in">
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-3">
               <Link
                 href="/client-info-list"
                 className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
