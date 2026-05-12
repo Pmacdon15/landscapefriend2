@@ -1,4 +1,4 @@
-# Scheduler
+# Landscape Friend
 
 A modern scheduling and client management application built with Next.js.
 
