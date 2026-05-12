@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "biome check",
+    "lint": "biome check --write --unsafe",
     "format": "biome format --write"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "@hello-pangea/dnd": "^18.0.1",
     "@neondatabase/serverless": "^1.1.0",
     "@tanstack/react-form": "^1.31.0",
+    "@tanstack/react-pacer": "^0.22.0",
     "@tanstack/react-query": "^5.100.9",
     "@vercel/blob": "^2.3.3",
     "browser-image-compression": "^2.0.2",

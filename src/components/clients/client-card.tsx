@@ -9,6 +9,7 @@ import {
   Trash,
   User,
 } from "lucide-react";
+import Image from "next/image";
 import { startTransition, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
@@ -170,17 +171,20 @@ export function ClientCard({
                         variant="ghost"
                         size="sm"
                         className="h-7 text-[10px] gap-1.5 text-slate-500 hover:text-primary"
-                        onClick={() =>
+                        onClick={() => {
+                          const photo = address.completed_job?.photos?.[0];
+                          if (!photo) return;
                           setViewingSiteMap({
-                            id: address.completed_job!.photos![0].id,
+                            id: photo.id,
                             address_id: address.id,
-                            blob_path:
-                              address.completed_job!.photos![0].blob_path,
-                            name: "Latest Service Photo",
-                            created_at:
-                              address.completed_job!.photos![0].created_at,
-                          })
-                        }
+                            blob_path: photo.blob_path,
+                            map_data: null,
+                            name: "Completion Photo",
+                            created_at: photo.created_at
+                              ? new Date(photo.created_at)
+                              : new Date(),
+                          });
+                        }}
                       >
                         <FileImage className="h-3 w-3" />
                         Latest Photo
@@ -304,10 +308,12 @@ export function ClientCard({
           {viewingSiteMap && (
             <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
               {viewingSiteMap.blob_path && (
-                /* biome-ignore lint/a11y/useAltText: viewing existing sitemap or completion photo */
-                <img
+                <Image
                   src={`/api/site-maps/image/${viewingSiteMap.id}`}
-                  className="max-w-full max-h-full object-contain shadow-2xl rounded-sm transition-all duration-300"
+                  alt="Viewing existing sitemap or completion photo"
+                  fill
+                  unoptimized
+                  className="object-contain shadow-2xl rounded-sm transition-all duration-300"
                 />
               )}
             </div>

@@ -375,7 +375,7 @@ export async function insertSiteMapDb(
   addressId: string,
   name: string | null,
   blobPath: string | null,
-  mapData: any | null,
+  mapData: Record<string, unknown> | null,
 ): Promise<SiteMapRow> {
   // Ensure mapData is passed as a string for JSONB to avoid driver issues with arrays/objects
   const jsonMapData = mapData ? JSON.stringify(mapData) : null;
@@ -419,4 +419,42 @@ export async function getCompletionPhotoWithOrgDb(
     WHERE cp.id = ${photoId} AND cj.org_id = ${orgId}
   `;
   return (result[0] as { id: string; blob_path: string }) || null;
+}
+
+export async function searchClientsDb(
+  orgId: string,
+  query: string,
+  matchedAssigneeIds: string[] = [],
+): Promise<ClientRow[]> {
+  const searchPattern = `%${query}%`;
+  const hasAssignees = matchedAssigneeIds.length > 0;
+
+  const result = await sql`
+    SELECT DISTINCT c.*
+    FROM clients c
+    LEFT JOIN addresses a ON c.id = a.client_id AND a.status != 'deleted'
+    WHERE c.org_id = ${orgId}
+    AND (
+      c.name ILIKE ${searchPattern} OR
+      c.email ILIKE ${searchPattern} OR
+      c.phone ILIKE ${searchPattern} OR
+      a.street ILIKE ${searchPattern} OR
+      a.city ILIKE ${searchPattern} OR
+      a.zip ILIKE ${searchPattern} OR
+      (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[]))
+    )
+    ORDER BY c.name ASC
+  `;
+  return result as unknown as ClientRow[];
+}
+
+export async function getClientByIdDb(
+  id: string,
+  orgId: string,
+): Promise<ClientRow | null> {
+  const result = await sql`
+    SELECT * FROM clients
+    WHERE id = ${id} AND org_id = ${orgId}
+  `;
+  return (result[0] as unknown as ClientRow) || null;
 }

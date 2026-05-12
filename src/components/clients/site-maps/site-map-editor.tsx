@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 
 type Point = {
   x: number;
@@ -208,7 +207,7 @@ export function SiteMapEditor({
   const loadMap = useCallback(() => {
     if (!search) return;
     const encoded = encodeURIComponent(search);
-    const key = process["env"].NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
     const url = `https://maps.googleapis.com/maps/api/staticmap?center=${encoded}&zoom=20&size=1200x800&maptype=satellite&key=${key}`;
     setMapImage(url);
 

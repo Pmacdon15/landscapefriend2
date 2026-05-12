@@ -3,6 +3,7 @@
 import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
 import { FileImage, Map as MapIcon, Plus, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -276,10 +277,12 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
           {viewingSiteMap && (
             <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
               {viewingSiteMap.blob_path ? (
-                /* biome-ignore lint/a11y/useAltText: viewing existing sitemap */
-                <img
+                <Image
                   src={`/api/site-maps/image/${viewingSiteMap.id}`}
-                  className="max-w-full max-h-full object-contain shadow-2xl rounded-sm transition-all duration-300"
+                  alt="Viewing existing sitemap"
+                  fill
+                  unoptimized
+                  className="object-contain shadow-2xl rounded-sm transition-all duration-300"
                 />
               ) : viewingSiteMap.map_data ? (
                 <div className="w-full max-w-5xl aspect-[12/8] bg-white rounded-lg overflow-hidden shadow-2xl">

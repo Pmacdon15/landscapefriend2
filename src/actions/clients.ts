@@ -103,7 +103,6 @@ export async function saveSiteMapAction(formData: FormData) {
 
       blobPath = blob.url;
     } catch (error) {
-
       console.error("Blob upload error:", error);
       return {
         success: false,

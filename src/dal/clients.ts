@@ -2,7 +2,12 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import { differenceInCalendarDays, parseISO, startOfDay } from "date-fns";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
-import type { AddressRow, ClientRow, ScheduleRow } from "@/types/types";
+import type {
+  AddressRow,
+  ClientRow,
+  ScheduleRow,
+  SiteMapRow,
+} from "@/types/types";
 import {
   deleteAddressDb,
   deleteAssignmentDb,
@@ -10,6 +15,7 @@ import {
   deleteSiteMapDb,
   getAddressesDb,
   getAssignmentsDb,
+  getClientByIdDb,
   getClientsDb,
   getCompletedJobsDb,
   getCompletedJobsHistoryDb,
@@ -21,6 +27,7 @@ import {
   insertCompletedJobDb,
   insertCompletionPhotoDb,
   insertSiteMapDb,
+  searchClientsDb,
   updateAddressAssigneeDb,
   updateAddressDb,
   updateClientDb,
@@ -52,16 +59,25 @@ export interface CutListItem {
 
 export async function getClientsForInfoDal(
   page: number,
+  searchQuery?: string,
 ): Promise<{ clients: Client[]; totalPages: number }> {
   const { orgId } = await auth();
-
   if (!orgId) {
     throw new Error("Unauthorized: No organization selected");
+  }
+  let matchedAssigneeIds: string[] = [];
+  if (searchQuery) {
+    const members = await getOrganizationMembersDal();
+    matchedAssigneeIds = members
+      .filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .map((m) => m.id);
   }
 
   const [clients, addresses, schedules, siteMaps, jobHistory] =
     await Promise.all([
-      getClientsDb(orgId),
+      searchQuery
+        ? searchClientsDb(orgId, searchQuery, matchedAssigneeIds)
+        : getClientsDb(orgId),
       getAddressesDb(orgId),
       getSchedulesDb(orgId),
       getSiteMapsDb(orgId),
@@ -140,7 +156,7 @@ export async function getClientsForCutListDal(
   const assignmentMap = new Map(assignments.map((a) => [a.address_id, a]));
   const jobMap = new Map(completedJobs.map((j) => [j.address_id, j]));
   const clientMap = new Map(clients.map((c) => [c.id, c]));
-  const siteMapGroupMap = new Map<string, any[]>();
+  const siteMapGroupMap = new Map<string, SiteMapRow[]>();
   for (const sm of siteMaps) {
     const group = siteMapGroupMap.get(sm.address_id) || [];
     group.push(sm);
@@ -540,7 +556,7 @@ export async function saveSiteMapDal(
   addressId: string,
   name: string | null,
   blobPath: string | null,
-  mapData: any | null,
+  mapData: Record<string, unknown> | null,
 ): Promise<Result<SiteMap, { reason: string }>> {
   const { orgId } = await auth();
   if (!orgId) return errAsync({ reason: "Unauthorized" });
@@ -573,4 +589,89 @@ export async function deleteSiteMapDal(
   return ResultAsync.fromPromise(deleteSiteMapDb(parsedSiteMapId.data), () => ({
     reason: "Failed to delete site map",
   }));
+}
+
+export async function getClientByIdDal(id: string): Promise<Client | null> {
+  const { orgId } = await auth();
+  if (!orgId) throw new Error("Unauthorized");
+
+  const [clientRow, addresses, schedules, siteMaps, jobHistory] =
+    await Promise.all([
+      getClientByIdDb(id, orgId),
+      getAddressesDb(orgId),
+      getSchedulesDb(orgId),
+      getSiteMapsDb(orgId),
+      getCompletedJobsHistoryDb(orgId),
+    ]);
+
+  if (!clientRow) return null;
+
+  const clientAddresses = addresses
+    .filter((a: AddressRow) => a.client_id === id && a.status !== "deleted")
+    .map((address: AddressRow) => {
+      const schedule = schedules.find(
+        (s: ScheduleRow) => s.address_id === address.id,
+      );
+      const addressSiteMaps = siteMaps.filter(
+        (sm) => sm.address_id === address.id,
+      );
+      const latestJob = jobHistory.find((j) => j.address_id === address.id);
+
+      return {
+        ...address,
+        schedule: schedule || null,
+        sort_order: 0,
+        assignment: null,
+        completed_job: latestJob || null,
+        site_maps: addressSiteMaps,
+      } as Address;
+    });
+
+  return { ...clientRow, addresses: clientAddresses } as Client;
+}
+
+export async function searchClientsDal(query: string): Promise<Client[]> {
+  const { orgId } = await auth();
+  if (!orgId) throw new Error("Unauthorized");
+
+  const members = await getOrganizationMembersDal();
+  const matchedAssigneeIds = members
+    .filter((m) => m.name.toLowerCase().includes(query.toLowerCase()))
+    .map((m) => m.id);
+
+  const [clients, addresses, schedules, siteMaps, jobHistory] =
+    await Promise.all([
+      searchClientsDb(orgId, query, matchedAssigneeIds),
+      getAddressesDb(orgId),
+      getSchedulesDb(orgId),
+      getSiteMapsDb(orgId),
+      getCompletedJobsHistoryDb(orgId),
+    ]);
+
+  return clients.map((client: ClientRow) => {
+    const clientAddresses = addresses
+      .filter(
+        (a: AddressRow) => a.client_id === client.id && a.status !== "deleted",
+      )
+      .map((address: AddressRow) => {
+        const schedule = schedules.find(
+          (s: ScheduleRow) => s.address_id === address.id,
+        );
+        const addressSiteMaps = siteMaps.filter(
+          (sm) => sm.address_id === address.id,
+        );
+        const latestJob = jobHistory.find((j) => j.address_id === address.id);
+
+        return {
+          ...address,
+          schedule: schedule || null,
+          sort_order: 0,
+          assignment: null,
+          completed_job: latestJob || null,
+          site_maps: addressSiteMaps,
+        } as Address;
+      });
+
+    return { ...client, addresses: clientAddresses } as Client;
+  });
 }

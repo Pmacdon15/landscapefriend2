@@ -6,8 +6,10 @@ import {
   Droppable,
   type DropResult,
 } from "@hello-pangea/dnd";
+import imageCompression from "browser-image-compression";
 import { format, parseISO } from "date-fns";
 import { CalendarIcon, CheckCircle2, GripVertical, MapPin } from "lucide-react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
@@ -15,7 +17,6 @@ import { SiteMapEditor } from "@/components/clients/site-maps/site-map-editor";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { CameraCapture } from "@/components/ui/camera-capture";
-import imageCompression from "browser-image-compression";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -28,7 +29,6 @@ import { cn, getGoogleMapsUrl } from "@/lib/utils";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 import type { SiteMap } from "@/zod/schemas";
-import Image from "next/image";
 
 interface ServiceListContentProps {
   clientsPromise: Promise<CutListItem[]>;
@@ -106,8 +106,10 @@ export function ServiceListContent({
     setCapturedAt(timestamp);
   };
 
-  const handleFinishCompletion = async (address: any) => {
-    if (!completingAddressId) return;
+  const handleFinishCompletion = async (
+    address: CutListItem["address"] | undefined,
+  ) => {
+    if (!completingAddressId || !address) return;
 
     let fileToUpload = capturedPhoto || undefined;
 
@@ -264,20 +266,21 @@ export function ServiceListContent({
                                         variant="link"
                                         size="sm"
                                         className="text-xs h-auto p-0 text-slate-500 hover:text-primary"
-                                        onClick={() =>
+                                        onClick={() => {
+                                          const photo =
+                                            address.completed_job?.photos?.[0];
+                                          if (!photo) return;
                                           setViewingSiteMap({
-                                            id: address.completed_job!
-                                              .photos![0].id,
+                                            id: photo.id,
                                             address_id: address.id,
-                                            blob_path:
-                                              address.completed_job!.photos![0]
-                                                .blob_path,
+                                            blob_path: photo.blob_path,
+                                            map_data: null,
                                             name: "Completion Photo",
-                                            created_at:
-                                              address.completed_job!.photos![0]
-                                                .created_at,
-                                          })
-                                        }
+                                            created_at: photo.created_at
+                                              ? new Date(photo.created_at)
+                                              : new Date(),
+                                          });
+                                        }}
                                       >
                                         View Photo
                                       </Button>
@@ -341,10 +344,12 @@ export function ServiceListContent({
               Confirm Completion
             </h3>
             <div className="aspect-square w-full relative rounded-lg overflow-hidden border">
-              {/* biome-ignore lint/a11y/useAltText: confirmation preview */}
-              <img
+              <Image
                 src={URL.createObjectURL(capturedPhoto)}
-                className="w-full h-full object-cover"
+                alt="confirmation preview"
+                fill
+                unoptimized
+                className="object-cover"
               />
             </div>
             <div className="flex gap-3">
@@ -381,10 +386,12 @@ export function ServiceListContent({
           {viewingSiteMap && (
             <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
               {viewingSiteMap.blob_path ? (
-                /* biome-ignore lint/a11y/useAltText: viewing existing sitemap or completion photo */
-                <img
+                <Image
                   src={`/api/site-maps/image/${viewingSiteMap.id}`}
-                  className="max-w-full max-h-full object-contain shadow-2xl rounded-sm transition-all duration-300"
+                  alt="Viewing existing sitemap or completion photo"
+                  fill
+                  unoptimized
+                  className="object-contain shadow-2xl rounded-sm transition-all duration-300"
                 />
               ) : viewingSiteMap.map_data ? (
                 <div className="w-full max-w-5xl aspect-[12/8] bg-white rounded-lg overflow-hidden shadow-2xl">
