@@ -492,6 +492,9 @@ export async function getClientByIdDb(
   id: string,
   orgId: string,
 ): Promise<ClientRow | null> {
+  "use cache";
+  cacheTag(`client-${id}-${orgId}`, `client-${orgId}`);
+  cacheTag("days");
   const result = await sql`
     SELECT * FROM clients
     WHERE id = ${id} AND org_id = ${orgId}

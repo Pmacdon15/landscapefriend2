@@ -48,6 +48,7 @@ export async function updateClientAction(
   return result.match(
     (client) => {
       updateTag(`clients-${client.org_id}`);
+      updateTag(`client-${client.org_id}-${client.id}`);
       updateTag(`addresses-${client.org_id}`);
       updateTag(`schedules-${client.org_id}`);
       updateTag(`sitemaps-${client.org_id}`);
@@ -86,6 +87,7 @@ export async function deleteClientAction(clientId: string) {
   return result.match(
     (client) => {
       updateTag(`clients-${client.org_id}`);
+      updateTag(`client-${client.org_id}-${client.id}`);
       updateTag(`addresses-${client.org_id}`);
       updateTag(`schedules-${client.org_id}`);
       updateTag(`sitemaps-${client.org_id}`);
