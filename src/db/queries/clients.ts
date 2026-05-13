@@ -9,7 +9,10 @@ import type {
   ScheduleRow,
   SiteMapRow,
 } from "@/types/types";
-import type { ScheduleWithOrgSchema, SiteMapWithOrgSchema } from "@/zod/schemas";
+import type {
+  ScheduleWithOrgSchema,
+  SiteMapWithOrgSchema,
+} from "@/zod/schemas";
 import { sql } from "../client";
 export async function getClientsDb(orgId: string): Promise<ClientRow[]> {
   "use cache";
@@ -415,11 +418,16 @@ export async function insertSiteMapDb(
   return row;
 }
 
-export async function deleteSiteMapDb(siteMapId: string): Promise<void> {
-  await sql`
+export async function deleteSiteMapDb(
+  siteMapId: string,
+): Promise<SiteMapWithOrgSchema> {
+  const [row] = (await sql`
     DELETE FROM site_maps
     WHERE id = ${siteMapId}
-  `;
+    RETURNING *
+  `) as unknown as SiteMapWithOrgSchema[];
+
+  return row;
 }
 
 export async function getSiteMapWithOrgDb(

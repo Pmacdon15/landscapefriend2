@@ -3,11 +3,10 @@ import { toast } from "sonner";
 import {
   createClientAction,
   deleteClientAction,
-  deleteSiteMapAction,
-  saveSiteMapAction,
   updateAddressAssigneeAction,
   updateClientAction,
 } from "@/actions/clients";
+import { deleteSiteMapAction, saveSiteMapAction } from "@/actions/sitemaps";
 import type { CreateClientInput } from "@/zod/schemas";
 
 export function useCreateClient() {

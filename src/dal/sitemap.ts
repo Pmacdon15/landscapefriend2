@@ -39,7 +39,7 @@ export async function saveSiteMapDal(
 
 export async function deleteSiteMapDal(
   siteMapId: string,
-): Promise<Result<void, { reason: string }>> {
+): Promise<Result<SiteMapWithOrgSchema, { reason: string }>> {
   const { orgId } = await auth.protect();
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 

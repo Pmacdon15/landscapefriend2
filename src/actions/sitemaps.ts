@@ -1,5 +1,5 @@
 import { put } from "@vercel/blob";
-import { revalidatePath, updateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { deleteSiteMapDal, saveSiteMapDal } from "@/dal/sitemap";
 
 export async function saveSiteMapAction(formData: FormData) {
@@ -57,10 +57,12 @@ export async function saveSiteMapAction(formData: FormData) {
 
 export async function deleteSiteMapAction(siteMapId: string) {
   const result = await deleteSiteMapDal(siteMapId);
-  revalidatePath("/client-info-list");
 
   return result.match(
-    () => ({ success: true, error: null }),
+    (siteMap) => {
+      updateTag(`sitemaps-${siteMap.org_id}`);
+      return { success: true, siteMap, error: null };
+    },
     (err) => ({ success: false, error: err.reason }),
   );
 }
