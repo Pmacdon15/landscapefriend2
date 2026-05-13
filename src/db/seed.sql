@@ -5,7 +5,7 @@ ON CONFLICT (user_id) DO NOTHING;
 
 -- Dummy Organization Insert
 INSERT INTO organizations (org_id, name)
-VALUES ('org_3DY7FL5jIzw9kxnXHMVO7VzGCes', 'Patricks Organization')
+VALUES ('org_3DeTMGxDlYOssvHgmZR4b3ZcPv7', 'Patricks Organization')
 ON CONFLICT (org_id) DO NOTHING;
 
 -- Dummy Client Insert

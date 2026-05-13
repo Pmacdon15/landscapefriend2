@@ -1,3 +1,4 @@
+import { cacheTag, updateTag } from "next/cache";
 import type {
   AddressRow,
   AssignmentRow,
@@ -8,9 +9,11 @@ import type {
   ScheduleRow,
   SiteMapRow,
 } from "@/types/types";
+import type { ScheduleWithOrgSchema, SiteMapWithOrgSchema } from "@/zod/schemas";
 import { sql } from "../client";
-
 export async function getClientsDb(orgId: string): Promise<ClientRow[]> {
+  "use cache";
+  cacheTag(`clients-${orgId}`);
   const result = await sql`
     SELECT * FROM clients
     WHERE org_id = ${orgId}
@@ -99,16 +102,19 @@ export async function deleteAddressDb(
 export async function deleteClientDb(
   clientId: string,
   orgId: string,
-): Promise<void> {
-  // Rely on ON DELETE CASCADE for schedules, route_orders, completed_jobs, assignments, and addresses.
-  // We just need to delete the client record.
-  await sql`
+): Promise<ClientRow> {
+  const [client] = (await sql`
     DELETE FROM clients
-    WHERE id = ${clientId} AND org_id = ${orgId}
-  `;
+    WHERE id = ${clientId} AND org_id = ${orgId} 
+    RETURNING *
+  `) as unknown as ClientRow[];
+
+  return client;
 }
 
 export async function getAddressesDb(orgId: string): Promise<AddressRow[]> {
+  "use cache";
+  cacheTag(`addresses-${orgId}`);
   const result = await sql`
     SELECT a.* FROM addresses a
     JOIN clients c ON a.client_id = c.id
@@ -118,6 +124,8 @@ export async function getAddressesDb(orgId: string): Promise<AddressRow[]> {
 }
 
 export async function getSchedulesDb(orgId: string): Promise<ScheduleRow[]> {
+  "use cache";
+  updateTag(`schedules-${orgId}`);
   const result = await sql`
     SELECT s.* FROM schedules s
     JOIN addresses a ON s.address_id = a.id
@@ -130,6 +138,8 @@ export async function getSchedulesDb(orgId: string): Promise<ScheduleRow[]> {
 export async function getRouteOrdersDb(
   orgId: string,
 ): Promise<RouteOrderRow[]> {
+  "use cache";
+  cacheTag(`route-order-${orgId}`);
   const result = await sql`
     SELECT * FROM route_orders
     WHERE org_id = ${orgId}
@@ -139,28 +149,34 @@ export async function getRouteOrdersDb(
 
 export async function upsertScheduleDb(
   addressId: string,
+  orgId: string,
   frequency: string,
   nextCutDate: Date,
-): Promise<ScheduleRow> {
+): Promise<ScheduleWithOrgSchema> {
   const dayOfWeek = nextCutDate.getDay();
-  const result = await sql`
-    INSERT INTO schedules (address_id, day_of_week, frequency, next_cut_date)
-    VALUES (${addressId}, ${dayOfWeek}, ${frequency}, ${nextCutDate})
+
+  const [row] = (await sql`
+    INSERT INTO schedules (address_id, org_id, day_of_week, frequency, next_cut_date)
+    VALUES (${addressId}, ${orgId}, ${dayOfWeek}, ${frequency}, ${nextCutDate})
     ON CONFLICT (address_id) 
     DO UPDATE SET 
+      org_id = EXCLUDED.org_id,
       day_of_week = EXCLUDED.day_of_week,
       frequency = EXCLUDED.frequency,
       next_cut_date = EXCLUDED.next_cut_date,
       updated_at = CURRENT_TIMESTAMP
     RETURNING *
-  `;
-  return result[0] as unknown as ScheduleRow;
+  `) as unknown as ScheduleWithOrgSchema[];
+
+  return row;
 }
 
 export async function getAssignmentsDb(
   orgId: string,
   date: string,
 ): Promise<AssignmentRow[]> {
+  "use cache";
+  cacheTag(`assignments-${orgId}`);
   const result = await sql`
     SELECT * FROM assignments
     WHERE org_id = ${orgId} AND scheduled_date = ${date}
@@ -279,23 +295,28 @@ export async function updateRouteOrderDb(
   addressId: string,
   orgId: string,
   newSortOrder: number,
-): Promise<void> {
-  await sql`
+): Promise<RouteOrderRow> {
+  const result = (await sql`
     INSERT INTO route_orders (address_id, org_id, sort_order)
     VALUES (${addressId}, ${orgId}, ${newSortOrder})
     ON CONFLICT (address_id) DO UPDATE SET sort_order = EXCLUDED.sort_order, updated_at = CURRENT_TIMESTAMP
-  `;
+  `) as unknown as RouteOrderRow;
+  return result;
 }
 
 export async function updateAddressAssigneeDb(
   addressId: string,
   assignedTo: string | null,
-): Promise<void> {
-  await sql`
+): Promise<AddressRow> {
+  // Destructure the first element [row] from the results array
+  const [row] = (await sql`
     UPDATE addresses
     SET assigned_to = ${assignedTo}, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ${addressId}
-  `;
+    WHERE id = ${addressId} 
+    RETURNING *
+  `) as unknown as AddressRow[];
+
+  return row;
 }
 
 export async function insertCompletedJobDb(
@@ -318,9 +339,12 @@ export async function insertCompletedJobDb(
 
 export async function getCompletedJobsDb(
   orgId: string,
-  date: string,
+  date?: string,
 ): Promise<CompletedJobRow[]> {
-  const result = await sql`
+  "use cache";
+  cacheTag(`job-history-${orgId}-${date ?? ""}`);
+  const result = date
+    ? await sql`
     SELECT cj.*, 
            COALESCE(
              (SELECT json_agg(cp.*) FROM completion_photos cp WHERE cp.completed_job_id = cj.id),
@@ -328,14 +352,8 @@ export async function getCompletedJobsDb(
            ) as photos
     FROM completed_jobs cj
     WHERE cj.org_id = ${orgId} AND cj.completed_at::date = ${date}::date
-  `;
-  return result as unknown as CompletedJobRow[];
-}
-
-export async function getCompletedJobsHistoryDb(
-  orgId: string,
-): Promise<CompletedJobRow[]> {
-  const result = await sql`
+  `
+    : await sql`
     SELECT cj.*, 
            COALESCE(
              (SELECT json_agg(cp.*) FROM completion_photos cp WHERE cp.completed_job_id = cj.id),
@@ -362,6 +380,8 @@ export async function insertCompletionPhotoDb(
 }
 
 export async function getSiteMapsDb(orgId: string): Promise<SiteMapRow[]> {
+  "use cache";
+  cacheTag(`sitemaps-${orgId}`);
   const result = await sql`
     SELECT sm.* FROM site_maps sm
     JOIN addresses a ON sm.address_id = a.id
@@ -376,15 +396,23 @@ export async function insertSiteMapDb(
   name: string | null,
   blobPath: string | null,
   mapData: Record<string, unknown> | null,
-): Promise<SiteMapRow> {
-  // Ensure mapData is passed as a string for JSONB to avoid driver issues with arrays/objects
+): Promise<SiteMapWithOrgSchema> {
   const jsonMapData = mapData ? JSON.stringify(mapData) : null;
-  const result = await sql`
-    INSERT INTO site_maps (address_id, name, blob_path, map_data)
-    VALUES (${addressId}, ${name}, ${blobPath}, ${jsonMapData})
+
+  const [row] = (await sql`
+    INSERT INTO site_maps (address_id, org_id, name, blob_path, map_data)
+    SELECT 
+      id, 
+      org_id, 
+      ${name}, 
+      ${blobPath}, 
+      ${jsonMapData}
+    FROM addresses
+    WHERE id = ${addressId}
     RETURNING *
-  `;
-  return result[0] as unknown as SiteMapRow;
+  `) as unknown as SiteMapWithOrgSchema[];
+
+  return row;
 }
 
 export async function deleteSiteMapDb(siteMapId: string): Promise<void> {
@@ -426,6 +454,10 @@ export async function searchClientsDb(
   query: string,
   matchedAssigneeIds: string[] = [],
 ): Promise<ClientRow[]> {
+  "use cache";
+  cacheTag(
+    `clients-search${orgId}-${query}-${matchedAssigneeIds.sort().join("-")}`,
+  );
   const searchPattern = `%${query}%`;
   const hasAssignees = matchedAssigneeIds.length > 0;
 

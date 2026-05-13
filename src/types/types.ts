@@ -27,6 +27,7 @@ export interface AddressRow {
   assigned_to: string | null;
   created_at: Date;
   updated_at: Date;
+  org_id?: string;
 }
 
 export interface ScheduleRow {
@@ -111,4 +112,12 @@ export interface ClientCardProps {
 export interface ClientCardContactProps {
   email: string | null | undefined;
   phone: string | null | undefined;
+}
+
+export interface CutListItem {
+  client: {
+    id: string;
+    name: string;
+  };
+  address: Address;
 }

@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { upsertScheduleDal } from "@/dal/clients";
+import { revalidatePath, updateTag } from "next/cache";
+import { upsertScheduleDal } from "@/dal/service";
 
 export async function upsertScheduleAction(
   addressId: string,
@@ -13,7 +13,10 @@ export async function upsertScheduleAction(
   revalidatePath("/clients-service");
 
   return result.match(
-    (schedule) => ({ success: true, schedule, error: null }),
+    (schedule) => {
+      updateTag(`schedules-${schedule.org_id}`);
+      return { success: true, schedule, error: null };
+    },
     (err) => ({ success: false, schedule: null, error: err.reason }),
   );
 }

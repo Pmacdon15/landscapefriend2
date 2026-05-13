@@ -1,61 +1,38 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { differenceInCalendarDays, parseISO, startOfDay } from "date-fns";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
 import type {
+  Address,
   AddressRow,
+  Client,
   ClientRow,
+  CutListItem,
   ScheduleRow,
   SiteMapRow,
 } from "@/types/types";
 import {
+  type AddressInputSchema,
+  type CreateClientInput,
+  CreateClientInputSchema,
+} from "@/zod/schemas";
+import {
   deleteAddressDb,
-  deleteAssignmentDb,
   deleteClientDb,
-  deleteSiteMapDb,
   getAddressesDb,
   getAssignmentsDb,
-  getClientByIdDb,
   getClientsDb,
   getCompletedJobsDb,
-  getCompletedJobsHistoryDb,
   getRouteOrdersDb,
   getSchedulesDb,
   getSiteMapsDb,
   insertAddressDb,
   insertClientDb,
-  insertCompletedJobDb,
-  insertCompletionPhotoDb,
-  insertSiteMapDb,
   searchClientsDb,
-  updateAddressAssigneeDb,
   updateAddressDb,
   updateClientDb,
-  updateRouteOrderDb,
-  upsertAssignmentDb,
-  upsertScheduleDb,
 } from "../db/queries/clients";
-import {
-  type Address,
-  type AddressInputSchema,
-  type Assignment,
-  type Client,
-  type CompletedJob,
-  type CreateClientInput,
-  CreateClientInputSchema,
-  type Schedule,
-  type SiteMap,
-} from "../zod/schemas";
-
-export type { Client, Address, Schedule, CompletedJob, Assignment };
-
-export interface CutListItem {
-  client: {
-    id: string;
-    name: string;
-  };
-  address: Address;
-}
+import { getOrganizationMembersDal } from "./clerk";
 
 export async function getClientsForInfoDal(
   page: number,
@@ -65,6 +42,7 @@ export async function getClientsForInfoDal(
   if (!orgId) {
     throw new Error("Unauthorized: No organization selected");
   }
+
   let matchedAssigneeIds: string[] = [];
   if (searchQuery) {
     const members = await getOrganizationMembersDal();
@@ -81,49 +59,60 @@ export async function getClientsForInfoDal(
       getAddressesDb(orgId),
       getSchedulesDb(orgId),
       getSiteMapsDb(orgId),
-      getCompletedJobsHistoryDb(orgId),
+      getCompletedJobsDb(orgId),
     ]);
 
-  const mappedClients = clients.map((client: ClientRow) => {
-    const clientAddresses = addresses
-      .filter(
-        (a: AddressRow) => a.client_id === client.id && a.status !== "deleted",
-      )
-      .map((address: AddressRow) => {
-        const schedule = schedules.find(
-          (s: ScheduleRow) => s.address_id === address.id,
-        );
-        const addressSiteMaps = siteMaps.filter(
-          (sm) => sm.address_id === address.id,
-        );
-        // Find latest completed job for basic preview, but we could provide the whole array
-        const latestJob = jobHistory.find((j) => j.address_id === address.id);
+  const addressMap = new Map<string, AddressRow[]>();
+  addresses.forEach((a) => {
+    if (a.status !== "deleted") {
+      const list = addressMap.get(a.client_id) || [];
+      list.push(a);
+      addressMap.set(a.client_id, list);
+    }
+  });
 
-        return {
-          ...address,
-          schedule: schedule || null,
-          sort_order: 0,
-          assignment: null,
-          completed_job: latestJob || null,
-          site_maps: addressSiteMaps,
-        } as Address;
-      });
+  const scheduleMap = new Map<string, ScheduleRow>();
+  schedules.forEach((s) => {
+    scheduleMap.set(s.address_id, s);
+  });
+
+  const siteMapLookup = new Map<string, typeof siteMaps>();
+  siteMaps.forEach((sm) => {
+    const list = siteMapLookup.get(sm.address_id) || [];
+    list.push(sm);
+    siteMapLookup.set(sm.address_id, list);
+  });
+
+  const historyMap = new Map<string, (typeof jobHistory)[0]>();
+  jobHistory.forEach((j) => {
+    historyMap.set(j.address_id, j);
+  });
+
+  const mappedClients = clients.map((client: ClientRow) => {
+    const clientAddresses = (addressMap.get(client.id) || []).map((address) => {
+      return {
+        ...address,
+        schedule: scheduleMap.get(address.id) || null,
+        sort_order: 0,
+        assignment: null,
+        completed_job: historyMap.get(address.id) || null,
+        site_maps: siteMapLookup.get(address.id) || [],
+      } as Address;
+    });
 
     return { ...client, addresses: clientAddresses } as Client;
   });
 
-  const allClients = mappedClients;
   const pageSize = 6;
-  const totalPages = Math.max(1, Math.ceil(allClients.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(mappedClients.length / pageSize));
   const safePage = Math.max(1, Math.min(page, totalPages));
-  const paginatedClients = allClients.slice(
+  const paginatedClients = mappedClients.slice(
     (safePage - 1) * pageSize,
     safePage * pageSize,
   );
 
   return { clients: paginatedClients, totalPages };
 }
-
 export async function getClientsForCutListDal(
   date: string,
 ): Promise<CutListItem[]> {
@@ -148,98 +137,90 @@ export async function getClientsForCutListDal(
     getSiteMapsDb(orgId),
   ]);
 
-  // Create lookup maps for O(1) access
-  const scheduleMap = new Map(schedules.map((s) => [s.address_id, s]));
-  const orderMap = new Map(
-    routeOrders?.map((r) => [r.address_id, r.sort_order]),
-  );
-  const assignmentMap = new Map(assignments.map((a) => [a.address_id, a]));
-  const jobMap = new Map(completedJobs.map((j) => [j.address_id, j]));
-  const clientMap = new Map(clients.map((c) => [c.id, c]));
+  const scheduleMap = new Map<string, ScheduleRow>();
+  schedules.forEach((s) => {
+    scheduleMap.set(s.address_id, s);
+  });
+
+  const orderMap = new Map<string, number>();
+  routeOrders?.forEach((r) => {
+    orderMap.set(r.address_id, r.sort_order);
+  });
+
+  const assignmentMap = new Map<string, (typeof assignments)[0]>();
+  assignments.forEach((a) => {
+    assignmentMap.set(a.address_id, a);
+  });
+
+  const jobMap = new Map<string, (typeof completedJobs)[0]>();
+  completedJobs.forEach((j) => {
+    jobMap.set(j.address_id, j);
+  });
+
+  const clientMap = new Map<string, ClientRow>();
+  clients.forEach((c) => {
+    clientMap.set(c.id, c);
+  });
+
   const siteMapGroupMap = new Map<string, SiteMapRow[]>();
-  for (const sm of siteMaps) {
+  siteMaps.forEach((sm) => {
     const group = siteMapGroupMap.get(sm.address_id) || [];
     group.push(sm);
     siteMapGroupMap.set(sm.address_id, group);
-  }
+  });
 
   const targetDate = startOfDay(parseISO(date));
+  const results: CutListItem[] = [];
 
-  // Map directly over addresses instead of nesting under clients
-  const results = addresses
-    .filter((addr) => addr.status !== "deleted")
-    .map((addr) => {
-      const schedule = scheduleMap.get(addr.id);
-      if (!schedule) return null;
+  for (const addr of addresses) {
+    if (addr.status === "deleted") continue;
 
-      // Normalize dates to avoid timezone issues (use UTC to avoid local day shifts)
-      const scheduleDateStr =
-        schedule.next_cut_date instanceof Date
-          ? schedule.next_cut_date.toISOString().split("T")[0]
-          : String(schedule.next_cut_date).split("T")[0];
-      const scheduleDate = parseISO(scheduleDateStr);
-      const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
-      if (diffDays < 0) return null;
+    const schedule = scheduleMap.get(addr.id);
+    if (!schedule) continue;
 
-      let isScheduled = false;
-      const freq = schedule.frequency.toLowerCase();
+    const scheduleDateStr =
+      schedule.next_cut_date instanceof Date
+        ? schedule.next_cut_date.toISOString().split("T")[0]
+        : String(schedule.next_cut_date).split("T")[0];
 
-      if (freq === "daily") isScheduled = true;
-      else if (diffDays === 0) isScheduled = true;
-      else if (freq === "weekly") isScheduled = diffDays % 7 === 0;
-      else if (freq === "bi-weekly") isScheduled = diffDays % 14 === 0;
-      else if (freq === "monthly")
-        isScheduled = targetDate.getUTCDate() === scheduleDate.getUTCDate();
-      else isScheduled = schedule.day_of_week === targetDate.getUTCDay();
+    const scheduleDate = parseISO(scheduleDateStr);
+    const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
+    if (diffDays < 0) continue;
 
-      if (!isScheduled) return null;
+    let isScheduled = false;
+    const freq = schedule.frequency.toLowerCase();
 
-      // Check Assignment
-      const assignment = assignmentMap.get(addr.id);
-      const assigneeId = assignment?.user_id || addr.assigned_to;
+    if (freq === "daily") isScheduled = true;
+    else if (diffDays === 0) isScheduled = true;
+    else if (freq === "weekly") isScheduled = diffDays % 7 === 0;
+    else if (freq === "bi-weekly") isScheduled = diffDays % 14 === 0;
+    else if (freq === "monthly")
+      isScheduled = targetDate.getUTCDate() === scheduleDate.getUTCDate();
+    else isScheduled = schedule.day_of_week === targetDate.getUTCDay();
 
-      if (assigneeId !== userId) return null;
+    if (!isScheduled) continue;
 
-      const client = clientMap.get(addr.client_id);
-      if (!client) return null;
+    const assignment = assignmentMap.get(addr.id);
+    const assigneeId = assignment?.user_id || addr.assigned_to;
+    if (assigneeId !== userId) continue;
 
-      return {
-        client: { id: client.id, name: client.name },
-        address: {
-          ...addr,
-          schedule,
-          sort_order: orderMap.get(addr.id) ?? 0,
-          assignment: assignment ?? null,
-          completed_job: jobMap.get(addr.id) ?? null,
-          site_maps: siteMapGroupMap.get(addr.id) || [],
-        } as Address,
-      };
-    })
-    .filter((item): item is CutListItem => item !== null);
+    const client = clientMap.get(addr.client_id);
+    if (!client) continue;
+
+    results.push({
+      client: { id: client.id, name: client.name },
+      address: {
+        ...addr,
+        schedule,
+        sort_order: orderMap.get(addr.id) ?? 0,
+        assignment: assignment ?? null,
+        completed_job: jobMap.get(addr.id) ?? null,
+        site_maps: siteMapGroupMap.get(addr.id) || [],
+      } as Address,
+    });
+  }
 
   return results.sort((a, b) => a.address.sort_order - b.address.sort_order);
-}
-
-export async function updateRouteOrderDal(
-  addressId: string,
-  newSortOrder: number,
-): Promise<Result<void, { reason: string }>> {
-  const { orgId } = await auth.protect();
-
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
-
-  const parsedAddressId = z.string().uuid().safeParse(addressId);
-  if (!parsedAddressId.success)
-    return errAsync({ reason: "Invalid address ID" });
-
-  const parsedSortOrder = z.number().safeParse(newSortOrder);
-  if (!parsedSortOrder.success)
-    return errAsync({ reason: "Invalid sort order" });
-
-  return ResultAsync.fromPromise(
-    updateRouteOrderDb(parsedAddressId.data, orgId, parsedSortOrder.data),
-    () => ({ reason: "Failed to update route order" }),
-  );
 }
 
 export async function createClientDal(
@@ -305,7 +286,7 @@ export async function updateClientDal(
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  const clientIdResult = z.string().uuid().safeParse(clientId);
+  const clientIdResult = z.uuid().safeParse(clientId);
   if (!clientIdResult.success) return errAsync({ reason: "Invalid client ID" });
 
   const result = CreateClientInputSchema.safeParse(data);
@@ -378,256 +359,28 @@ export async function updateClientDal(
   );
 }
 
-export async function upsertScheduleDal(
-  addressId: string,
-  frequency: string,
-  nextCutDate: Date,
-): Promise<Result<Schedule, { reason: string }>> {
-  const { orgId } = await auth.protect();
-
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
-
-  const parsedAddressId = z.string().uuid().safeParse(addressId);
-  if (!parsedAddressId.success)
-    return errAsync({ reason: "Invalid address ID" });
-
-  const parsedFrequency = z.string().min(1).safeParse(frequency);
-  if (!parsedFrequency.success)
-    return errAsync({ reason: "Invalid frequency" });
-
-  const parsedDate = z.date().safeParse(nextCutDate);
-  if (!parsedDate.success) return errAsync({ reason: "Invalid date" });
-
-  return ResultAsync.fromPromise(
-    upsertScheduleDb(
-      parsedAddressId.data,
-      parsedFrequency.data,
-      parsedDate.data,
-    ) as Promise<Schedule>,
-    () => ({ reason: "Failed to update schedule" }),
-  );
-}
-
-export async function completeJobDal(
-  addressId: string,
-  serviceType: "grass" | "snow",
-  assignedTo?: string | null,
-  notes?: string | null,
-  photoBlobPath?: string | null,
-  capturedAt?: Date | null,
-  completedAt?: Date | null,
-): Promise<Result<CompletedJob, { reason: string }>> {
-  const { orgId, userId } = await auth.protect();
-
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
-
-  const parsedAddressId = z.string().uuid().safeParse(addressId);
-  if (!parsedAddressId.success)
-    return errAsync({ reason: "Invalid address ID" });
-
-  const parsedServiceType = z.enum(["grass", "snow"]).safeParse(serviceType);
-  if (!parsedServiceType.success)
-    return errAsync({ reason: "Invalid service type" });
-
-  return ResultAsync.fromPromise(
-    (async () => {
-      const job = await insertCompletedJobDb(
-        parsedAddressId.data,
-        orgId,
-        parsedServiceType.data,
-        userId,
-        assignedTo,
-        completedAt || new Date(),
-        capturedAt || null,
-        notes,
-      );
-
-      if (photoBlobPath) {
-        await insertCompletionPhotoDb(
-          job.id,
-          photoBlobPath,
-          capturedAt || null,
-        );
-      }
-
-      return job as CompletedJob;
-    })(),
-    () => ({ reason: "Failed to complete job" }),
-  );
-}
-
-export async function getOrganizationMembersDal(): Promise<
-  { id: string; name: string }[]
-> {
-  const { orgId } = await auth.protect();
-
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
-
-  try {
-    const client = await clerkClient();
-    const members = await client.organizations.getOrganizationMembershipList({
-      organizationId: orgId,
-    });
-
-    return members.data.map((m) => ({
-      id: m.publicUserData?.userId || "",
-      name:
-        m.publicUserData?.firstName && m.publicUserData?.lastName
-          ? `${m.publicUserData.firstName} ${m.publicUserData.lastName}`
-          : m.publicUserData?.identifier || "Unknown Member",
-    }));
-  } catch (error) {
-    console.error("Failed to fetch organization members from Clerk:", error);
-    return [];
-  }
-}
-
-export async function upsertAssignmentDal(
-  addressId: string,
-  userId: string | null,
-  date: string,
-): Promise<Result<Assignment | null, { reason: string }>> {
-  const { orgId } = await auth.protect();
-
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
-
-  const parsedAddressId = z.string().uuid().safeParse(addressId);
-  if (!parsedAddressId.success)
-    return errAsync({ reason: "Invalid address ID" });
-
-  if (!userId || userId === "unassigned") {
-    return ResultAsync.fromPromise(
-      deleteAssignmentDb(parsedAddressId.data, date).then(() => null),
-      () => ({ reason: "Failed to delete assignment" }),
-    );
-  }
-
-  return ResultAsync.fromPromise(
-    upsertAssignmentDb(
-      parsedAddressId.data,
-      orgId,
-      userId,
-      date,
-    ) as Promise<Assignment>,
-    () => ({ reason: "Failed to upsert assignment" }),
-  );
-}
-
-export async function updateAddressAssigneeDal(
-  addressId: string,
-  userId: string | null,
-): Promise<Result<void, { reason: string }>> {
-  const { orgId } = await auth.protect();
-
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
-
-  const parsedAddressId = z.string().uuid().safeParse(addressId);
-  if (!parsedAddressId.success)
-    return errAsync({ reason: "Invalid address ID" });
-
-  return ResultAsync.fromPromise(
-    updateAddressAssigneeDb(
-      parsedAddressId.data,
-      userId === "unassigned" ? null : userId,
-    ),
-    () => ({ reason: "Failed to update address assignee" }),
-  );
-}
-
 export async function deleteClientDal(
   clientId: string,
-): Promise<Result<void, { reason: string }>> {
+): Promise<Result<ClientRow, { reason: string }>> {
   const { orgId } = await auth.protect();
 
   if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-  const parsedClientId = z.string().uuid().safeParse(clientId);
+  const parsedClientId = z.uuid().safeParse(clientId);
   if (!parsedClientId.success) return errAsync({ reason: "Invalid client ID" });
 
   return ResultAsync.fromPromise(
     deleteClientDb(parsedClientId.data, orgId),
-    () => ({ reason: "Failed to delete client" }),
-  );
-}
-
-export async function saveSiteMapDal(
-  addressId: string,
-  name: string | null,
-  blobPath: string | null,
-  mapData: Record<string, unknown> | null,
-): Promise<Result<SiteMap, { reason: string }>> {
-  const { orgId } = await auth.protect();
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
-
-  const parsedAddressId = z.string().uuid().safeParse(addressId);
-  if (!parsedAddressId.success)
-    return errAsync({ reason: "Invalid address ID" });
-
-  return ResultAsync.fromPromise(
-    insertSiteMapDb(
-      parsedAddressId.data,
-      name,
-      blobPath,
-      mapData,
-    ) as Promise<SiteMap>,
-    () => ({ reason: "Failed to save site map" }),
-  );
-}
-
-export async function deleteSiteMapDal(
-  siteMapId: string,
-): Promise<Result<void, { reason: string }>> {
-  const { orgId } = await auth.protect();
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
-
-  const parsedSiteMapId = z.string().uuid().safeParse(siteMapId);
-  if (!parsedSiteMapId.success)
-    return errAsync({ reason: "Invalid site map ID" });
-
-  return ResultAsync.fromPromise(deleteSiteMapDb(parsedSiteMapId.data), () => ({
-    reason: "Failed to delete site map",
-  }));
-}
-
-export async function getClientByIdDal(id: string): Promise<Client | null> {
-  const { orgId } = await auth.protect();
-  if (!orgId) throw new Error("Unauthorized");
-
-  const [clientRow, addresses, schedules, siteMaps, jobHistory] =
-    await Promise.all([
-      getClientByIdDb(id, orgId),
-      getAddressesDb(orgId),
-      getSchedulesDb(orgId),
-      getSiteMapsDb(orgId),
-      getCompletedJobsHistoryDb(orgId),
-    ]);
-
-  if (!clientRow) return null;
-
-  const clientAddresses = addresses
-    .filter((a: AddressRow) => a.client_id === id && a.status !== "deleted")
-    .map((address: AddressRow) => {
-      const schedule = schedules.find(
-        (s: ScheduleRow) => s.address_id === address.id,
-      );
-      const addressSiteMaps = siteMaps.filter(
-        (sm) => sm.address_id === address.id,
-      );
-      const latestJob = jobHistory.find((j) => j.address_id === address.id);
-
-      return {
-        ...address,
-        schedule: schedule || null,
-        sort_order: 0,
-        assignment: null,
-        completed_job: latestJob || null,
-        site_maps: addressSiteMaps,
-      } as Address;
-    });
-
-  return { ...clientRow, addresses: clientAddresses } as Client;
+    (error) => {
+      console.error(error); // Good for debugging server-side
+      return { reason: "Failed to delete client" };
+    },
+  ).andThen((client) => {
+    if (!client) {
+      return errAsync({ reason: "Client not found or already deleted" });
+    }
+    return ResultAsync.fromSafePromise(Promise.resolve(client));
+  });
 }
 
 export async function searchClientsDal(query: string): Promise<Client[]> {
@@ -645,32 +398,46 @@ export async function searchClientsDal(query: string): Promise<Client[]> {
       getAddressesDb(orgId),
       getSchedulesDb(orgId),
       getSiteMapsDb(orgId),
-      getCompletedJobsHistoryDb(orgId),
+      getCompletedJobsDb(orgId),
     ]);
 
-  return clients.map((client: ClientRow) => {
-    const clientAddresses = addresses
-      .filter(
-        (a: AddressRow) => a.client_id === client.id && a.status !== "deleted",
-      )
-      .map((address: AddressRow) => {
-        const schedule = schedules.find(
-          (s: ScheduleRow) => s.address_id === address.id,
-        );
-        const addressSiteMaps = siteMaps.filter(
-          (sm) => sm.address_id === address.id,
-        );
-        const latestJob = jobHistory.find((j) => j.address_id === address.id);
+  const addressMap = new Map<string, AddressRow[]>();
+  addresses.forEach((a) => {
+    if (a.status !== "deleted") {
+      const list = addressMap.get(a.client_id) || [];
+      list.push(a);
+      addressMap.set(a.client_id, list);
+    }
+  });
 
-        return {
-          ...address,
-          schedule: schedule || null,
-          sort_order: 0,
-          assignment: null,
-          completed_job: latestJob || null,
-          site_maps: addressSiteMaps,
-        } as Address;
-      });
+  const scheduleMap = new Map<string, ScheduleRow>();
+  schedules.forEach((s) => {
+    scheduleMap.set(s.address_id, s);
+  });
+
+  const siteMapLookup = new Map<string, SiteMapRow[]>();
+  siteMaps.forEach((sm) => {
+    const list = siteMapLookup.get(sm.address_id) || [];
+    list.push(sm);
+    siteMapLookup.set(sm.address_id, list);
+  });
+
+  const historyMap = new Map<string, typeof jobHistory[0]>();
+  jobHistory.forEach((j) => {
+    historyMap.set(j.address_id, j);
+  });
+
+  return clients.map((client: ClientRow) => {
+    const clientAddresses = (addressMap.get(client.id) || []).map((address) => {
+      return {
+        ...address,
+        schedule: scheduleMap.get(address.id) || null,
+        sort_order: 0,
+        assignment: null,
+        completed_job: historyMap.get(address.id) || null,
+        site_maps: siteMapLookup.get(address.id) || [],
+      } as Address;
+    });
 
     return { ...client, addresses: clientAddresses } as Client;
   });
