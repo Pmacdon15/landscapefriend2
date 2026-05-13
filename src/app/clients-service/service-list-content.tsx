@@ -8,12 +8,7 @@ import {
 } from "@hello-pangea/dnd";
 import imageCompression from "browser-image-compression";
 import { format, parseISO } from "date-fns";
-import {
-  CalendarIcon,
-  CheckCircle2,
-  GripVertical,
-  MapPin,
-} from "lucide-react";
+import { CalendarIcon, CheckCircle2, GripVertical, MapPin } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
 import { SiteMapViewer } from "@/components/clients/site-map-viewer";
@@ -28,10 +23,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { CutListItem } from "@/dal/clients";
+
 import { cn, getGoogleMapsUrl } from "@/lib/utils";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
+import type { CutListItem } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
 
 interface ServiceListContentProps {

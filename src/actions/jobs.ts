@@ -50,6 +50,10 @@ export async function completeJobAction(formData: FormData) {
         error: null,
       };
     },
-    (err) => ({ success: false, error: err.reason }),
+    (err) => ({
+      success: false,
+      job: null,
+      error: err.reason,
+    }),
   );
 }

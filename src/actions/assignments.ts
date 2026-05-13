@@ -11,6 +11,7 @@ export async function upsertAssignmentAction(
   const result = await upsertAssignmentDal(addressId, userId, date);
   return result.match(
     (assignment) => {
+      // Small fix: remove the optional chain if org_id is guaranteed
       updateTag(`assignments-${assignment?.org_id}`);
       return {
         success: true,
@@ -18,6 +19,10 @@ export async function upsertAssignmentAction(
         error: null,
       };
     },
-    (err) => ({ success: false, error: err.reason }),
+    (err) => ({
+      success: false,
+      assignment: null, // Add this to satisfy the type union
+      error: err.reason,
+    }),
   );
 }

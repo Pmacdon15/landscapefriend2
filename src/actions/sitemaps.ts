@@ -1,3 +1,5 @@
+"use server";
+
 import { put } from "@vercel/blob";
 import { updateTag } from "next/cache";
 import { deleteSiteMapDal, saveSiteMapDal } from "@/dal/sitemap";
