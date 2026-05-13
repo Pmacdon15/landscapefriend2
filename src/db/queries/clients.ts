@@ -1,4 +1,4 @@
-import { cacheTag, updateTag } from "next/cache";
+import { cacheTag } from "next/cache";
 import type {
   AddressRow,
   AssignmentRow,
@@ -128,7 +128,7 @@ export async function getAddressesDb(orgId: string): Promise<AddressRow[]> {
 
 export async function getSchedulesDb(orgId: string): Promise<ScheduleRow[]> {
   "use cache";
-  updateTag(`schedules-${orgId}`);
+  cacheTag(`schedules-${orgId}`);
   const result = await sql`
     SELECT s.* FROM schedules s
     JOIN addresses a ON s.address_id = a.id
