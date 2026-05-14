@@ -210,7 +210,7 @@ export async function upsertAssignmentDb(
       updated_at = CURRENT_TIMESTAMP
     RETURNING *
   `;
-  return result[0] as unknown as AddressRow;
+  return result[0] as unknown as AssignmentRow;
 }
 
 export async function deleteAssignmentDb(
