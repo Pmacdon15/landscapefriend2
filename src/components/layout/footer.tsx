@@ -112,7 +112,7 @@ export function Footer() {
             warning.
           </p>
           <p className="text-xs text-slate-400 dark:text-slate-600 text-center mt-2">
-            © {new Date().getFullYear()} Scheduler App. All rights reserved.
+            © 2026 Scheduler App. All rights reserved.
           </p>
         </div>
       </div>

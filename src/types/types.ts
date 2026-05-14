@@ -27,6 +27,7 @@ export interface AddressRow {
   assigned_to: string | null;
   created_at: Date;
   updated_at: Date;
+  org_id?: string;
 }
 
 export interface ScheduleRow {
@@ -34,7 +35,7 @@ export interface ScheduleRow {
   address_id: string;
   day_of_week: number | null;
   frequency: string;
-  next_cut_date: Date;
+  first_cut_date: Date;
   created_at: Date;
   updated_at: Date;
 }
@@ -93,7 +94,7 @@ export type OptimisticAction =
       type: "update-schedule";
       addressId: string;
       frequency: string;
-      nextCutDate: Date;
+      firstCutDate: Date;
     }
   | { type: "add-client"; client: Client }
   | { type: "edit-client"; client: Client }
@@ -111,4 +112,12 @@ export interface ClientCardProps {
 export interface ClientCardContactProps {
   email: string | null | undefined;
   phone: string | null | undefined;
+}
+
+export interface CutListItem {
+  client: {
+    id: string;
+    name: string;
+  };
+  address: Address;
 }

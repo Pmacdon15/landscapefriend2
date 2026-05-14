@@ -7,16 +7,16 @@ export function useUpsertSchedule() {
     mutationFn: async ({
       addressId,
       frequency,
-      nextCutDate,
+      firstCutDate,
     }: {
       addressId: string;
       frequency: string;
-      nextCutDate: Date;
+      firstCutDate: Date;
     }) => {
       const { success, schedule, error } = await upsertScheduleAction(
         addressId,
         frequency,
-        nextCutDate,
+        firstCutDate,
       );
 
       if (!success || !schedule) {

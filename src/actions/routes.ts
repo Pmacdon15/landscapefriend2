@@ -1,7 +1,6 @@
 "use server";
-
-import { revalidatePath } from "next/cache";
-import { updateRouteOrderDal } from "@/dal/clients";
+import { updateTag } from "next/cache";
+import { updateRouteOrderDal } from "@/dal/service";
 
 export async function updateRouteOrderAction(
   addressId: string,
@@ -9,11 +8,15 @@ export async function updateRouteOrderAction(
 ) {
   const result = await updateRouteOrderDal(addressId, newSortOrder);
 
-  // Revalidate paths that show cuts
-  revalidatePath("/clients-service");
-
   return result.match(
-    () => ({ success: true, error: null }),
+    (route) => {
+      updateTag(`job-history-${route.org_id}`);
+      return {
+        success: true,
+        route,
+        error: null,
+      };
+    },
     (err) => ({ success: false, error: err.reason }),
   );
 }

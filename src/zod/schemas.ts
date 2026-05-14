@@ -5,7 +5,7 @@ export const ScheduleSchema = z.object({
   address_id: z.string().uuid(),
   day_of_week: z.number().nullable(),
   frequency: z.string(),
-  next_cut_date: z.date(),
+  first_cut_date: z.date(),
 });
 
 export const AssignmentSchema = z.object({
@@ -96,3 +96,13 @@ export type CompletedJob = z.infer<typeof CompletedJobSchema>;
 export type SiteMap = z.infer<typeof SiteMapSchema>;
 export type Assignment = z.infer<typeof AssignmentSchema>;
 export type CreateClientInput = z.infer<typeof CreateClientInputSchema>;
+
+export const ScheduleWithOrg = ScheduleSchema.extend({
+  org_id: z.string(),
+});
+export type ScheduleWithOrgSchema = z.infer<typeof ScheduleWithOrg>;
+
+export const SiteMapWithOrg = SiteMapSchema.extend({
+  org_id: z.string(),
+});
+export type SiteMapWithOrgSchema = z.infer<typeof SiteMapWithOrg>;

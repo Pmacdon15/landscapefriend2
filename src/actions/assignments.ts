@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { upsertAssignmentDal } from "@/dal/clients";
+import { updateTag } from "next/cache";
+import { upsertAssignmentDal } from "@/dal/service";
 
 export async function upsertAssignmentAction(
   addressId: string,
@@ -9,10 +9,20 @@ export async function upsertAssignmentAction(
   date: string,
 ) {
   const result = await upsertAssignmentDal(addressId, userId, date);
-  revalidatePath("/clients-service");
-
   return result.match(
-    (assignment) => ({ success: true, assignment, error: null }),
-    (err) => ({ success: false, assignment: null, error: err.reason }),
+    (assignment) => {
+      // Small fix: remove the optional chain if org_id is guaranteed
+      updateTag(`assignments-${assignment?.org_id}`);
+      return {
+        success: true,
+        assignment,
+        error: null,
+      };
+    },
+    (err) => ({
+      success: false,
+      assignment: null, // Add this to satisfy the type union
+      error: err.reason,
+    }),
   );
 }

@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import ClientInfoContainer from "@/components/clients/client-info/client-info-container";
 import PaginationButtons from "@/components/pagination-buttons";
-import { getClientsForInfoDal, getOrganizationMembersDal } from "@/dal/clients";
+import { getOrganizationMembersDal } from "@/dal/clerk";
+import { getClientsForInfoDal } from "@/dal/clients";
 
 export const metadata: Metadata = {
   title: "Client Roster",

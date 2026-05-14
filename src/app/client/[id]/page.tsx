@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { SingleClientContainer } from "@/components/clients/client-info/single-client-container";
 import { buttonVariants } from "@/components/ui/button";
-import { getClientByIdDal, getOrganizationMembersDal } from "@/dal/clients";
+import { getOrganizationMembersDal } from "@/dal/clerk";
+import { getClientByIdDal } from "@/dal/sitemap";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {

@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { CalendarDays, FileImage, MapPin, User } from "lucide-react";
 import { startTransition, useState } from "react";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getGoogleMapsUrl } from "@/lib/utils";
+import { getGoogleMapsUrl, getNextCutDate } from "@/lib/utils";
 import { useUpdateAddressAssignee } from "@/mutations/clients";
 import type { Address, OptimisticAction } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
@@ -123,14 +123,26 @@ export function AddressItem({
       <div className="flex items-center justify-between pl-6">
         <div className="text-xs text-muted-foreground">
           {address.schedule ? (
-            <span className="flex flex-col gap-0.5">
-              <span className="font-medium text-slate-700 dark:text-slate-300 capitalize">
-                {address.schedule.frequency}
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize text-[10px] tracking-wider">
+                {address.schedule.frequency} SERVICE
               </span>
-              <span>
-                Next:{" "}
-                {format(new Date(address.schedule.next_cut_date), "MMM do")}
-              </span>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 text-primary">
+                  <span className="opacity-60 w-10">Next:</span>
+                  <span className="font-bold">
+                    {(() => {
+                      const nextDate = getNextCutDate(
+                        address.schedule.first_cut_date,
+                        address.schedule.frequency,
+                      );
+                      return isValid(nextDate)
+                        ? format(nextDate, "MMM do, yyyy")
+                        : "Not set";
+                    })()}
+                  </span>
+                </div>
+              </div>
             </span>
           ) : (
             <span className="italic">No schedule set</span>
@@ -164,7 +176,21 @@ export function AddressItem({
                 initialFrequency={address.schedule?.frequency}
                 initialDate={
                   address.schedule
-                    ? new Date(address.schedule.next_cut_date)
+                    ? (() => {
+                        const dateValue = address.schedule.first_cut_date;
+                        if (!dateValue) return undefined;
+                        try {
+                          const dateStr =
+                            typeof dateValue === "string"
+                              ? dateValue
+                              : dateValue instanceof Date && isValid(dateValue)
+                                ? dateValue.toISOString().split("T")[0]
+                                : null;
+                          return dateStr ? parseISO(dateStr) : undefined;
+                        } catch (_e) {
+                          return undefined;
+                        }
+                      })()
                     : undefined
                 }
                 setOptimistic={setOptimistic}

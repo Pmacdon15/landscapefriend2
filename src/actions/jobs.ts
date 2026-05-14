@@ -1,8 +1,8 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { revalidatePath } from "next/cache";
-import { completeJobDal } from "@/dal/clients";
+import { updateTag } from "next/cache";
+import { completeJobDal } from "@/dal/service";
 
 export async function completeJobAction(formData: FormData) {
   const addressId = formData.get("addressId") as string;
@@ -41,12 +41,19 @@ export async function completeJobAction(formData: FormData) {
     completedAt,
   );
 
-  // Revalidate paths that show schedules or cut lists
-  revalidatePath("/clients-service");
-  revalidatePath("/client-info-list");
-
   return result.match(
-    (job) => ({ success: true, job, error: null }),
-    (err) => ({ success: false, job: null, error: err.reason }),
+    (job) => {
+      updateTag(`job-history-${job.org_id}`);
+      return {
+        success: true,
+        job,
+        error: null,
+      };
+    },
+    (err) => ({
+      success: false,
+      job: null,
+      error: err.reason,
+    }),
   );
 }

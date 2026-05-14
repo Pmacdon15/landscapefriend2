@@ -2,12 +2,7 @@
 
 import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
-import {
-  FileImage,
-  Map as MapIcon,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { FileImage, Map as MapIcon, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,11 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Address } from "@/dal/clients";
+
 import { useDeleteSiteMap, useSaveSiteMap } from "@/mutations/clients";
-import type { SiteMap } from "@/zod/schemas";
-import { SiteMapEditor } from "./site-map-editor";
+import type { Address, SiteMap } from "@/zod/schemas";
 import { SiteMapViewer } from "../site-map-viewer";
+import { SiteMapEditor } from "./site-map-editor";
 
 interface SiteMapContainerProps {
   address: Address;
