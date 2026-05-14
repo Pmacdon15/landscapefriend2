@@ -73,6 +73,10 @@ export async function getClientsForInfoDal(
 
   const scheduleMap = new Map<string, ScheduleRow>();
   schedules.forEach((s) => {
+    // Fallback for transition period/stale cache
+    if (!s.first_cut_date && (s as any).next_cut_date) {
+      s.first_cut_date = (s as any).next_cut_date;
+    }
     scheduleMap.set(s.address_id, s);
   });
 
@@ -139,6 +143,10 @@ export async function getClientsForCutListDal(
 
   const scheduleMap = new Map<string, ScheduleRow>();
   schedules.forEach((s) => {
+    // Fallback for transition period/stale cache
+    if (!s.first_cut_date && (s as any).next_cut_date) {
+      s.first_cut_date = (s as any).next_cut_date;
+    }
     scheduleMap.set(s.address_id, s);
   });
 
@@ -179,9 +187,9 @@ export async function getClientsForCutListDal(
     if (!schedule) continue;
 
     const scheduleDateStr =
-      schedule.next_cut_date instanceof Date
-        ? schedule.next_cut_date.toISOString().split("T")[0]
-        : String(schedule.next_cut_date).split("T")[0];
+      schedule.first_cut_date instanceof Date
+        ? schedule.first_cut_date.toISOString().split("T")[0]
+        : String(schedule.first_cut_date).split("T")[0];
 
     const scheduleDate = parseISO(scheduleDateStr);
     const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
@@ -412,6 +420,10 @@ export async function searchClientsDal(query: string): Promise<Client[]> {
 
   const scheduleMap = new Map<string, ScheduleRow>();
   schedules.forEach((s) => {
+    // Fallback for transition period/stale cache
+    if (!s.first_cut_date && (s as any).next_cut_date) {
+      s.first_cut_date = (s as any).next_cut_date;
+    }
     scheduleMap.set(s.address_id, s);
   });
 

@@ -41,8 +41,8 @@ export function SingleClientContainer({
                 id: address.schedule?.id || crypto.randomUUID(),
                 address_id: address.id,
                 frequency: action.frequency,
-                next_cut_date: action.nextCutDate,
-                day_of_week: action.nextCutDate.getDay(),
+                first_cut_date: action.firstCutDate,
+                day_of_week: action.firstCutDate.getDay(),
               };
               return { ...address, schedule: newSchedule };
             }

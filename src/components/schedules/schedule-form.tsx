@@ -44,7 +44,7 @@ export function ScheduleForm({
   const form = useForm({
     defaultValues: {
       frequency: initialFrequency || "weekly",
-      startDate: initialDate || new Date(),
+      firstCutDate: initialDate || new Date(),
     },
     onSubmit: async ({ value }) => {
       if (setOptimistic) {
@@ -53,13 +53,13 @@ export function ScheduleForm({
             type: "update-schedule",
             addressId,
             frequency: value.frequency,
-            nextCutDate: value.startDate,
+            firstCutDate: value.firstCutDate,
           });
 
           upsertSchedule({
             addressId,
             frequency: value.frequency,
-            nextCutDate: value.startDate,
+            firstCutDate: value.firstCutDate,
           });
         });
       }
@@ -103,10 +103,10 @@ export function ScheduleForm({
         )}
       </form.Field>
 
-      <form.Field name="startDate">
+      <form.Field name="firstCutDate">
         {(field) => (
           <div className="flex flex-col space-y-2">
-            <Label>Start Date</Label>
+            <Label>First Cut Date</Label>
             <Popover>
               <PopoverTrigger
                 className={buttonVariants({

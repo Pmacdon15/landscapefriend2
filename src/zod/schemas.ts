@@ -5,7 +5,7 @@ export const ScheduleSchema = z.object({
   address_id: z.string().uuid(),
   day_of_week: z.number().nullable(),
   frequency: z.string(),
-  next_cut_date: z.date(),
+  first_cut_date: z.date(),
 });
 
 export const AssignmentSchema = z.object({

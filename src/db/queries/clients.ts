@@ -154,19 +154,19 @@ export async function upsertScheduleDb(
   addressId: string,
   orgId: string,
   frequency: string,
-  nextCutDate: Date,
+  firstCutDate: Date,
 ): Promise<ScheduleWithOrgSchema> {
-  const dayOfWeek = nextCutDate.getDay();
+  const dayOfWeek = firstCutDate.getDay();
 
   const [row] = (await sql`
-    INSERT INTO schedules (address_id, org_id, day_of_week, frequency, next_cut_date)
-    VALUES (${addressId}, ${orgId}, ${dayOfWeek}, ${frequency}, ${nextCutDate})
+    INSERT INTO schedules (address_id, org_id, day_of_week, frequency, first_cut_date)
+    VALUES (${addressId}, ${orgId}, ${dayOfWeek}, ${frequency}, ${firstCutDate})
     ON CONFLICT (address_id) 
     DO UPDATE SET 
       org_id = EXCLUDED.org_id,
       day_of_week = EXCLUDED.day_of_week,
       frequency = EXCLUDED.frequency,
-      next_cut_date = EXCLUDED.next_cut_date,
+      first_cut_date = EXCLUDED.first_cut_date,
       updated_at = CURRENT_TIMESTAMP
     RETURNING *
   `) as unknown as ScheduleWithOrgSchema[];
@@ -274,7 +274,7 @@ export async function getMockClientsDb(orgId: string): Promise<{
         address_id: addressId,
         day_of_week: nextCut.getDay(),
         frequency: i % 2 === 0 ? "bi-weekly" : "weekly",
-        next_cut_date: nextCut,
+        first_cut_date: nextCut,
         created_at: new Date(),
         updated_at: new Date(),
       });

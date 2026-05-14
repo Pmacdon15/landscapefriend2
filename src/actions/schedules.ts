@@ -6,9 +6,9 @@ import { upsertScheduleDal } from "@/dal/service";
 export async function upsertScheduleAction(
   addressId: string,
   frequency: string,
-  nextCutDate: Date,
+  firstCutDate: Date,
 ) {
-  const result = await upsertScheduleDal(addressId, frequency, nextCutDate);
+  const result = await upsertScheduleDal(addressId, frequency, firstCutDate);
   revalidatePath("/client-info-list");
   revalidatePath("/clients-service");
 

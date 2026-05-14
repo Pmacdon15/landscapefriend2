@@ -19,6 +19,6 @@ VALUES ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-1111111
 ON CONFLICT (id) DO NOTHING;
 
 -- Dummy Schedule Insert
-INSERT INTO schedules (id, address_id, day_of_week, frequency, next_cut_date)
+INSERT INTO schedules (id, address_id, day_of_week, frequency, first_cut_date)
 VALUES ('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', 1, 'bi-weekly', '2026-05-18')
 ON CONFLICT (id) DO NOTHING;

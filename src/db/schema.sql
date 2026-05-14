@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS schedules (
     address_id UUID NOT NULL UNIQUE REFERENCES addresses(id) ON DELETE CASCADE,
     day_of_week INTEGER, -- 0 for Sunday, 1 for Monday, etc.
     frequency TEXT NOT NULL, -- 'weekly', 'bi-weekly', 'monthly'
-    next_cut_date DATE NOT NULL,
+    first_cut_date DATE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
