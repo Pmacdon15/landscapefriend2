@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { deleteScheduleDal, upsertScheduleDal } from "@/dal/service";
 
 export async function upsertScheduleAction(
@@ -9,8 +9,6 @@ export async function upsertScheduleAction(
   firstCutDate: Date,
 ) {
   const result = await upsertScheduleDal(addressId, frequency, firstCutDate);
-  revalidatePath("/client-info-list");
-  revalidatePath("/clients-service");
 
   return result.match(
     (schedule) => {
@@ -23,8 +21,6 @@ export async function upsertScheduleAction(
 
 export async function deleteScheduleAction(addressId: string) {
   const result = await deleteScheduleDal(addressId);
-  revalidatePath("/client-info-list");
-  revalidatePath("/clients-service");
 
   return result.match(
     (schedule) => {
