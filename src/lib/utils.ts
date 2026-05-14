@@ -73,7 +73,7 @@ export function getNextCutDate(startDate: Date | string, frequency: string) {
     }
 
     return start;
-  } catch (e) {
+  } catch (_e) {
     return new Date(NaN);
   }
 }

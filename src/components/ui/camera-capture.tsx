@@ -18,7 +18,7 @@ export function CameraCapture({
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [_stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);

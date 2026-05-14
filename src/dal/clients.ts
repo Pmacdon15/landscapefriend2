@@ -195,15 +195,15 @@ export async function getClientsForCutListDal(
     try {
       const scheduleDateStr =
         schedule.first_cut_date instanceof Date
-          ? (isValid(schedule.first_cut_date)
-              ? schedule.first_cut_date.toISOString().split("T")[0]
-              : null)
+          ? isValid(schedule.first_cut_date)
+            ? schedule.first_cut_date.toISOString().split("T")[0]
+            : null
           : String(schedule.first_cut_date).split("T")[0];
 
       if (!scheduleDateStr) continue;
       scheduleDate = parseISO(scheduleDateStr);
       if (!isValid(scheduleDate)) continue;
-    } catch (e) {
+    } catch (_e) {
       continue;
     }
     const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
@@ -448,7 +448,7 @@ export async function searchClientsDal(query: string): Promise<Client[]> {
     siteMapLookup.set(sm.address_id, list);
   });
 
-  const historyMap = new Map<string, typeof jobHistory[0]>();
+  const historyMap = new Map<string, (typeof jobHistory)[0]>();
   jobHistory.forEach((j) => {
     historyMap.set(j.address_id, j);
   });

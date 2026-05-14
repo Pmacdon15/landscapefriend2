@@ -128,30 +128,6 @@ export function AddressItem({
                 {address.schedule.frequency} SERVICE
               </span>
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="opacity-60 w-10">First:</span>
-                  <span className="font-medium">
-                    {(() => {
-                      const dateValue = address.schedule.first_cut_date;
-                      if (!dateValue) return "Not set";
-                      try {
-                        const dateStr =
-                          typeof dateValue === "string"
-                            ? dateValue
-                            : dateValue instanceof Date && isValid(dateValue)
-                              ? dateValue.toISOString().split("T")[0]
-                              : null;
-                        if (!dateStr) return "Not set";
-                        const parsed = parseISO(dateStr);
-                        return isValid(parsed)
-                          ? format(parsed, "MMM do, yyyy")
-                          : "Not set";
-                      } catch (e) {
-                        return "Not set";
-                      }
-                    })()}
-                  </span>
-                </div>
                 <div className="flex items-center gap-1.5 text-primary">
                   <span className="opacity-60 w-10">Next:</span>
                   <span className="font-bold">
@@ -211,7 +187,7 @@ export function AddressItem({
                                 ? dateValue.toISOString().split("T")[0]
                                 : null;
                           return dateStr ? parseISO(dateStr) : undefined;
-                        } catch (e) {
+                        } catch (_e) {
                           return undefined;
                         }
                       })()
