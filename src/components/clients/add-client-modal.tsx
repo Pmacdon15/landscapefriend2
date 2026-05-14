@@ -90,9 +90,11 @@ export function AddClientModal({
       };
 
       if (setOptimistic) {
+        setOpen(false);
+        form.reset();
         startTransition(() => {
-          setOpen(false);
-          form.reset();
+          // setOpen(false);
+          // form.reset();
           setOptimistic({ type: "add-client", client: optimisticClient });
           createClient({
             name: value.name,
@@ -130,7 +132,7 @@ export function AddClientModal({
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={() => setOpen(!open)}>
       <DialogTrigger
         render={
           <Button className="gap-2">

@@ -17,10 +17,7 @@ export async function upsertUserDb(
   return result[0];
 }
 
-export async function upsertOrganizationDb(
-  orgId: string,
-  name: string,
-) {
+export async function upsertOrganizationDb(orgId: string, name: string) {
   const result = await sql`
     INSERT INTO organizations (org_id, name)
     VALUES (${orgId}, ${name})

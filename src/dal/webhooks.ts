@@ -2,8 +2,8 @@ import { upsertOrganizationDb, upsertUserDb } from "@/db/queries/webhooks";
 
 /**
  * DAL for handling Webhooks.
- * NO AUTH for webhook: This DAL bypasses the standard session-based auth 
- * because it is triggered by Clerk's servers. Security is handled 
+ * NO AUTH for webhook: This DAL bypasses the standard session-based auth
+ * because it is triggered by Clerk's servers. Security is handled
  * at the API route layer via signature verification.
  */
 
