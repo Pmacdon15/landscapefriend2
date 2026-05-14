@@ -25,8 +25,7 @@ export async function upsertOrganizationDb(
     INSERT INTO organizations (org_id, name)
     VALUES (${orgId}, ${name})
     ON CONFLICT (org_id) DO UPDATE SET 
-      name = EXCLUDED.name,
-      updated_at = CURRENT_TIMESTAMP
+      name = EXCLUDED.name,      
     RETURNING *
   `;
   return result[0];
