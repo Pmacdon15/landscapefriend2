@@ -154,13 +154,11 @@ export async function upsertScheduleDb(
   addressId: string,
   orgId: string,
   frequency: string,
-  firstCutDate: Date,
+  firstCutDate: string,
 ): Promise<ScheduleWithOrgSchema> {
-  const dayOfWeek = firstCutDate.getDay();
-
   const [row] = (await sql`
     INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date)
-    VALUES (${addressId}, ${dayOfWeek}, ${frequency}, ${firstCutDate})
+    VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate})
     ON CONFLICT (address_id) 
     DO UPDATE SET 
       day_of_week = EXCLUDED.day_of_week,
@@ -212,7 +210,7 @@ export async function upsertAssignmentDb(
       updated_at = CURRENT_TIMESTAMP
     RETURNING *
   `;
-  return result[0] as unknown as AssignmentRow;
+  return result[0] as unknown as AddressRow;
 }
 
 export async function deleteAssignmentDb(

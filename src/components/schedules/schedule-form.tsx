@@ -61,7 +61,7 @@ export function ScheduleForm({
           upsertSchedule({
             addressId,
             frequency: value.frequency,
-            firstCutDate: value.firstCutDate,
+            firstCutDate: format(value.firstCutDate, "yyyy-MM-dd"),
           });
         });
       }

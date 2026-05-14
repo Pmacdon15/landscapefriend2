@@ -6,7 +6,7 @@ import { deleteScheduleDal, upsertScheduleDal } from "@/dal/service";
 export async function upsertScheduleAction(
   addressId: string,
   frequency: string,
-  firstCutDate: Date,
+  firstCutDate: string,
 ) {
   const result = await upsertScheduleDal(addressId, frequency, firstCutDate);
 

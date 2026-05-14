@@ -44,7 +44,7 @@ export async function updateRouteOrderDal(
 export async function upsertScheduleDal(
   addressId: string,
   frequency: string,
-  firstCutDate: Date,
+  firstCutDate: string,
 ): Promise<Result<ScheduleWithOrgSchema, { reason: string }>> {
   const { orgId } = await auth.protect();
 
@@ -58,7 +58,7 @@ export async function upsertScheduleDal(
   if (!parsedFrequency.success)
     return errAsync({ reason: "Invalid frequency" });
 
-  const parsedDate = z.date().safeParse(firstCutDate);
+  const parsedDate = z.string().safeParse(firstCutDate);
   if (!parsedDate.success) return errAsync({ reason: "Invalid date" });
 
   return ResultAsync.fromPromise(
