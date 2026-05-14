@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { upsertScheduleAction } from "@/actions/schedules";
+import { deleteScheduleAction, upsertScheduleAction } from "@/actions/schedules";
 
 export function useUpsertSchedule() {
   return useMutation({
@@ -26,6 +26,25 @@ export function useUpsertSchedule() {
     },
     onSuccess: () => {
       toast.success("Schedule updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+export function useDeleteSchedule() {
+  return useMutation({
+    mutationFn: async (addressId: string) => {
+      const { success, schedule, error } = await deleteScheduleAction(addressId);
+
+      if (!success || !schedule) {
+        throw new Error(error ?? "Failed to delete schedule");
+      }
+      return schedule;
+    },
+    onSuccess: () => {
+      toast.success("Schedule removed");
     },
     onError: (error: Error) => {
       toast.error(error.message);

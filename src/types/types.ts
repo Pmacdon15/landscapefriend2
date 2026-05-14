@@ -96,6 +96,7 @@ export type OptimisticAction =
       frequency: string;
       firstCutDate: Date;
     }
+  | { type: "delete-schedule"; addressId: string }
   | { type: "add-client"; client: Client }
   | { type: "edit-client"; client: Client }
   | { type: "delete-client"; clientId: string }

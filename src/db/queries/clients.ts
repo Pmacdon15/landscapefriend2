@@ -173,6 +173,17 @@ export async function upsertScheduleDb(
   return { ...row, org_id: orgId };
 }
 
+export async function deleteScheduleDb(
+  addressId: string,
+): Promise<ScheduleRow | undefined> {
+  const [row] = (await sql`
+    DELETE FROM schedules
+    WHERE address_id = ${addressId}
+    RETURNING *
+  `) as unknown as ScheduleRow[];
+  return row;
+}
+
 export async function getAssignmentsDb(
   orgId: string,
   date: string,

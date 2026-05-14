@@ -19,7 +19,8 @@ export function SingleClientContainer({
       }
       if (
         action.type === "update-assignee" ||
-        action.type === "update-schedule"
+        action.type === "update-schedule" ||
+        action.type === "delete-schedule"
       ) {
         if (!state.addresses) return state;
         const hasTargetAddress = state.addresses.some(
@@ -45,6 +46,10 @@ export function SingleClientContainer({
                 day_of_week: action.firstCutDate.getDay(),
               };
               return { ...address, schedule: newSchedule };
+            }
+
+            if (action.type === "delete-schedule") {
+              return { ...address, schedule: null };
             }
 
             return address;

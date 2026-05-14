@@ -31,6 +31,7 @@ export default function ClientInfoContainer({
           return state.filter((c) => c.id !== action.clientId);
         case "update-assignee":
         case "update-schedule":
+        case "delete-schedule":
           return state.map((client) => {
             if (!client.addresses) return client;
 
@@ -57,6 +58,10 @@ export default function ClientInfoContainer({
                     day_of_week: action.firstCutDate.getDay(),
                   };
                   return { ...address, schedule: newSchedule };
+                }
+
+                if (action.type === "delete-schedule") {
+                  return { ...address, schedule: null };
                 }
 
                 return address;

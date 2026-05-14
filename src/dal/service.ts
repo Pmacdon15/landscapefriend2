@@ -3,6 +3,7 @@ import { errAsync, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
 import {
   deleteAssignmentDb,
+  deleteScheduleDb,
   insertCompletedJobDb,
   insertCompletionPhotoDb,
   updateAddressAssigneeDb,
@@ -68,6 +69,26 @@ export async function upsertScheduleDal(
       parsedDate.data,
     ) as Promise<ScheduleWithOrgSchema>,
     () => ({ reason: "Failed to update schedule" }),
+  );
+}
+
+export async function deleteScheduleDal(
+  addressId: string,
+): Promise<Result<ScheduleWithOrgSchema, { reason: string }>> {
+  const { orgId } = await auth.protect();
+
+  if (!orgId) return errAsync({ reason: "Unauthorized" });
+
+  const parsedAddressId = z.uuid().safeParse(addressId);
+  if (!parsedAddressId.success)
+    return errAsync({ reason: "Invalid address ID" });
+
+  return ResultAsync.fromPromise(
+    deleteScheduleDb(parsedAddressId.data).then((row) => {
+      if (!row) throw new Error("Schedule not found");
+      return { ...row, org_id: orgId } as ScheduleWithOrgSchema;
+    }),
+    () => ({ reason: "Failed to delete schedule" }),
   );
 }
 
