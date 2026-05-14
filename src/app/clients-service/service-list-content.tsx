@@ -84,7 +84,14 @@ export function ServiceListContent({
     } else {
       const prev = newCuts[destIndex - 1].address.sort_order;
       const next = newCuts[destIndex + 1].address.sort_order;
-      newSortOrder = (prev + next) / 2;
+
+      if (prev === next) {
+        // Handle collisions (e.g., both neighbors are 0)
+        // Shift slightly based on direction of move
+        newSortOrder = prev + (destIndex > sourceIndex ? 10 : -10);
+      } else {
+        newSortOrder = (prev + next) / 2;
+      }
     }
 
     moved.address.sort_order = newSortOrder;

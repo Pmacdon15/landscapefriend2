@@ -19,7 +19,9 @@ export function useUpdateRouteOrder() {
       if (!success) {
         throw new Error(error ?? "Failed to update route order");
       }
+      toast.success("Success updating route order.")
       return { success: true };
+
     },
     onError: (error: Error) => {
       toast.error(error.message);

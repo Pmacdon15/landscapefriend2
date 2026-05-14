@@ -156,19 +156,31 @@ export async function upsertScheduleDb(
   frequency: string,
   firstCutDate: string,
 ): Promise<ScheduleWithOrgSchema> {
-  const [row] = (await sql`
-    INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date)
-    VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate})
-    ON CONFLICT (address_id) 
-    DO UPDATE SET 
-      day_of_week = EXCLUDED.day_of_week,
-      frequency = EXCLUDED.frequency,
-      first_cut_date = EXCLUDED.first_cut_date,
-      updated_at = CURRENT_TIMESTAMP
-    RETURNING *
+  const results = (await sql`
+    WITH upserted_schedule AS (
+      INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date)
+      VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate})
+      ON CONFLICT (address_id)
+      DO UPDATE SET
+        day_of_week = EXCLUDED.day_of_week,
+        frequency = EXCLUDED.frequency,
+        first_cut_date = EXCLUDED.first_cut_date,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    ),
+    inserted_order AS (
+      INSERT INTO route_orders (address_id, org_id, sort_order)
+      SELECT 
+        ${addressId}, 
+        ${orgId}, 
+        COALESCE((SELECT MAX(sort_order) + 1000 FROM route_orders WHERE org_id = ${orgId}), 1000)
+      WHERE NOT EXISTS (SELECT 1 FROM route_orders WHERE address_id = ${addressId})
+      RETURNING 1
+    )
+    SELECT *, ${orgId} AS org_id FROM upserted_schedule;
   `) as unknown as ScheduleRow[];
 
-  return { ...row, org_id: orgId };
+  return results[0] as unknown as ScheduleWithOrgSchema;
 }
 
 export async function deleteScheduleDb(
@@ -311,8 +323,9 @@ export async function updateRouteOrderDb(
     INSERT INTO route_orders (address_id, org_id, sort_order)
     VALUES (${addressId}, ${orgId}, ${newSortOrder})
     ON CONFLICT (address_id) DO UPDATE SET sort_order = EXCLUDED.sort_order, updated_at = CURRENT_TIMESTAMP
-  `) as unknown as RouteOrderRow;
-  return result;
+    RETURNING *
+  `) as unknown as RouteOrderRow[];
+  return result[0];
 }
 
 export async function updateAddressAssigneeDb(

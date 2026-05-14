@@ -36,6 +36,7 @@ import {
   searchClientsDb,
   updateAddressDb,
   updateClientDb,
+  updateRouteOrderDb,
 } from "../db/queries/clients";
 import { getOrganizationMembersDal } from "./clerk";
 
@@ -229,20 +230,76 @@ export async function getClientsForCutListDal(
     const client = clientMap.get(addr.client_id);
     if (!client) continue;
 
+    const dbSortOrder = orderMap.get(addr.id);
+
     results.push({
       client: { id: client.id, name: client.name },
       address: {
         ...addr,
         schedule,
-        sort_order: orderMap.get(addr.id) ?? 0,
+        sort_order: dbSortOrder ?? 0,
         assignment: assignment ?? null,
         completed_job: jobMap.get(addr.id) ?? null,
         site_maps: siteMapGroupMap.get(addr.id) || [],
       } as Address,
     });
+
+    if (dbSortOrder !== undefined) {
+      (results[results.length - 1].address as any)._has_db_order = true;
+    }
   }
 
-  return results.sort((a, b) => a.address.sort_order - b.address.sort_order);
+  // Identify items that need a database order assigned
+  const missingOrders: CutListItem[] = [];
+
+  // Initial sort: items with DB orders first, then by street
+  const sorted = results.sort((a, b) => {
+    const aHas = (a.address as any)._has_db_order;
+    const bHas = (b.address as any)._has_db_order;
+
+    if (aHas && bHas) return a.address.sort_order - b.address.sort_order;
+    if (aHas) return -1;
+    if (bHas) return 1;
+    return a.address.street.localeCompare(b.address.street);
+  });
+
+  // Assign sequential orders in memory to ensure uniqueness and strictly increasing values.
+  let lastOrder = -1000000;
+  const finalResults = sorted.map((item, index) => {
+    const hasDbOrder = (item.address as any)._has_db_order;
+    // Use the DB order if it exists, otherwise a sequential default starting high.
+    // This ensures that "no order" items stay at the end but get a real value.
+    let currentOrder = hasDbOrder
+      ? item.address.sort_order
+      : (index + 1) * 10000;
+
+    if (currentOrder <= lastOrder) {
+      currentOrder = lastOrder + 1;
+    }
+
+    if (!hasDbOrder) {
+      missingOrders.push(item);
+    }
+
+    item.address.sort_order = currentOrder;
+    lastOrder = currentOrder;
+    return item;
+  });
+
+  // Lazy backfill: If we found missing orders, save them to the DB now.
+  if (missingOrders.length > 0) {
+    try {
+      await Promise.all(
+        missingOrders.map((item) =>
+          updateRouteOrderDb(item.address.id, orgId, item.address.sort_order),
+        ),
+      );
+    } catch (e) {
+      console.error("Failed to backfill route orders:", e);
+    }
+  }
+
+  return finalResults;
 }
 
 export async function createClientDal(

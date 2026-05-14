@@ -10,7 +10,7 @@ export async function updateRouteOrderAction(
 
   return result.match(
     (route) => {
-      updateTag(`job-history-${route.org_id}`);
+      updateTag(`route-order-${route.org_id}`);
       return {
         success: true,
         route,
