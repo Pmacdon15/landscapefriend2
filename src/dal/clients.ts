@@ -1,5 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
-import { differenceInCalendarDays, parseISO, startOfDay } from "date-fns";
+import {
+  differenceInCalendarDays,
+  isValid,
+  parseISO,
+  startOfDay,
+} from "date-fns";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
 import type {
@@ -184,14 +189,23 @@ export async function getClientsForCutListDal(
     if (addr.status === "deleted") continue;
 
     const schedule = scheduleMap.get(addr.id);
-    if (!schedule) continue;
+    if (!schedule || !schedule.first_cut_date) continue;
 
-    const scheduleDateStr =
-      schedule.first_cut_date instanceof Date
-        ? schedule.first_cut_date.toISOString().split("T")[0]
-        : String(schedule.first_cut_date).split("T")[0];
+    let scheduleDate: Date;
+    try {
+      const scheduleDateStr =
+        schedule.first_cut_date instanceof Date
+          ? (isValid(schedule.first_cut_date)
+              ? schedule.first_cut_date.toISOString().split("T")[0]
+              : null)
+          : String(schedule.first_cut_date).split("T")[0];
 
-    const scheduleDate = parseISO(scheduleDateStr);
+      if (!scheduleDateStr) continue;
+      scheduleDate = parseISO(scheduleDateStr);
+      if (!isValid(scheduleDate)) continue;
+    } catch (e) {
+      continue;
+    }
     const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
     if (diffDays < 0) continue;
 
