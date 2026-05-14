@@ -51,17 +51,20 @@ export function ScheduleForm({
     onSubmit: async ({ value }) => {
       if (setOptimistic) {
         startTransition(() => {
+          const dateStr = format(value.firstCutDate, "yyyy-MM-dd");
+          const utcMidnight = new Date(`${dateStr}T00:00:00Z`);
+
           setOptimistic({
             type: "update-schedule",
             addressId,
             frequency: value.frequency,
-            firstCutDate: value.firstCutDate,
+            firstCutDate: utcMidnight,
           });
 
           upsertSchedule({
             addressId,
             frequency: value.frequency,
-            firstCutDate: format(value.firstCutDate, "yyyy-MM-dd"),
+            firstCutDate: dateStr,
           });
         });
       }
