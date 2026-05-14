@@ -5,7 +5,7 @@ import {
   handleUserCreatedDal,
 } from "@/dal/webhooks";
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   
   // try {
   //   const evt = (await verifyWebhook(req, {
