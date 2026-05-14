@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -36,6 +38,7 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
+  const [siteMapToDelete, setSiteMapToDelete] = useState<SiteMap | null>(null);
   const [name, setName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [mapData, setMapData] = useState<{ x: number; y: number }[] | null>(
@@ -243,11 +246,7 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              if (window.confirm("Delete this site map?")) {
-                                deleteSiteMap(sm.id);
-                              }
-                            }}
+                            onClick={() => setSiteMapToDelete(sm)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -275,6 +274,40 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
         viewingSiteMap={viewingSiteMap}
         onClose={() => setViewingSiteMap(null)}
       />
+
+      <Dialog
+        open={!!siteMapToDelete}
+        onOpenChange={(open) => !open && setSiteMapToDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Site Map</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">
+                {siteMapToDelete?.name || "this site map"}
+              </span>
+              ? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSiteMapToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (siteMapToDelete) {
+                  deleteSiteMap(siteMapToDelete.id);
+                  setSiteMapToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -419,13 +419,20 @@ export async function insertSiteMapDb(
 export async function deleteSiteMapDb(
   siteMapId: string,
 ): Promise<SiteMapWithOrgSchema> {
+  const [info] = (await sql`
+    SELECT c.org_id FROM site_maps sm
+    JOIN addresses a ON sm.address_id = a.id
+    JOIN clients c ON a.client_id = c.id
+    WHERE sm.id = ${siteMapId}
+  `) as unknown as { org_id: string }[];
+
   const [row] = (await sql`
     DELETE FROM site_maps
     WHERE id = ${siteMapId}
     RETURNING *
-  `) as unknown as SiteMapWithOrgSchema[];
+  `) as unknown as SiteMapRow[];
 
-  return row;
+  return { ...row, org_id: info?.org_id };
 }
 
 export async function getSiteMapWithOrgDb(

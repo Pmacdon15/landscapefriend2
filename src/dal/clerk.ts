@@ -30,6 +30,7 @@ export async function getOrganizationMembersDal(): Promise<
     } else {
       console.error("Failed to fetch organization members from Clerk:", error);
     }
+
     return [];
   }
 }
