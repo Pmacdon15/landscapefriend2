@@ -433,8 +433,7 @@ export async function searchClientsDal(query: string): Promise<Client[]> {
   });
 
   const scheduleMap = new Map<string, ScheduleRow>();
-  schedules.forEach((s) => {
-    // Fallback for transition period/stale cache
+  schedules.forEach((s) => {    
     if (!s.first_cut_date && (s as any).next_cut_date) {
       s.first_cut_date = (s as any).next_cut_date;
     }
