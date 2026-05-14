@@ -6,7 +6,8 @@ export async function getOrganizationMembersDal(): Promise<
   const { orgId } = await auth.protect();
 
   if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
+    console.error("getOrganizationMembersDal: No orgId found after auth.protect()");
+    return [];
   }
 
   try {
@@ -23,7 +24,12 @@ export async function getOrganizationMembersDal(): Promise<
           : m.publicUserData?.identifier || "Unknown Member",
     }));
   } catch (error) {
-    console.error("Failed to fetch organization members from Clerk:", error);
+    const isAborted = error instanceof Error && error.message?.includes("aborted");
+    if (isAborted) {
+      console.warn("Clerk request was aborted (possibly due to navigation or revalidation)");
+    } else {
+      console.error("Failed to fetch organization members from Clerk:", error);
+    }
     return [];
   }
 }

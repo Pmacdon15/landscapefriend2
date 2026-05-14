@@ -159,19 +159,18 @@ export async function upsertScheduleDb(
   const dayOfWeek = firstCutDate.getDay();
 
   const [row] = (await sql`
-    INSERT INTO schedules (address_id, org_id, day_of_week, frequency, first_cut_date)
-    VALUES (${addressId}, ${orgId}, ${dayOfWeek}, ${frequency}, ${firstCutDate})
+    INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date)
+    VALUES (${addressId}, ${dayOfWeek}, ${frequency}, ${firstCutDate})
     ON CONFLICT (address_id) 
     DO UPDATE SET 
-      org_id = EXCLUDED.org_id,
       day_of_week = EXCLUDED.day_of_week,
       frequency = EXCLUDED.frequency,
       first_cut_date = EXCLUDED.first_cut_date,
       updated_at = CURRENT_TIMESTAMP
     RETURNING *
-  `) as unknown as ScheduleWithOrgSchema[];
+  `) as unknown as ScheduleRow[];
 
-  return row;
+  return { ...row, org_id: orgId };
 }
 
 export async function getAssignmentsDb(
@@ -403,19 +402,18 @@ export async function insertSiteMapDb(
   const jsonMapData = mapData ? JSON.stringify(mapData) : null;
 
   const [row] = (await sql`
-    INSERT INTO site_maps (address_id, org_id, name, blob_path, map_data)
-    SELECT 
-      id, 
-      org_id, 
-      ${name}, 
-      ${blobPath}, 
-      ${jsonMapData}
-    FROM addresses
-    WHERE id = ${addressId}
+    INSERT INTO site_maps (address_id, name, blob_path, map_data)
+    VALUES (${addressId}, ${name}, ${blobPath}, ${jsonMapData})
     RETURNING *
-  `) as unknown as SiteMapWithOrgSchema[];
+  `) as unknown as SiteMapRow[];
 
-  return row;
+  const [orgRow] = (await sql`
+    SELECT c.org_id FROM addresses a
+    JOIN clients c ON a.client_id = c.id
+    WHERE a.id = ${addressId}
+  `) as unknown as { org_id: string }[];
+
+  return { ...row, org_id: orgRow.org_id };
 }
 
 export async function deleteSiteMapDb(
