@@ -44,262 +44,285 @@ export async function getClientsForInfoDal(
   page: number,
   searchQuery?: string,
 ): Promise<{ clients: Client[]; totalPages: number }> {
-  const { orgId } = await auth.protect();
-  if (!orgId) {
-    throw new Error("Unauthorized: No organization selected");
-  }
+  try {
+    const { orgId, orgRole } = await auth.protect();
 
-  let matchedAssigneeIds: string[] = [];
-  if (searchQuery) {
-    const members = await getOrganizationMembersDal();
-    matchedAssigneeIds = members
-      .filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
-      .map((m) => m.id);
-  }
+    const isAdmin = orgRole === "org:admin";
 
-  const [clients, addresses, schedules, siteMaps, jobHistory] =
-    await Promise.all([
-      searchQuery
-        ? searchClientsDb(orgId, searchQuery, matchedAssigneeIds)
-        : getClientsDb(orgId),
-      getAddressesDb(orgId),
-      getSchedulesDb(orgId),
-      getSiteMapsDb(orgId),
-      getCompletedJobsDb(orgId),
-    ]);
-
-  const addressMap = new Map<string, AddressRow[]>();
-  addresses.forEach((a) => {
-    if (a.status !== "deleted") {
-      const list = addressMap.get(a.client_id) || [];
-      list.push(a);
-      addressMap.set(a.client_id, list);
+    if (!orgId || !isAdmin) {
+      throw new Error("Unauthorized");
     }
-  });
 
-  const scheduleMap = new Map<string, ScheduleRow>();
-  schedules.forEach((s) => {
-    // Fallback for transition period/stale cache
-    if (!s.first_cut_date && (s as any).next_cut_date) {
-      s.first_cut_date = (s as any).next_cut_date;
+    let matchedAssigneeIds: string[] = [];
+    if (searchQuery) {
+      const members = await getOrganizationMembersDal();
+      matchedAssigneeIds = members
+        .filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .map((m) => m.id);
     }
-    scheduleMap.set(s.address_id, s);
-  });
 
-  const siteMapLookup = new Map<string, typeof siteMaps>();
-  siteMaps.forEach((sm) => {
-    const list = siteMapLookup.get(sm.address_id) || [];
-    list.push(sm);
-    siteMapLookup.set(sm.address_id, list);
-  });
+    const [clients, addresses, schedules, siteMaps, jobHistory] =
+      await Promise.all([
+        searchQuery
+          ? searchClientsDb(orgId, searchQuery, matchedAssigneeIds)
+          : getClientsDb(orgId),
+        getAddressesDb(orgId),
+        getSchedulesDb(orgId),
+        getSiteMapsDb(orgId),
+        getCompletedJobsDb(orgId),
+      ]);
 
-  const historyMap = new Map<string, (typeof jobHistory)[0]>();
-  jobHistory.forEach((j) => {
-    historyMap.set(j.address_id, j);
-  });
-
-  const mappedClients = clients.map((client: ClientRow) => {
-    const clientAddresses = (addressMap.get(client.id) || []).map((address) => {
-      return {
-        ...address,
-        schedule: scheduleMap.get(address.id) || null,
-        sort_order: 0,
-        assignment: null,
-        completed_job: historyMap.get(address.id) || null,
-        site_maps: siteMapLookup.get(address.id) || [],
-      } as Address;
+    const addressMap = new Map<string, AddressRow[]>();
+    addresses.forEach((a) => {
+      if (a.status !== "deleted") {
+        const list = addressMap.get(a.client_id) || [];
+        list.push(a);
+        addressMap.set(a.client_id, list);
+      }
     });
 
-    return { ...client, addresses: clientAddresses } as Client;
-  });
+    const scheduleMap = new Map<string, ScheduleRow>();
+    schedules.forEach((s) => {
+      // Fallback for transition period/stale cache
+      if (!s.first_cut_date && (s as any).next_cut_date) {
+        s.first_cut_date = (s as any).next_cut_date;
+      }
+      scheduleMap.set(s.address_id, s);
+    });
 
-  const pageSize = 6;
-  const totalPages = Math.max(1, Math.ceil(mappedClients.length / pageSize));
-  const safePage = Math.max(1, Math.min(page, totalPages));
-  const paginatedClients = mappedClients.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize,
-  );
+    const siteMapLookup = new Map<string, typeof siteMaps>();
+    siteMaps.forEach((sm) => {
+      const list = siteMapLookup.get(sm.address_id) || [];
+      list.push(sm);
+      siteMapLookup.set(sm.address_id, list);
+    });
 
-  return { clients: paginatedClients, totalPages };
+    const historyMap = new Map<string, (typeof jobHistory)[0]>();
+    jobHistory.forEach((j) => {
+      historyMap.set(j.address_id, j);
+    });
+
+    const mappedClients = clients.map((client: ClientRow) => {
+      const clientAddresses = (addressMap.get(client.id) || []).map(
+        (address) => {
+          return {
+            ...address,
+            schedule: scheduleMap.get(address.id) || null,
+            sort_order: 0,
+            assignment: null,
+            completed_job: historyMap.get(address.id) || null,
+            site_maps: siteMapLookup.get(address.id) || [],
+          } as Address;
+        },
+      );
+
+      return { ...client, addresses: clientAddresses } as Client;
+    });
+
+    const pageSize = 6;
+    const totalPages = Math.max(1, Math.ceil(mappedClients.length / pageSize));
+    const safePage = Math.max(1, Math.min(page, totalPages));
+    const paginatedClients = mappedClients.slice(
+      (safePage - 1) * pageSize,
+      safePage * pageSize,
+    );
+
+    return { clients: paginatedClients, totalPages };
+  } catch (error) {
+    console.error("Error in getClientsForInfoDal:", error);
+    return { clients: [], totalPages: 0 };
+  }
 }
+
 export async function getClientsForCutListDal(
   date: string,
+  userIdOverride?: string,
 ): Promise<CutListItem[]> {
-  const { orgId, userId } = await auth.protect();
-  if (!orgId || !userId) throw new Error("Unauthorized");
+  try {
+    const { orgId, userId, orgRole } = await auth.protect();
+    if (!orgId || !userId) throw new Error("Unauthorized");
 
-  const [
-    clients,
-    addresses,
-    schedules,
-    routeOrders,
-    assignments,
-    completedJobs,
-    siteMaps,
-  ] = await Promise.all([
-    getClientsDb(orgId),
-    getAddressesDb(orgId),
-    getSchedulesDb(orgId),
-    getRouteOrdersDb(orgId),
-    getAssignmentsDb(orgId, date),
-    getCompletedJobsDb(orgId, date),
-    getSiteMapsDb(orgId),
-  ]);
+    const isAdmin = orgRole === "org:admin";
+    const targetUserId =
+      isAdmin && userIdOverride ? userIdOverride : (userIdOverride || userId);
 
-  const scheduleMap = new Map<string, ScheduleRow>();
-  schedules.forEach((s) => {
-    // Fallback for transition period/stale cache
-    if (!s.first_cut_date && (s as any).next_cut_date) {
-      s.first_cut_date = (s as any).next_cut_date;
-    }
-    scheduleMap.set(s.address_id, s);
-  });
+    const showAll = isAdmin && userIdOverride === "all";
 
-  const orderMap = new Map<string, number>();
-  routeOrders?.forEach((r) => {
-    orderMap.set(r.address_id, r.sort_order);
-  });
+    const [
+      clients,
+      addresses,
+      schedules,
+      routeOrders,
+      assignments,
+      completedJobs,
+      siteMaps,
+    ] = await Promise.all([
+      getClientsDb(orgId),
+      getAddressesDb(orgId),
+      getSchedulesDb(orgId),
+      getRouteOrdersDb(orgId),
+      getAssignmentsDb(orgId, date),
+      getCompletedJobsDb(orgId, date),
+      getSiteMapsDb(orgId),
+    ]);
 
-  const assignmentMap = new Map<string, (typeof assignments)[0]>();
-  assignments.forEach((a) => {
-    assignmentMap.set(a.address_id, a);
-  });
-
-  const jobMap = new Map<string, (typeof completedJobs)[0]>();
-  completedJobs.forEach((j) => {
-    jobMap.set(j.address_id, j);
-  });
-
-  const clientMap = new Map<string, ClientRow>();
-  clients.forEach((c) => {
-    clientMap.set(c.id, c);
-  });
-
-  const siteMapGroupMap = new Map<string, SiteMapRow[]>();
-  siteMaps.forEach((sm) => {
-    const group = siteMapGroupMap.get(sm.address_id) || [];
-    group.push(sm);
-    siteMapGroupMap.set(sm.address_id, group);
-  });
-
-  const targetDate = startOfDay(parseISO(date));
-  const results: CutListItem[] = [];
-
-  for (const addr of addresses) {
-    if (addr.status === "deleted") continue;
-
-    const schedule = scheduleMap.get(addr.id);
-    if (!schedule || !schedule.first_cut_date) continue;
-
-    let scheduleDate: Date;
-    try {
-      const scheduleDateStr =
-        schedule.first_cut_date instanceof Date
-          ? isValid(schedule.first_cut_date)
-            ? schedule.first_cut_date.toISOString().split("T")[0]
-            : null
-          : String(schedule.first_cut_date).split("T")[0];
-
-      if (!scheduleDateStr) continue;
-      scheduleDate = parseISO(scheduleDateStr);
-      if (!isValid(scheduleDate)) continue;
-    } catch (_e) {
-      continue;
-    }
-    const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
-    if (diffDays < 0) continue;
-
-    let isScheduled = false;
-    const freq = schedule.frequency.toLowerCase();
-
-    if (freq === "daily") isScheduled = true;
-    else if (diffDays === 0) isScheduled = true;
-    else if (freq === "weekly") isScheduled = diffDays % 7 === 0;
-    else if (freq === "bi-weekly") isScheduled = diffDays % 14 === 0;
-    else if (freq === "monthly")
-      isScheduled = targetDate.getUTCDate() === scheduleDate.getUTCDate();
-    else isScheduled = schedule.day_of_week === targetDate.getUTCDay();
-
-    if (!isScheduled) continue;
-
-    const assignment = assignmentMap.get(addr.id);
-    const assigneeId = assignment?.user_id || addr.assigned_to;
-    if (assigneeId !== userId) continue;
-
-    const client = clientMap.get(addr.client_id);
-    if (!client) continue;
-
-    const dbSortOrder = orderMap.get(addr.id);
-
-    results.push({
-      client: { id: client.id, name: client.name },
-      address: {
-        ...addr,
-        schedule,
-        sort_order: dbSortOrder ?? 0,
-        assignment: assignment ?? null,
-        completed_job: jobMap.get(addr.id) ?? null,
-        site_maps: siteMapGroupMap.get(addr.id) || [],
-      } as Address,
+    const scheduleMap = new Map<string, ScheduleRow>();
+    schedules.forEach((s) => {
+      // Fallback for transition period/stale cache
+      if (!s.first_cut_date && (s as any).next_cut_date) {
+        s.first_cut_date = (s as any).next_cut_date;
+      }
+      scheduleMap.set(s.address_id, s);
     });
 
-    if (dbSortOrder !== undefined) {
-      (results[results.length - 1].address as any)._has_db_order = true;
+    const orderMap = new Map<string, number>();
+    routeOrders?.forEach((r) => {
+      orderMap.set(r.address_id, r.sort_order);
+    });
+
+    const assignmentMap = new Map<string, (typeof assignments)[0]>();
+    assignments.forEach((a) => {
+      assignmentMap.set(a.address_id, a);
+    });
+
+    const jobMap = new Map<string, (typeof completedJobs)[0]>();
+    completedJobs.forEach((j) => {
+      jobMap.set(j.address_id, j);
+    });
+
+    const clientMap = new Map<string, ClientRow>();
+    clients.forEach((c) => {
+      clientMap.set(c.id, c);
+    });
+
+    const siteMapGroupMap = new Map<string, SiteMapRow[]>();
+    siteMaps.forEach((sm) => {
+      const group = siteMapGroupMap.get(sm.address_id) || [];
+      group.push(sm);
+      siteMapGroupMap.set(sm.address_id, group);
+    });
+
+    const targetDate = startOfDay(parseISO(date));
+    const results: CutListItem[] = [];
+
+    for (const addr of addresses) {
+      if (addr.status === "deleted") continue;
+
+      const schedule = scheduleMap.get(addr.id);
+      if (!schedule || !schedule.first_cut_date) continue;
+
+      let scheduleDate: Date;
+      try {
+        const scheduleDateStr =
+          schedule.first_cut_date instanceof Date
+            ? isValid(schedule.first_cut_date)
+              ? schedule.first_cut_date.toISOString().split("T")[0]
+              : null
+            : String(schedule.first_cut_date).split("T")[0];
+
+        if (!scheduleDateStr) continue;
+        scheduleDate = parseISO(scheduleDateStr);
+        if (!isValid(scheduleDate)) continue;
+      } catch (_e) {
+        continue;
+      }
+      const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
+      if (diffDays < 0) continue;
+
+      let isScheduled = false;
+      const freq = schedule.frequency.toLowerCase();
+
+      if (freq === "daily") isScheduled = true;
+      else if (diffDays === 0) isScheduled = true;
+      else if (freq === "weekly") isScheduled = diffDays % 7 === 0;
+      else if (freq === "bi-weekly") isScheduled = diffDays % 14 === 0;
+      else if (freq === "monthly")
+        isScheduled = targetDate.getUTCDate() === scheduleDate.getUTCDate();
+      else isScheduled = schedule.day_of_week === targetDate.getUTCDay();
+
+      if (!isScheduled) continue;
+
+      const assignment = assignmentMap.get(addr.id);
+      const assigneeId = assignment?.user_id || addr.assigned_to;
+      if (!showAll && assigneeId !== targetUserId) continue;
+
+      const client = clientMap.get(addr.client_id);
+      if (!client) continue;
+
+      const dbSortOrder = orderMap.get(addr.id);
+
+      results.push({
+        client: { id: client.id, name: client.name },
+        address: {
+          ...addr,
+          schedule,
+          sort_order: dbSortOrder ?? 0,
+          assignment: assignment ?? null,
+          completed_job: jobMap.get(addr.id) ?? null,
+          site_maps: siteMapGroupMap.get(addr.id) || [],
+        } as Address,
+      });
+
+      if (dbSortOrder !== undefined) {
+        (results[results.length - 1].address as any)._has_db_order = true;
+      }
     }
+
+    // Identify items that need a database order assigned
+    const missingOrders: CutListItem[] = [];
+
+    // Initial sort: items with DB orders first, then by street
+    const sorted = results.sort((a, b) => {
+      const aHas = (a.address as any)._has_db_order;
+      const bHas = (b.address as any)._has_db_order;
+
+      if (aHas && bHas) return a.address.sort_order - b.address.sort_order;
+      if (aHas) return -1;
+      if (bHas) return 1;
+      return a.address.street.localeCompare(b.address.street);
+    });
+
+    // Assign sequential orders in memory to ensure uniqueness and strictly increasing values.
+    let lastOrder = -1000000;
+    const finalResults = sorted.map((item, index) => {
+      const hasDbOrder = (item.address as any)._has_db_order;
+      // Use the DB order if it exists, otherwise a sequential default starting high.
+      // This ensures that "no order" items stay at the end but get a real value.
+      let currentOrder = hasDbOrder
+        ? item.address.sort_order
+        : (index + 1) * 10000;
+
+      if (currentOrder <= lastOrder) {
+        currentOrder = lastOrder + 1;
+      }
+
+      if (!hasDbOrder) {
+        missingOrders.push(item);
+      }
+
+      item.address.sort_order = currentOrder;
+      lastOrder = currentOrder;
+      return item;
+    });
+
+    // Lazy backfill: If we found missing orders, save them to the DB now.
+    if (missingOrders.length > 0) {
+      try {
+        await Promise.all(
+          missingOrders.map((item) =>
+            updateRouteOrderDb(item.address.id, orgId, item.address.sort_order),
+          ),
+        );
+      } catch (e) {
+        console.error("Failed to backfill route orders:", e);
+      }
+    }
+
+    return finalResults;
+  } catch (error) {
+    console.error("Error in getClientsForCutListDal:", error);
+    return [];
   }
-
-  // Identify items that need a database order assigned
-  const missingOrders: CutListItem[] = [];
-
-  // Initial sort: items with DB orders first, then by street
-  const sorted = results.sort((a, b) => {
-    const aHas = (a.address as any)._has_db_order;
-    const bHas = (b.address as any)._has_db_order;
-
-    if (aHas && bHas) return a.address.sort_order - b.address.sort_order;
-    if (aHas) return -1;
-    if (bHas) return 1;
-    return a.address.street.localeCompare(b.address.street);
-  });
-
-  // Assign sequential orders in memory to ensure uniqueness and strictly increasing values.
-  let lastOrder = -1000000;
-  const finalResults = sorted.map((item, index) => {
-    const hasDbOrder = (item.address as any)._has_db_order;
-    // Use the DB order if it exists, otherwise a sequential default starting high.
-    // This ensures that "no order" items stay at the end but get a real value.
-    let currentOrder = hasDbOrder
-      ? item.address.sort_order
-      : (index + 1) * 10000;
-
-    if (currentOrder <= lastOrder) {
-      currentOrder = lastOrder + 1;
-    }
-
-    if (!hasDbOrder) {
-      missingOrders.push(item);
-    }
-
-    item.address.sort_order = currentOrder;
-    lastOrder = currentOrder;
-    return item;
-  });
-
-  // Lazy backfill: If we found missing orders, save them to the DB now.
-  if (missingOrders.length > 0) {
-    try {
-      await Promise.all(
-        missingOrders.map((item) =>
-          updateRouteOrderDb(item.address.id, orgId, item.address.sort_order),
-        ),
-      );
-    } catch (e) {
-      console.error("Failed to backfill route orders:", e);
-    }
-  }
-
-  return finalResults;
 }
 
 export async function createClientDal(

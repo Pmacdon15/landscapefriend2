@@ -199,7 +199,7 @@ export async function getAssignmentsDb(
   date: string,
 ): Promise<AssignmentRow[]> {
   "use cache";
-  cacheTag(`assignments-${orgId}`);
+  cacheTag(`assignments-${orgId}`, `assignments-${orgId}-${date}`);
   const result = await sql`
     SELECT * FROM assignments
     WHERE org_id = ${orgId} AND scheduled_date = ${date}
@@ -332,12 +332,16 @@ export async function updateAddressAssigneeDb(
   addressId: string,
   assignedTo: string | null,
 ): Promise<AddressRow> {
-  // Destructure the first element [row] from the results array
   const [row] = (await sql`
-    UPDATE addresses
-    SET assigned_to = ${assignedTo}, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ${addressId} 
-    RETURNING *
+    WITH updated AS (
+      UPDATE addresses
+      SET assigned_to = ${assignedTo}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${addressId}
+      RETURNING *
+    )
+    SELECT u.*, c.org_id
+    FROM updated u
+    JOIN clients c ON u.client_id = c.id
   `) as unknown as AddressRow[];
 
   return row;
@@ -366,7 +370,10 @@ export async function getCompletedJobsDb(
   date?: string,
 ): Promise<CompletedJobRow[]> {
   "use cache";
-  cacheTag(`job-history-${orgId}-${date ?? ""}`);
+  cacheTag(`job-history-${orgId}`);
+  if (date) {
+    cacheTag(`job-history-${orgId}-${date}`);
+  }
   const result = date
     ? await sql`
     SELECT cj.*, 

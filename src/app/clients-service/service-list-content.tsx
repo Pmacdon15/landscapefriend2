@@ -1,5 +1,7 @@
-"use client";
-
+'use client'
+import {
+  useAuth,
+} from "@clerk/nextjs";
 import {
   DragDropContext,
   Draggable,
@@ -8,7 +10,7 @@ import {
 } from "@hello-pangea/dnd";
 import imageCompression from "browser-image-compression";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, CheckCircle2, GripVertical, MapPin } from "lucide-react";
+import { CalendarIcon, CheckCircle2, GripVertical, MapPin, UserIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
 import { SiteMapViewer } from "@/components/clients/site-map-viewer";
@@ -23,7 +25,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn, getGoogleMapsUrl } from "@/lib/utils";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
@@ -33,13 +41,20 @@ import type { SiteMap } from "@/zod/schemas";
 interface ServiceListContentProps {
   clientsPromise: Promise<CutListItem[]>;
   datePromise: Promise<string>;
+  userIdPromise: Promise<string>;
+  membersPromise: Promise<{ id: string; name: string }[]>;
 }
 export function ServiceListContent({
   clientsPromise,
   datePromise,
+  userIdPromise,
+  membersPromise,
 }: ServiceListContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { has, isLoaded, userId: currentUserId } = useAuth();
+  const isAdmin = isLoaded && has?.({ role: "org:admin" });
+
   const { mutate: updateRouteOrder } = useUpdateRouteOrder();
   const { mutate: completeJob, isPending: isCompleting } = useCompleteJob();
 
@@ -49,7 +64,9 @@ export function ServiceListContent({
   const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
 
   const defaultDate = use(datePromise);
-  const initialClients = use(clientsPromise); // This is already your sorted CutListItem[]
+  const initialClients = use(clientsPromise); 
+  const currentFilterUserId = use(userIdPromise);
+  const members = use(membersPromise);
 
   const [date, setDate] = useState<Date>(parseISO(defaultDate));
 
@@ -58,7 +75,6 @@ export function ServiceListContent({
     (_, newCuts: CutListItem[]) => newCuts,
   );
 
-  // Sync date state when the server sends new data
   const parsedDefaultDate = parseISO(defaultDate);
   if (date.getTime() !== parsedDefaultDate.getTime()) {
     setDate(parsedDefaultDate);
@@ -74,7 +90,6 @@ export function ServiceListContent({
     const [moved] = newCuts.splice(sourceIndex, 1);
     newCuts.splice(destIndex, 0, moved);
 
-    // LexoRank Float Logic
     let newSortOrder = 0;
     if (destIndex === 0) {
       newSortOrder = (newCuts[1]?.address.sort_order ?? 1000) - 1000;
@@ -86,8 +101,6 @@ export function ServiceListContent({
       const next = newCuts[destIndex + 1].address.sort_order;
 
       if (prev === next) {
-        // Handle collisions (e.g., both neighbors are 0)
-        // Shift slightly based on direction of move
         newSortOrder = prev + (destIndex > sourceIndex ? 10 : -10);
       } else {
         newSortOrder = (prev + next) / 2;
@@ -152,37 +165,80 @@ export function ServiceListContent({
     }
   };
 
+  const handleUserChange = (val: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (val === "all" || val === currentUserId) {
+      params.delete("userId");
+    } else {
+      params.set("userId", val);
+    }
+    router.push(`/clients-service?${params.toString()}`);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 gap-4">
-        <h2 className="text-xl font-semibold">
-          Showing services for:{" "}
-          <span className="text-primary">{format(date, "PPPP")}</span>
-        </h2>
+      <div className="flex flex-col md:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 gap-4">
+        <div className="flex flex-col gap-1 text-center md:text-left">
+          <h2 className="text-xl font-semibold">
+            Showing services for:{" "}
+            <span className="text-primary">{format(date, "PPPP")}</span>
+          </h2>
+          {isAdmin && (
+            <p className="text-sm text-slate-500">
+              Admin View: Filtering by{" "}
+              {members.find((m) => m.id === currentFilterUserId)?.name ||
+                (currentFilterUserId === "all" ? "Everyone" : "Yourself")}
+            </p>
+          )}
+        </div>
 
-        <Popover>
-          <PopoverTrigger
-            render={
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[240px] justify-start text-left font-normal",
-                  !date && "text-muted-foreground",
-                )}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          {isAdmin && (
+            <div className="w-full sm:w-[200px]">
+              <Select
+                value={currentFilterUserId || currentUserId || ""}
+                onValueChange={handleUserChange}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick a date</span>}
-              </Button>
-            }
-          />
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={handleDateChange}
+                <SelectTrigger className="w-full">
+                  <UserIcon className="mr-2 h-4 w-4 opacity-50" />
+                  <SelectValue placeholder="Select User" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Everyone</SelectItem>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name} {member.id === currentUserId && "(You)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full sm:w-[240px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "PPP") : <span>Pick a date</span>}
+                </Button>
+              }
             />
-          </PopoverContent>
-        </Popover>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={handleDateChange}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto">
@@ -214,7 +270,6 @@ export function ServiceListContent({
                         >
                           <CardContent className="p-0">
                             <div className="flex items-center">
-                              {/* Drag Handle */}
                               <div
                                 {...provided.dragHandleProps}
                                 className="p-4 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
@@ -319,10 +374,10 @@ export function ServiceListContent({
         ) : (
           <div className="text-center py-20 bg-white/50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-800">
             <h3 className="text-xl font-semibold mb-2">
-              No cuts assigned to you
+              No cuts assigned {currentFilterUserId === "all" ? "at all" : (currentFilterUserId ? "to this user" : "to you")}
             </h3>
             <p className="text-muted-foreground">
-              You have no clients assigned for service on{" "}
+              There are no clients assigned for service on{" "}
               {format(date, "MMM do, yyyy")}.
             </p>
           </div>
