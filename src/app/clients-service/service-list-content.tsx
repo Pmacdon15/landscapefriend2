@@ -1,19 +1,15 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd";
 import imageCompression from "browser-image-compression";
 import { format, parseISO } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
-
-import { SiteMapViewer } from "@/components/clients/site-map-viewer";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
 import { ServiceListItem } from "@/components/service/ServiceListItem";
 import { CameraCapture } from "@/components/ui/camera-capture";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 import type { CutListItem } from "@/types/types";
@@ -25,6 +21,7 @@ interface ServiceListContentProps {
   datePromise: Promise<string>;
   userIdPromise: Promise<string>;
   membersPromise: Promise<{ id: string; name: string }[]>;
+  currentUserIdPromise: Promise<string>;
 }
 
 export function ServiceListContent({
@@ -33,10 +30,10 @@ export function ServiceListContent({
   datePromise,
   userIdPromise,
   membersPromise,
+  currentUserIdPromise,
 }: ServiceListContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { userId: currentUserId } = useAuth();
 
   const { mutate: updateRouteOrder } = useUpdateRouteOrder();
   const { mutate: completeJob, isPending: isCompleting } = useCompleteJob();
@@ -44,8 +41,9 @@ export function ServiceListContent({
   const [completingAddressId, setCompletingAddressId] = useState<string | null>(
     null,
   );
-  const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
+  const [_viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
 
+  const currentUserId = use(currentUserIdPromise);
   const isAdmin = use(isAdminPromise);
   const defaultDate = use(datePromise);
   const initialClients = use(clientsPromise);
@@ -135,10 +133,14 @@ export function ServiceListContent({
     }
   };
 
-  const handleUserChange = (val: string) => {
+  const handleUserChange = (val: string | null) => {
+    if (!val) return;
     const params = new URLSearchParams(searchParams);
-    if (val === "all") params.delete("userId");
-    else params.set("userId", val);
+    if (val === currentUserId) {
+      params.delete("userId");
+    } else {
+      params.set("userId", val);
+    }
     router.push(`/clients-service?${params.toString()}`);
   };
 
@@ -205,7 +207,6 @@ export function ServiceListContent({
           )}
         </DialogContent>
       </Dialog>
-    
     </div>
   );
 }

@@ -42,7 +42,10 @@ export default async function ClientsServicePage(
     .protect()
     .then((authData) => authData.has({ role: "org:admin" }));
 
-  
+  const currentUserIdPromise = auth
+    .protect()
+    .then((authData) => authData.userId);
+
   return (
     <div className="container mx-auto max-w-7xl px-4 py-12">
       <div className="mb-10">
@@ -62,6 +65,7 @@ export default async function ClientsServicePage(
         }
       >
         <ServiceListContent
+          currentUserIdPromise={currentUserIdPromise}
           isAdminPromise={isAdminPromise}
           clientsPromise={clientsPromise}
           datePromise={datePromise}

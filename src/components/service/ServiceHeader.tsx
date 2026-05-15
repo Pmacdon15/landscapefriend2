@@ -25,7 +25,7 @@ interface ServiceHeaderProps {
   members: { id: string; name: string }[];
   currentFilterUserId: string;
   currentUserId: string;
-  handleUserChange: (val: string) => void;
+  handleUserChange: (val: string | null) => void;
 }
 
 export function ServiceHeader({
@@ -47,8 +47,8 @@ export function ServiceHeader({
         {isAdmin && (
           <p className="text-sm text-slate-500">
             Admin View: Filtering by{" "}
-            {members.find((m) => m.id === currentFilterUserId)?.name ||
-              (currentFilterUserId === "all" ? "Everyone" : "Yourself")}
+            {members.find((m) => m.id === (currentFilterUserId || currentUserId))
+              ?.name || "Yourself"}
           </p>
         )}
       </div>
@@ -57,17 +57,24 @@ export function ServiceHeader({
         {isAdmin && (
           <div className="w-full sm:w-50">
             <Select
-              value={currentFilterUserId || currentUserId || ""}
-              onValueChange={handleUserChange}
+              value={
+                members.find((m) => m.id === (currentFilterUserId || currentUserId))
+                  ?.name || ""
+              }
+              onValueChange={(selectedName) => {
+                const member = members.find((m) => m.name === selectedName);
+                if (member) {
+                  handleUserChange(member.id);
+                }
+              }}
             >
               <SelectTrigger className="w-full">
                 <UserIcon className="mr-2 h-4 w-4 opacity-50" />
                 <SelectValue placeholder="Select User" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Everyone</SelectItem>
                 {members.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
+                  <SelectItem key={member.id} value={member.name}>
                     {member.name} {member.id === currentUserId && "(You)"}
                   </SelectItem>
                 ))}
@@ -92,11 +99,7 @@ export function ServiceHeader({
             }
           />
           <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={onDateChange}
-            />
+            <Calendar mode="single" selected={date} onSelect={onDateChange} />
           </PopoverContent>
         </Popover>
       </div>

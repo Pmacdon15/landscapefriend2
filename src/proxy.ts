@@ -1,15 +1,22 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
   "/api/webhooks/clerk",
-  "privacy",
-  "terms",
+  "/privacy",
+  "/terms",
 ]);
 
+const isAdminRoute = createRouteMatcher(["/client-info-list(.*)"]);
+
 export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+  if (isPublicRoute(request)) return;
+
+  if (isAdminRoute(request)) {
+    const { orgRole } = await auth.protect();
+    if (orgRole !== "org:admin")
+      return NextResponse.redirect(new URL("/", request.url));
   }
 });
 
