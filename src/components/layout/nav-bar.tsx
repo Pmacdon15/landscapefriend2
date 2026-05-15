@@ -48,7 +48,7 @@ export function NavBar() {
   return (
     <nav className="border-b border-slate-200/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-950/50 backdrop-blur-md sticky top-0 z-50 w-full">
       <div className="flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
-        <div className="flex items-center gap-6">
+        <div className="flex   items-center gap-6 ">
           <Link href="/" className="font-bold text-xl tracking-tight">
             Landscape Friend
           </Link>
@@ -69,9 +69,9 @@ export function NavBar() {
           </Show>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1">
           <Show when="signed-in">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center md:gap-4">
               <OrganizationSwitcher />
               <UserButton />
             </div>
@@ -109,7 +109,7 @@ export function NavBar() {
             >
               <Menu className="h-5 w-5" />
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px]">
+            <SheetContent side="right" className="w-75">
               <SheetHeader>
                 <SheetTitle className="text-left">Navigation</SheetTitle>
               </SheetHeader>
