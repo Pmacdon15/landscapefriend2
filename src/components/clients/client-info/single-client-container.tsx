@@ -7,9 +7,11 @@ import type { Client, OptimisticAction, Schedule } from "@/types/types";
 export function SingleClientContainer({
   client,
   members,
+  isAdmin,
 }: {
   client: Client;
   members: { id: string; name: string }[];
+  isAdmin: boolean;
 }) {
   const [optimisticClient, setOptimistic] = useOptimistic(
     client,
@@ -63,6 +65,7 @@ export function SingleClientContainer({
   return (
     <div className="w-full max-w-xl mx-auto">
       <ClientCard
+        isAdmin={isAdmin}
         client={optimisticClient}
         members={members}
         setOptimistic={setOptimistic as (action: OptimisticAction) => void}

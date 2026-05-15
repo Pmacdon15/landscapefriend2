@@ -1,5 +1,6 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { updateTag } from "next/cache";
 import { upsertAssignmentDal } from "@/dal/service";
 
@@ -8,11 +9,13 @@ export async function upsertAssignmentAction(
   userId: string | null,
   date: string,
 ) {
+  const { orgId } = await auth.protect();
   const result = await upsertAssignmentDal(addressId, userId, date);
+  
   return result.match(
     (assignment) => {
-      // Small fix: remove the optional chain if org_id is guaranteed
-      updateTag(`assignments-${assignment?.org_id}`);
+      updateTag(`assignments-${orgId}`);
+      updateTag(`assignments-${orgId}-${date}`);
       return {
         success: true,
         assignment,
@@ -21,7 +24,7 @@ export async function upsertAssignmentAction(
     },
     (err) => ({
       success: false,
-      assignment: null, // Add this to satisfy the type union
+      assignment: null,
       error: err.reason,
     }),
   );

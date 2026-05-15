@@ -1,5 +1,6 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { updateTag } from "next/cache";
 import {
   createClientDal,
@@ -10,12 +11,13 @@ import { updateAddressAssigneeDal } from "@/dal/service";
 import type { CreateClientInput } from "@/zod/schemas";
 
 export async function createClientAction(data: CreateClientInput) {
+  const { orgId } = await auth.protect();
   const result = await createClientDal(data);
 
   return result.match(
     (client) => {
-      updateTag(`clients-${client.org_id}`);
-      updateTag(`addresses-${client.org_id}`);
+      updateTag(`clients-${orgId}`);
+      updateTag(`addresses-${orgId}`);
       return {
         success: true,
         client,
@@ -43,15 +45,16 @@ export async function updateClientAction(
     }[];
   },
 ) {
+  const { orgId } = await auth.protect();
   const result = await updateClientDal(clientId, data);
 
   return result.match(
     (client) => {
-      updateTag(`clients-${client.org_id}`);
-      updateTag(`client-${client.org_id}-${client.id}`);
-      updateTag(`addresses-${client.org_id}`);
-      updateTag(`schedules-${client.org_id}`);
-      updateTag(`sitemaps-${client.org_id}`);
+      updateTag(`clients-${orgId}`);
+      updateTag(`client-${orgId}-${client.id}`);
+      updateTag(`addresses-${orgId}`);
+      updateTag(`schedules-${orgId}`);
+      updateTag(`sitemaps-${orgId}`);
       return {
         success: true,
         client,
@@ -66,11 +69,12 @@ export async function updateAddressAssigneeAction(
   addressId: string,
   userId: string | null,
 ) {
+  const { orgId } = await auth.protect();
   const result = await updateAddressAssigneeDal(addressId, userId);
 
   return result.match(
     (address) => {
-      updateTag(`addresses-${address.org_id}`);
+      updateTag(`addresses-${orgId}`);
       return {
         success: true,
         address,
@@ -82,16 +86,17 @@ export async function updateAddressAssigneeAction(
 }
 
 export async function deleteClientAction(clientId: string) {
+  const { orgId } = await auth.protect();
   const result = await deleteClientDal(clientId);
 
   return result.match(
     (client) => {
-      updateTag(`clients-${client.org_id}`);
-      updateTag(`client-${client.org_id}-${client.id}`);
-      updateTag(`addresses-${client.org_id}`);
-      updateTag(`schedules-${client.org_id}`);
-      updateTag(`sitemaps-${client.org_id}`);
-      updateTag(`job-history-${client.org_id}`);
+      updateTag(`clients-${orgId}`);
+      updateTag(`client-${orgId}-${client.id}`);
+      updateTag(`addresses-${orgId}`);
+      updateTag(`schedules-${orgId}`);
+      updateTag(`sitemaps-${orgId}`);
+      updateTag(`job-history-${orgId}`);
       return {
         success: true,
         client,

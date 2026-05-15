@@ -1,10 +1,13 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { put } from "@vercel/blob";
 import { updateTag } from "next/cache";
+import { format } from "date-fns";
 import { completeJobDal } from "@/dal/service";
 
 export async function completeJobAction(formData: FormData) {
+  const { orgId } = await auth.protect();
   const addressId = formData.get("addressId") as string;
   const serviceType = formData.get("serviceType") as "grass" | "snow";
   const assignedTo = formData.get("assignedTo") as string | null;
@@ -43,7 +46,10 @@ export async function completeJobAction(formData: FormData) {
 
   return result.match(
     (job) => {
-      updateTag(`job-history-${job.org_id}`);
+      updateTag(`job-history-${orgId}`);
+      if (completedAt) {
+        updateTag(`job-history-${orgId}-${format(completedAt, "yyyy-MM-dd")}`);
+      }
       return {
         success: true,
         job,

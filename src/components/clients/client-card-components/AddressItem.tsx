@@ -28,6 +28,7 @@ interface AddressItemProps {
   members: { id: string; name: string }[];
   setOptimistic: (action: OptimisticAction) => void;
   onViewPhoto: (siteMap: SiteMap) => void;
+  isAdmin: boolean;
 }
 
 export function AddressItem({
@@ -35,6 +36,7 @@ export function AddressItem({
   members,
   setOptimistic,
   onViewPhoto,
+  isAdmin,
 }: AddressItemProps) {
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
@@ -54,7 +56,7 @@ export function AddressItem({
           </span>
         </a>
         <div className="flex items-center gap-2">
-          <SiteMapContainer address={address} />
+          <SiteMapContainer address={address} isAdmin={isAdmin} />
           {address.completed_job?.photos?.[0] && (
             <Button
               variant="ghost"

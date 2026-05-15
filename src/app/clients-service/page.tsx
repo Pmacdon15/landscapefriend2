@@ -1,6 +1,8 @@
+import { auth } from "@clerk/nextjs/server";
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForCutListDal } from "@/dal/clients";
 import { ServiceListContent } from "./service-list-content";
 
@@ -19,6 +21,7 @@ export default async function ClientsServicePage(
         (Array.isArray(p.date) ? p.date[0] : p.date) ??
           new Date().toISOString().split("T")[0],
       ),
+      String((Array.isArray(p.userId) ? p.userId[0] : p.userId) ?? ""),
     ),
   );
 
@@ -28,6 +31,20 @@ export default async function ClientsServicePage(
         new Date().toISOString().split("T")[0],
     ),
   );
+
+  const userIdPromise = props.searchParams.then((p) =>
+    String((Array.isArray(p.userId) ? p.userId[0] : p.userId) ?? ""),
+  );
+
+  const membersPromise = getOrganizationMembersDal();
+
+  const isAdminPromise = auth
+    .protect()
+    .then((authData) => authData.has({ role: "org:admin" }));
+
+  const currentUserIdPromise = auth
+    .protect()
+    .then((authData) => authData.userId);
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-12">
@@ -48,8 +65,12 @@ export default async function ClientsServicePage(
         }
       >
         <ServiceListContent
+          currentUserIdPromise={currentUserIdPromise}
+          isAdminPromise={isAdminPromise}
           clientsPromise={clientsPromise}
           datePromise={datePromise}
+          userIdPromise={userIdPromise}
+          membersPromise={membersPromise}
         />
       </Suspense>
     </div>

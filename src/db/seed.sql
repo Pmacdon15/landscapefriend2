@@ -1,6 +1,6 @@
 -- Dummy User Insert
 INSERT INTO users (user_id, full_name, email)
-VALUES ('user_3DY6r8XH2E5MO4ZguNt1syeg9pf', 'Patrick MacDonald', 'pmacdonald15@gmail.com')
+VALUES ('user_3DhBM0L0FKMZns0XAwNe4iHx3a5', 'Patrick MacDonald', 'patrick@patmac.ca')
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Dummy Organization Insert

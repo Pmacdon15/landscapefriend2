@@ -16,13 +16,19 @@ export async function getOrganizationMembersDal(): Promise<
       organizationId: orgId,
     });
 
-    return members.data.map((m) => ({
-      id: m.publicUserData?.userId || "",
-      name:
-        m.publicUserData?.firstName && m.publicUserData?.lastName
-          ? `${m.publicUserData.firstName} ${m.publicUserData.lastName}`
-          : m.publicUserData?.identifier || "Unknown Member",
-    }));
+    return members.data.map((m) => {
+      const publicData = m.publicUserData;
+      const firstName = publicData?.firstName || "";
+      const lastName = publicData?.lastName || "";
+      const identifier = publicData?.identifier || "Unknown Member";
+      
+      const fullName = `${firstName} ${lastName}`.trim();
+      
+      return {
+        id: publicData?.userId || "",
+        name: fullName || identifier || "Unknown Member",
+      };
+    });
   } catch (error) {
     const isAborted = error instanceof Error && error.message?.includes("aborted");
     if (isAborted) {

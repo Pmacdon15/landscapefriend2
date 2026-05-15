@@ -108,6 +108,7 @@ export interface ClientCardProps {
   client: Client;
   members: { id: string; name: string }[];
   setOptimistic: (action: OptimisticAction) => void;
+  isAdmin: boolean;
 }
 
 export interface ClientCardContactProps {

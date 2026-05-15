@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -67,6 +68,9 @@ async function SingleClientLoader({
   clientPromise: ReturnType<typeof getClientByIdDal>;
   membersPromise: ReturnType<typeof getOrganizationMembersDal>;
 }) {
+  const isAdmin = await auth
+    .protect()
+    .then((authData) => authData.has({ role: "org:admin" }));
   const client = await clientPromise;
   const members = await membersPromise;
 
@@ -81,5 +85,11 @@ async function SingleClientLoader({
     );
   }
 
-  return <SingleClientContainer client={client} members={members} />;
+  return (
+    <SingleClientContainer
+      client={client}
+      members={members}
+      isAdmin={isAdmin}
+    />
+  );
 }
