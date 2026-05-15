@@ -27,10 +27,7 @@ export default async function ClientsServicePage(
   );
 
   const datePromise = props.searchParams.then((p) =>
-    String(
-      (Array.isArray(p.date) ? p.date[0] : p.date) ??
-        new Date().toISOString().split("T")[0],
-    ),
+    p.date ? String(Array.isArray(p.date) ? p.date[0] : p.date) : null,
   );
 
   const userIdPromise = props.searchParams.then((p) =>
