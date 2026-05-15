@@ -229,8 +229,10 @@ export async function getClientsForCutListDal(
 export async function createClientDal(
   data: CreateClientInput,
 ): Promise<Result<Client, { reason: string }>> {
-  const { orgId } = await auth.protect();
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
+  const { orgId, orgRole } = await auth.protect();
+
+  if (!orgId || orgRole !== "org:admin")
+    return errAsync({ reason: "Unauthorized" });
 
   const result = CreateClientInputSchema.safeParse(data);
   if (!result.success) return errAsync({ reason: result.error.message });
@@ -285,9 +287,10 @@ export async function updateClientDal(
     addresses: z.infer<typeof AddressInputSchema>[];
   },
 ): Promise<Result<Client, { reason: string }>> {
-  const { orgId } = await auth.protect();
+  const { orgId, orgRole } = await auth.protect();
 
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
+  if (!orgId || orgRole !== "org:admin")
+    return errAsync({ reason: "Unauthorized" });
 
   const clientIdResult = z.uuid().safeParse(clientId);
   if (!clientIdResult.success) return errAsync({ reason: "Invalid client ID" });
@@ -365,9 +368,10 @@ export async function updateClientDal(
 export async function deleteClientDal(
   clientId: string,
 ): Promise<Result<ClientRow, { reason: string }>> {
-  const { orgId } = await auth.protect();
+  const { orgId, orgRole } = await auth.protect();
 
-  if (!orgId) return errAsync({ reason: "Unauthorized" });
+  if (!orgId || orgRole !== "org:admin")
+    return errAsync({ reason: "Unauthorized" });
 
   const parsedClientId = z.uuid().safeParse(clientId);
   if (!parsedClientId.success) return errAsync({ reason: "Invalid client ID" });

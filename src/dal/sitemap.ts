@@ -69,8 +69,8 @@ export async function deleteSiteMapDal(
 
 export async function getClientByIdDal(id: string): Promise<Client | null> {
   try {
-    const { orgId } = await auth.protect();
-    if (!orgId) throw new Error("Unauthorized");
+    const { orgId, orgRole } = await auth.protect();
+    if (!orgId || orgRole !== "org:admin") throw new Error("Unauthorized");
 
     const [clientRow, addresses, schedules, siteMaps, jobHistory] =
       await Promise.all([

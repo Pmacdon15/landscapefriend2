@@ -17,6 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ClientPage(props: PageProps<"/client/[id]">) {
+  const isAdminPromise = auth
+    .protect()
+    .then((authData) => authData.has({ role: "org:admin" }));
   const clientPromise = props.params.then((params) =>
     getClientByIdDal(params.id),
   );
@@ -53,6 +56,7 @@ export default async function ClientPage(props: PageProps<"/client/[id]">) {
         }
       >
         <SingleClientLoader
+          isAdminPromise={isAdminPromise}
           clientPromise={clientPromise}
           membersPromise={membersPromise}
         />
@@ -62,15 +66,15 @@ export default async function ClientPage(props: PageProps<"/client/[id]">) {
 }
 
 async function SingleClientLoader({
+  isAdminPromise,
   clientPromise,
   membersPromise,
 }: {
+  isAdminPromise: Promise<boolean>;
   clientPromise: ReturnType<typeof getClientByIdDal>;
   membersPromise: ReturnType<typeof getOrganizationMembersDal>;
 }) {
-  const isAdmin = await auth
-    .protect()
-    .then((authData) => authData.has({ role: "org:admin" }));
+  const isAdmin = await isAdminPromise;
   const client = await clientPromise;
   const members = await membersPromise;
 
