@@ -20,8 +20,9 @@ export async function saveSiteMapDal(
   mapData: Record<string, unknown> | null,
 ): Promise<Result<SiteMapWithOrgSchema, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    const { orgId, orgRole } = await auth.protect();
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const parsedAddressId = z.uuid().safeParse(addressId);
     if (!parsedAddressId.success)
@@ -46,16 +47,20 @@ export async function deleteSiteMapDal(
   siteMapId: string,
 ): Promise<Result<SiteMapWithOrgSchema, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    const { orgId, orgRole } = await auth.protect();
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const parsedSiteMapId = z.uuid().safeParse(siteMapId);
     if (!parsedSiteMapId.success)
       return errAsync({ reason: "Invalid site map ID" });
 
-    return ResultAsync.fromPromise(deleteSiteMapDb(parsedSiteMapId.data), () => ({
-      reason: "Failed to delete site map",
-    }));
+    return ResultAsync.fromPromise(
+      deleteSiteMapDb(parsedSiteMapId.data),
+      () => ({
+        reason: "Failed to delete site map",
+      }),
+    );
   } catch (error) {
     console.error("Error in deleteSiteMapDal:", error);
     return errAsync({ reason: "An unexpected error occurred" });

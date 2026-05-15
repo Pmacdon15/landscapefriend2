@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -37,6 +38,11 @@ export default async function ClientsServicePage(
 
   const membersPromise = getOrganizationMembersDal();
 
+  const isAdminPromise = auth
+    .protect()
+    .then((authData) => authData.has({ role: "org:admin" }));
+
+  
   return (
     <div className="container mx-auto max-w-7xl px-4 py-12">
       <div className="mb-10">
@@ -56,6 +62,7 @@ export default async function ClientsServicePage(
         }
       >
         <ServiceListContent
+          isAdminPromise={isAdminPromise}
           clientsPromise={clientsPromise}
           datePromise={datePromise}
           userIdPromise={userIdPromise}

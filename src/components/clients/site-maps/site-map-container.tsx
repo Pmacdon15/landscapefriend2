@@ -32,9 +32,10 @@ import { SiteMapEditor } from "./site-map-editor";
 
 interface SiteMapContainerProps {
   address: Address;
+  isAdmin: boolean;
 }
 
-export function SiteMapContainer({ address }: SiteMapContainerProps) {
+export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
@@ -116,93 +117,97 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
             </Button>
           }
         />
-        <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Site Maps for {address.street}</DialogTitle>
-              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                <DialogTrigger
-                  render={
-                    <Button size="sm" className="h-8 gap-1.5">
-                      <Plus className="h-4 w-4" />
-                      Add Site Map
-                    </Button>
-                  }
-                />
-                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Add New Site Map</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-6 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Name / Description</Label>
-                      <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g., Front Yard Area"
-                      />
-                    </div>
-
-                    <div className="flex gap-4 border-b">
-                      <button
-                        type="button"
-                        className={`pb-2 px-1 text-sm font-medium transition-colors ${
-                          activeTab === "upload"
-                            ? "border-b-2 border-primary text-primary"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                        onClick={() => setActiveTab("upload")}
-                      >
-                        Upload Image
-                      </button>
-                      <button
-                        type="button"
-                        className={`pb-2 px-1 text-sm font-medium transition-colors ${
-                          activeTab === "draw"
-                            ? "border-b-2 border-primary text-primary"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                        onClick={() => setActiveTab("draw")}
-                      >
-                        Draw Area
-                      </button>
-                    </div>
-
-                    {activeTab === "upload" ? (
+        <DialogContent className="sm:max-w-175">
+          {isAdmin && (
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle>Site Maps for {address.street}</DialogTitle>
+                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                  <DialogTrigger
+                    render={
+                      <Button size="sm" className="h-8 gap-1.5">
+                        <Plus className="h-4 w-4" />
+                        Add Site Map
+                      </Button>
+                    }
+                  />
+                  <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Add New Site Map</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-6 py-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="file">
-                          Upload Image{" "}
-                          <span className="text-[10px] font-normal text-muted-foreground">
-                            (Max 1MB, will be compressed)
-                          </span>
-                        </Label>
+                        <Label htmlFor="name">Name / Description</Label>
                         <Input
-                          id="file"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setFile(e.target.files?.[0] || null)}
+                          id="name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="e.g., Front Yard Area"
                         />
-                        <Button
-                          onClick={() => handleSave()}
-                          disabled={isSaving || !file}
-                        >
-                          {isSaving
-                            ? compressionStatus || "Saving..."
-                            : "Save Upload"}
-                        </Button>
                       </div>
-                    ) : (
-                      <SiteMapEditor
-                        address={`${address.street}, ${address.city}, ${address.state}`}
-                        onSave={(data, file) => handleSave(data, file)}
-                      />
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </DialogHeader>
+
+                      <div className="flex gap-4 border-b">
+                        <button
+                          type="button"
+                          className={`pb-2 px-1 text-sm font-medium transition-colors ${
+                            activeTab === "upload"
+                              ? "border-b-2 border-primary text-primary"
+                              : "text-slate-500 hover:text-slate-700"
+                          }`}
+                          onClick={() => setActiveTab("upload")}
+                        >
+                          Upload Image
+                        </button>
+                        <button
+                          type="button"
+                          className={`pb-2 px-1 text-sm font-medium transition-colors ${
+                            activeTab === "draw"
+                              ? "border-b-2 border-primary text-primary"
+                              : "text-slate-500 hover:text-slate-700"
+                          }`}
+                          onClick={() => setActiveTab("draw")}
+                        >
+                          Draw Area
+                        </button>
+                      </div>
+
+                      {activeTab === "upload" ? (
+                        <div className="grid gap-2">
+                          <Label htmlFor="file">
+                            Upload Image{" "}
+                            <span className="text-[10px] font-normal text-muted-foreground">
+                              (Max 1MB, will be compressed)
+                            </span>
+                          </Label>
+                          <Input
+                            id="file"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) =>
+                              setFile(e.target.files?.[0] || null)
+                            }
+                          />
+                          <Button
+                            onClick={() => handleSave()}
+                            disabled={isSaving || !file}
+                          >
+                            {isSaving
+                              ? compressionStatus || "Saving..."
+                              : "Save Upload"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <SiteMapEditor
+                          address={`${address.street}, ${address.city}, ${address.state}`}
+                          onSave={(data, file) => handleSave(data, file)}
+                        />
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </DialogHeader>
+          )}
 
           <div className="border rounded-lg mt-4 overflow-hidden">
             <Table>
@@ -242,14 +247,16 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
                               View
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => setSiteMapToDelete(sm)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setSiteMapToDelete(sm)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -271,6 +278,7 @@ export function SiteMapContainer({ address }: SiteMapContainerProps) {
       </Dialog>
 
       <SiteMapViewer
+        isAdmin={true}
         viewingSiteMap={viewingSiteMap}
         onClose={() => setViewingSiteMap(null)}
       />

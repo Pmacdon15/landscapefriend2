@@ -10,9 +10,14 @@ import { SiteMapEditor } from "./site-maps/site-map-editor";
 interface SiteMapViewerProps {
   viewingSiteMap: SiteMap | null;
   onClose: () => void;
+  isAdmin: boolean;
 }
 
-export function SiteMapViewer({ viewingSiteMap, onClose }: SiteMapViewerProps) {
+export function SiteMapViewer({
+  viewingSiteMap,
+  onClose,
+  isAdmin,
+}: SiteMapViewerProps) {
   const handleDownload = async () => {
     if (!viewingSiteMap) return;
     try {
@@ -55,8 +60,8 @@ export function SiteMapViewer({ viewingSiteMap, onClose }: SiteMapViewerProps) {
                 unoptimized
                 className="object-contain shadow-2xl rounded-sm transition-all duration-300"
               />
-            ) : viewingSiteMap.map_data ? (
-              <div className="w-full max-w-5xl aspect-[12/8] bg-white rounded-lg overflow-hidden shadow-2xl">
+            ) : viewingSiteMap.map_data && isAdmin ? (
+              <div className="w-full max-w-5xl aspect-12/8 bg-white rounded-lg overflow-hidden shadow-2xl">
                 <SiteMapEditor
                   address={"Site Area"}
                   readOnlyPoints={viewingSiteMap.map_data}
