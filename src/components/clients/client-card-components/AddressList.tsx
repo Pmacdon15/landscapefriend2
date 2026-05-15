@@ -7,6 +7,7 @@ interface AddressListProps {
   members: { id: string; name: string }[];
   setOptimistic: (action: OptimisticAction) => void;
   onViewPhoto: (siteMap: SiteMap) => void;
+  isAdmin: boolean;
 }
 
 export function AddressList({
@@ -14,6 +15,7 @@ export function AddressList({
   members,
   setOptimistic,
   onViewPhoto,
+  isAdmin,
 }: AddressListProps) {
   if (addresses.length === 0) return null;
 
@@ -24,6 +26,7 @@ export function AddressList({
       </h4>
       {addresses.map((address) => (
         <AddressItem
+          isAdmin={isAdmin}
           key={address.id}
           address={address}
           members={members}

@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -15,6 +16,9 @@ export const metadata: Metadata = {
 export default async function ClientInfoListPage(
   props: PageProps<"/client-info-list">,
 ) {
+  const isAdminPromise = auth
+    .protect()
+    .then((authData) => authData.has({ role: "org:admin" }));
   const clientsPromise = props.searchParams.then((params) =>
     getClientsForInfoDal(
       Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
@@ -58,6 +62,7 @@ export default async function ClientInfoListPage(
         }
       >
         <ClientInfoContainer
+          isAdminPromise={isAdminPromise}
           clientsPromise={clientsPromise}
           membersPromise={membersPromise}
         />
