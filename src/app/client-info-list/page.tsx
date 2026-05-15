@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { PageHeader } from "@/components/layout/page-header";
 import ClientInfoContainer from "@/components/clients/client-info/client-info-container";
 import PaginationButtons from "@/components/pagination-buttons";
 import { getOrganizationMembersDal } from "@/dal/clerk";
@@ -42,17 +43,11 @@ export default async function ClientInfoListPage(
   );
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-12">
-      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 mb-3">
-            Clients
-          </h1>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-3xl">
-            Manage your clients and their recurring schedules.
-          </p>
-        </div>
-      </div>
+    <div className="container mx-auto max-w-7xl px-4 py-4 md:py-8">
+      <PageHeader
+        title="Clients"
+        description="Manage your clients and their recurring schedules."
+      />
 
       <Suspense
         fallback={

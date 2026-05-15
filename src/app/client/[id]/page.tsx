@@ -1,10 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { SingleClientContainer } from "@/components/clients/client-info/single-client-container";
-import { buttonVariants } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientByIdDal } from "@/dal/sitemap";
 
@@ -26,27 +25,13 @@ export default async function ClientPage(props: PageProps<"/client/[id]">) {
   const membersPromise = getOrganizationMembersDal();
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-12">
-      <div className="mb-10 flex flex-col items-start gap-4">
-        <Link
-          href="/client-info-list"
-          className={buttonVariants({
-            variant: "ghost",
-            className: "mb-2 -ml-4",
-          })}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Clients
-        </Link>
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 mb-3">
-            Client Details
-          </h1>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-3xl">
-            View and manage this specific client's information.
-          </p>
-        </div>
-      </div>
+    <div className="container mx-auto max-w-7xl px-4 py-4 md:py-8">
+      <PageHeader
+        title="Client Details"
+        description="View and manage this specific client's information."
+        backHref="/client-info-list"
+        backLabel="Back to Clients"
+      />
 
       <Suspense
         fallback={

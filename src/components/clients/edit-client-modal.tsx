@@ -96,9 +96,8 @@ export function EditClientModal({
               };
             }),
         };
-
+        setOpen(false);
         startTransition(() => {
-          setOpen(false);
           setOptimistic({ type: "edit-client", client: optimisticClient });
 
           updateClient({
