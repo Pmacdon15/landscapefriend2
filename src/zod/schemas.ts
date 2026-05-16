@@ -6,11 +6,13 @@ export const PointSchema = z.object({
 });
 
 export const ScheduleSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   address_id: z.string().uuid(),
   day_of_week: z.number().nullable(),
   frequency: z.string(),
   first_cut_date: z.date(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
 });
 
 export const AssignmentSchema = z.object({
@@ -19,13 +21,15 @@ export const AssignmentSchema = z.object({
   org_id: z.string(),
   user_id: z.string(),
   scheduled_date: z.string(), // ISO date string
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
 });
 
 export const CompletionPhotoSchema = z.object({
   id: z.string().uuid(),
   completed_job_id: z.string().uuid(),
   blob_path: z.string(),
-  created_at: z.date(),
+  created_at: z.date().optional(),
 });
 
 export const CompletedJobSchema = z.object({
@@ -38,6 +42,7 @@ export const CompletedJobSchema = z.object({
   completed_at: z.date(),
   notes: z.string().nullable().optional(),
   photos: z.array(CompletionPhotoSchema).optional(),
+  created_at: z.date().optional(),
 });
 
 export const SiteMapSchema = z.object({
@@ -47,7 +52,8 @@ export const SiteMapSchema = z.object({
   notes: z.string().nullable().optional(),
   blob_path: z.string().nullable().optional(),
   map_data: z.array(z.array(PointSchema)).nullable().optional(),
-  created_at: z.date(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
 });
 
 export const AddressSchema = z.object({
@@ -64,6 +70,8 @@ export const AddressSchema = z.object({
   assignment: AssignmentSchema.optional().nullable(),
   completed_job: CompletedJobSchema.optional().nullable(),
   site_maps: z.array(SiteMapSchema).optional(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
 });
 
 export const AddressInputSchema = z.object({
@@ -83,11 +91,13 @@ export const ClientSchema = z.object({
   email: z.string().email().nullable().optional(),
   phone: z.string().nullable().optional(),
   addresses: z.array(AddressSchema).optional(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
 });
 
 export const CreateClientInputSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.email().nullable().optional(),
+  email: z.string().email().nullable().optional(),
   phone: z.string().nullable().optional(),
   addresses: z
     .array(AddressInputSchema)

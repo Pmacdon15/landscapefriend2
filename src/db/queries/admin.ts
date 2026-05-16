@@ -180,7 +180,7 @@ export async function getMonthlyStatsRawDb(
     CROSS JOIN assignments_cte a;
   `;
 
-    if (!result) {
+  if (!result) {
     return { completedJobs: [], schedules: [], assignments: [] };
   }
 

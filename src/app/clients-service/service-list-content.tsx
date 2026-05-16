@@ -5,20 +5,20 @@ import imageCompression from "browser-image-compression";
 import { format, parseISO } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
+import { ImageViewer } from "@/components/clients/image-viewer";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
 import { ServiceListItem } from "@/components/service/ServiceListItem";
-import { ImageViewer } from "@/components/clients/image-viewer";
 import { CameraCapture } from "@/components/ui/camera-capture";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 import type { CutListItem } from "@/types/types";
-import type { SiteMap } from "@/zod/schemas";
+import type { Client, SiteMap } from "@/zod/schemas";
 
 interface ServiceListContentProps {
   isAdminPromise: Promise<boolean>;
-  clientsPromise: Promise<CutListItem[]>;
+  clientsPromise: Promise<Client[]>;
   datePromise: Promise<string | null>;
   userIdPromise: Promise<string>;
   membersPromise: Promise<{ id: string; name: string }[]>;
@@ -54,8 +54,17 @@ export function ServiceListContent({
     defaultDate = new Date().toLocaleDateString("en-CA");
 
   const [date, setDate] = useState<Date>(parseISO(defaultDate));
+
+  // Flatten clients into CutListItems for the UI list
+  const flatCuts = initialClients.flatMap((client) =>
+    (client.addresses ?? []).map((address) => ({
+      client: { id: client.id, name: client.name },
+      address,
+    })),
+  );
+
   const [optimisticCuts, setOptimisticCuts] = useOptimistic(
-    initialClients,
+    flatCuts,
     (_, newCuts: CutListItem[]) => newCuts,
   );
 
@@ -101,7 +110,7 @@ export function ServiceListContent({
     const addr = optimisticCuts.find(
       (c) => c.address.id === currentAddrId,
     )?.address;
-    
+
     if (!currentAddrId || !addr) return;
 
     // Close camera immediately for snappier feel

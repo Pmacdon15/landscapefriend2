@@ -107,8 +107,8 @@ CREATE TABLE IF NOT EXISTS site_maps (
     address_id UUID NOT NULL REFERENCES addresses(id) ON DELETE CASCADE,
     name TEXT,
     notes TEXT,
-    blob_path TEXT, -- The path in Vercel Blob
-    map_data JSONB, -- For storing Google Maps drawing coordinates (polygons)
+    blob_path TEXT,
+    map_data JSONB, 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

@@ -50,11 +50,15 @@ export async function completeJobAction(formData: FormData) {
   return result.match(
     (job) => {
       updateTag(`job-history-${orgId}`);
+      updateTag(`clients-info-${orgId}`);
+      updateTag(`clients-cutlist-${orgId}`);
       if (completedAt) {
         updateTag(`job-history-${orgId}-${format(completedAt, "yyyy-MM-dd")}`);
       }
       if (scheduledDate) {
-        updateTag(`job-history-${orgId}-${format(scheduledDate, "yyyy-MM-dd")}`);
+        updateTag(
+          `job-history-${orgId}-${format(scheduledDate, "yyyy-MM-dd")}`,
+        );
       }
       return {
         success: true,

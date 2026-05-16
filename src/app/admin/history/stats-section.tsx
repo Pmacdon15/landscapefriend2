@@ -1,4 +1,9 @@
-import { BarChart3, CheckCircle2, Image as ImageIcon, Users } from "lucide-react";
+import {
+  BarChart3,
+  CheckCircle2,
+  Image as ImageIcon,
+  Users,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPastServicesStatsDal } from "@/dal/admin";
 

@@ -32,7 +32,10 @@ export default async function HistoryPage(props: {
       </Suspense>
 
       <Suspense fallback={<HistorySkeleton />}>
-        <HistorySection historyPromise={historyPromise} pagePromise={pagePromise} />
+        <HistorySection
+          historyPromise={historyPromise}
+          pagePromise={pagePromise}
+        />
       </Suspense>
     </div>
   );

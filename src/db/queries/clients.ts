@@ -5,6 +5,7 @@ import type {
   ClientRow,
   CompletedJobRow,
   CompletionPhotoRow,
+  DbClientResult,
   RouteOrderRow,
   ScheduleRow,
   SiteMapRow,
@@ -522,31 +523,135 @@ export async function searchClientsDb(
   orgId: string,
   query: string,
   matchedAssigneeIds: string[] = [],
-): Promise<ClientRow[]> {
+): Promise<DbClientResult[]> {
   "use cache";
   cacheTag(
-    `clients-search${orgId}-${query}-${matchedAssigneeIds.sort().join("-")}`,
+    `clients-search-${orgId}-${query}-${matchedAssigneeIds.sort().join("-")}`,
+    `clients-search-${orgId}`,
   );
   const searchPattern = `%${query}%`;
   const hasAssignees = matchedAssigneeIds.length > 0;
 
-  const result = await sql`
-    SELECT DISTINCT c.*
-    FROM clients c
-    LEFT JOIN addresses a ON c.id = a.client_id AND a.status != 'deleted'
-    WHERE c.org_id = ${orgId}
-    AND (
-      c.name ILIKE ${searchPattern} OR
-      c.email ILIKE ${searchPattern} OR
-      c.phone ILIKE ${searchPattern} OR
-      a.street ILIKE ${searchPattern} OR
-      a.city ILIKE ${searchPattern} OR
-      a.zip ILIKE ${searchPattern} OR
-      (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[]))
+  const result = (await sql`
+    WITH filtered_clients AS (
+      SELECT DISTINCT c.*
+      FROM clients c
+      LEFT JOIN addresses a ON c.id = a.client_id AND a.status != 'deleted'
+      WHERE c.org_id = ${orgId}
+      AND (
+        c.name ILIKE ${searchPattern} OR
+        c.email ILIKE ${searchPattern} OR
+        c.phone ILIKE ${searchPattern} OR
+        a.street ILIKE ${searchPattern} OR
+        a.city ILIKE ${searchPattern} OR
+        a.zip ILIKE ${searchPattern} OR
+        (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[]))
+      )
     )
-    ORDER BY c.name ASC
-  `;
-  return result as unknown as ClientRow[];
+    SELECT 
+      fc.id,
+      fc.org_id,
+      fc.name,
+      fc.email,
+      fc.phone,
+      0 as total_count, -- Not needed for this non-paginated search
+      COALESCE(
+        (
+          SELECT jsonb_agg(addr_data ORDER BY addr_data.street ASC)
+          FROM (
+            SELECT 
+              a.id,
+              a.client_id,
+              a.street,
+              a.city,
+              a.state,
+              a.zip,
+              a.status,
+              a.assigned_to,
+              COALESCE((SELECT ro.sort_order FROM route_orders ro WHERE ro.address_id = a.id), 0)::float as sort_order,
+              (
+                SELECT jsonb_build_object(
+                  'id', ass.id,
+                  'address_id', ass.address_id,
+                  'user_id', ass.user_id,
+                  'scheduled_date', to_char(ass.scheduled_date, 'YYYY-MM-DD')
+                )
+                FROM assignments ass
+                WHERE ass.address_id = a.id
+                ORDER BY ass.scheduled_date DESC
+                LIMIT 1
+              ) as assignment,
+              (
+                SELECT jsonb_build_object(
+                  'id', s.id,
+                  'address_id', s.address_id,
+                  'frequency', s.frequency,
+                  'day_of_week', s.day_of_week,
+                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                )
+                FROM schedules s 
+                WHERE s.address_id = a.id
+              ) as schedule,
+              COALESCE(
+                (
+                  SELECT jsonb_agg(
+                    jsonb_build_object(
+                      'id', sm.id,
+                      'address_id', sm.address_id,
+                      'name', sm.name,
+                      'notes', sm.notes,
+                      'map_data', sm.map_data,
+                      'blob_path', sm.blob_path,
+                      'created_at', to_char(sm.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                    ) ORDER BY sm.created_at DESC
+                  ) 
+                  FROM site_maps sm 
+                  WHERE sm.address_id = a.id
+                ), 
+                '[]'::jsonb
+              ) as site_maps,
+              (
+                SELECT jsonb_build_object(
+                  'id', cj.id,
+                  'address_id', cj.address_id,
+                  'org_id', cj.org_id,
+                  'service_type', cj.service_type,
+                  'assigned_to', cj.assigned_to,
+                  'completed_by', cj.completed_by,
+                  'completed_at', to_char(cj.completed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'notes', cj.notes,
+                  'photos', COALESCE(
+                    (
+                      SELECT jsonb_agg(
+                        jsonb_build_object(
+                          'id', cp.id,
+                          'completed_job_id', cp.completed_job_id,
+                          'blob_path', cp.blob_path,
+                          'created_at', to_char(cp.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                        ) ORDER BY cp.created_at DESC
+                      ) 
+                      FROM completion_photos cp 
+                      WHERE cp.completed_job_id = cj.id
+                    ),
+                    '[]'::jsonb
+                  )
+                )
+                FROM completed_jobs cj
+                WHERE cj.address_id = a.id
+                ORDER BY cj.completed_at DESC
+                LIMIT 1
+              ) as completed_job
+            FROM addresses a
+            WHERE a.client_id = fc.id AND a.status != 'deleted'
+          ) addr_data
+        ),
+        '[]'::jsonb
+      ) as addresses
+    FROM filtered_clients fc
+    ORDER BY fc.name ASC;
+  `) as unknown as DbClientResult[];
+
+  return result;
 }
 
 export async function getClientByIdDb(
@@ -561,4 +666,295 @@ export async function getClientByIdDb(
     WHERE id = ${id} AND org_id = ${orgId}
   `;
   return (result[0] as unknown as ClientRow) || null;
+}
+
+export async function getClientsForCutListDb(
+  orgId: string,
+  date: string,
+  targetUserId?: string,
+  showAll = false,
+): Promise<DbClientResult[]> {
+  "use cache";
+  cacheTag(`clients-cutlist-${orgId}-${date}`, `clients-cutlist-${orgId}`);
+  if (targetUserId && !showAll) {
+    cacheTag(`clients-cutlist-${orgId}-${date}-${targetUserId}`);
+  }
+
+  const result = (await sql`
+    WITH scheduled_addresses AS (
+      SELECT 
+        a.*,
+        s.frequency,
+        s.first_cut_date,
+        s.day_of_week as schedule_dow,
+        ro.sort_order,
+        ass.user_id as assignment_user_id,
+        ass.id as assignment_id,
+        ass.scheduled_date as assignment_date
+      FROM addresses a
+      JOIN schedules s ON a.id = s.address_id
+      JOIN clients c ON a.client_id = c.id
+      LEFT JOIN route_orders ro ON a.id = ro.address_id
+      LEFT JOIN assignments ass ON a.id = ass.address_id AND ass.scheduled_date = ${date}::date
+      WHERE c.org_id = ${orgId} 
+        AND a.status = 'active'
+        AND s.first_cut_date <= ${date}::date
+        AND (
+          s.frequency = 'daily' OR
+          (s.frequency = 'weekly' AND ((${date}::date - s.first_cut_date) % 7) = 0) OR
+          (s.frequency = 'bi-weekly' AND ((${date}::date - s.first_cut_date) % 14) = 0) OR
+          (s.frequency = 'monthly' AND EXTRACT(DAY FROM s.first_cut_date) = EXTRACT(DAY FROM ${date}::date))
+        )
+    ),
+    filtered_addresses AS (
+      SELECT * FROM scheduled_addresses
+      WHERE 
+        ${showAll}::boolean OR 
+        COALESCE(assignment_user_id, assigned_to) = ${targetUserId || null}
+    )
+    SELECT 
+      c.id,
+      c.org_id,
+      c.name,
+      c.email,
+      c.phone,
+      COALESCE(
+        (
+          SELECT jsonb_agg(addr_data ORDER BY addr_data.sort_order ASC)
+          FROM (
+            SELECT 
+              fa.id,
+              fa.client_id,
+              fa.street,
+              fa.city,
+              fa.state,
+              fa.zip,
+              fa.status,
+              fa.assigned_to,
+              COALESCE(fa.sort_order, 0)::float as sort_order,
+              (
+                SELECT jsonb_build_object(
+                  'id', fa.assignment_id,
+                  'address_id', fa.id,
+                  'user_id', fa.assignment_user_id,
+                  'scheduled_date', to_char(fa.assignment_date, 'YYYY-MM-DD')
+                )
+                WHERE fa.assignment_id IS NOT NULL
+              ) as assignment,
+              jsonb_build_object(
+                'id', s.id,
+                'address_id', s.address_id,
+                'frequency', s.frequency,
+                'day_of_week', s.day_of_week,
+                'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+              ) as schedule,
+              COALESCE(
+                (
+                  SELECT jsonb_agg(
+                    jsonb_build_object(
+                      'id', sm.id,
+                      'address_id', sm.address_id,
+                      'name', sm.name,
+                      'notes', sm.notes,
+                      'map_data', sm.map_data,
+                      'blob_path', sm.blob_path,
+                      'created_at', to_char(sm.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                    ) ORDER BY sm.created_at DESC
+                  ) 
+                  FROM site_maps sm 
+                  WHERE sm.address_id = fa.id
+                ), 
+                '[]'::jsonb
+              ) as site_maps,
+              (
+                SELECT jsonb_build_object(
+                  'id', cj.id,
+                  'address_id', cj.address_id,
+                  'org_id', cj.org_id,
+                  'service_type', cj.service_type,
+                  'assigned_to', cj.assigned_to,
+                  'completed_by', cj.completed_by,
+                  'completed_at', to_char(cj.completed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'notes', cj.notes,
+                  'photos', COALESCE(
+                    (
+                      SELECT jsonb_agg(
+                        jsonb_build_object(
+                          'id', cp.id,
+                          'completed_job_id', cp.completed_job_id,
+                          'blob_path', cp.blob_path,
+                          'created_at', to_char(cp.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                        ) ORDER BY cp.created_at DESC
+                      ) 
+                      FROM completion_photos cp 
+                      WHERE cp.completed_job_id = cj.id
+                    ),
+                    '[]'::jsonb
+                  )
+                )
+                FROM completed_jobs cj
+                WHERE cj.address_id = fa.id AND (cj.completed_at::date = ${date}::date OR cj.scheduled_date = ${date}::date)
+                ORDER BY cj.completed_at DESC
+                LIMIT 1
+              ) as completed_job
+            FROM filtered_addresses fa
+            JOIN schedules s ON fa.id = s.address_id
+            WHERE fa.client_id = c.id
+          ) addr_data
+        ),
+        '[]'::jsonb
+      ) as addresses
+    FROM clients c
+    WHERE c.id IN (SELECT client_id FROM filtered_addresses)
+    ORDER BY (SELECT MIN(sort_order) FROM filtered_addresses WHERE client_id = c.id) ASC;
+  `) as unknown as DbClientResult[];
+
+  return result;
+}
+
+export async function getClientsForInfoDb(
+  orgId: string,
+  limit: number,
+  offset: number,
+  searchQuery?: string,
+  matchedAssigneeIds: string[] = [],
+): Promise<DbClientResult[]> {
+  "use cache";
+  const searchPattern = searchQuery ? `%${searchQuery}%` : null;
+  const hasAssignees = matchedAssigneeIds.length > 0;
+
+  cacheTag(`clients-info-${orgId}`);
+  if (searchQuery) {
+    cacheTag(`clients-info-search-${orgId}-${searchQuery}`);
+  }
+
+  const result = (await sql`
+    WITH filtered_clients AS (
+      SELECT DISTINCT c.*
+      FROM clients c
+      LEFT JOIN addresses a ON c.id = a.client_id AND a.status != 'deleted'
+      WHERE c.org_id = ${orgId}
+      AND (
+        ${!searchQuery}::boolean OR
+        c.name ILIKE ${searchPattern} OR
+        c.email ILIKE ${searchPattern} OR
+        c.phone ILIKE ${searchPattern} OR
+        a.street ILIKE ${searchPattern} OR
+        a.city ILIKE ${searchPattern} OR
+        a.zip ILIKE ${searchPattern} OR
+        (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[]))
+      )
+    ),
+    total_count AS (
+      SELECT count(*) as count FROM filtered_clients
+    ),
+    paginated_clients AS (
+      SELECT * FROM filtered_clients
+      ORDER BY name ASC
+      LIMIT ${limit} OFFSET ${offset}
+    )
+    SELECT 
+      pc.id,
+      pc.org_id,
+      pc.name,
+      pc.email,
+      pc.phone,
+      (SELECT count FROM total_count)::int as total_count,
+      COALESCE(
+        (
+          SELECT jsonb_agg(addr_data ORDER BY addr_data.street ASC)
+          FROM (
+            SELECT 
+              a.id,
+              a.client_id,
+              a.street,
+              a.city,
+              a.state,
+              a.zip,
+              a.status,
+              a.assigned_to,
+              COALESCE((SELECT ro.sort_order FROM route_orders ro WHERE ro.address_id = a.id), 0)::float as sort_order,
+              (
+                SELECT jsonb_build_object(
+                  'id', ass.id,
+                  'address_id', ass.address_id,
+                  'user_id', ass.user_id,
+                  'scheduled_date', to_char(ass.scheduled_date, 'YYYY-MM-DD')
+                )
+                FROM assignments ass
+                WHERE ass.address_id = a.id
+                ORDER BY ass.scheduled_date DESC
+                LIMIT 1
+              ) as assignment,
+              (
+                SELECT jsonb_build_object(
+                  'id', s.id,
+                  'address_id', s.address_id,
+                  'frequency', s.frequency,
+                  'day_of_week', s.day_of_week,
+                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                )
+                FROM schedules s 
+                WHERE s.address_id = a.id
+              ) as schedule,
+              COALESCE(
+                (
+                  SELECT jsonb_agg(
+                    jsonb_build_object(
+                      'id', sm.id,
+                      'address_id', sm.address_id,
+                      'name', sm.name,
+                      'notes', sm.notes,
+                      'map_data', sm.map_data,
+                      'blob_path', sm.blob_path,
+                      'created_at', to_char(sm.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                    ) ORDER BY sm.created_at DESC
+                  ) 
+                  FROM site_maps sm 
+                  WHERE sm.address_id = a.id
+                ), 
+                '[]'::jsonb
+              ) as site_maps,
+              (
+                SELECT jsonb_build_object(
+                  'id', cj.id,
+                  'address_id', cj.address_id,
+                  'org_id', cj.org_id,
+                  'service_type', cj.service_type,
+                  'assigned_to', cj.assigned_to,
+                  'completed_by', cj.completed_by,
+                  'completed_at', to_char(cj.completed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'notes', cj.notes,
+                  'photos', COALESCE(
+                    (
+                      SELECT jsonb_agg(
+                        jsonb_build_object(
+                          'id', cp.id,
+                          'completed_job_id', cp.completed_job_id,
+                          'blob_path', cp.blob_path,
+                          'created_at', to_char(cp.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                        ) ORDER BY cp.created_at DESC
+                      ) 
+                      FROM completion_photos cp 
+                      WHERE cp.completed_job_id = cj.id
+                    ),
+                    '[]'::jsonb
+                  )
+                )
+                FROM completed_jobs cj
+                WHERE cj.address_id = a.id
+                ORDER BY cj.completed_at DESC
+                LIMIT 1
+              ) as completed_job
+            FROM addresses a
+            WHERE a.client_id = pc.id AND a.status != 'deleted'
+          ) addr_data
+        ),
+        '[]'::jsonb
+      ) as addresses
+    FROM paginated_clients pc
+    ORDER BY pc.name ASC;
+  `) as unknown as DbClientResult[];
+
+  return result;
 }

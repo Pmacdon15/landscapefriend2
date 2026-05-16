@@ -1,4 +1,8 @@
-import { CheckCircle2, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  CheckCircle2,
+  TrendingUp,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,

@@ -12,7 +12,11 @@ import {
   getPastServicesListDb,
   getPastServicesStatsDb,
 } from "@/db/queries/admin";
-import type { AssignmentRow, CompletedJobRow, ScheduleRow } from "@/types/types";
+import type {
+  AssignmentRow,
+  CompletedJobRow,
+  ScheduleRow,
+} from "@/types/types";
 
 export interface PastServicesStats {
   totalCuts: number;
@@ -73,7 +77,9 @@ export async function getPastServicesStatsDal(): Promise<PastServicesStats> {
   }
 }
 
-export async function getPastServicesListDal(page = 1): Promise<{ data: PastServiceItem[]; totalPages: number }> {
+export async function getPastServicesListDal(
+  page = 1,
+): Promise<{ data: PastServiceItem[]; totalPages: number }> {
   const { orgId, orgRole } = await auth.protect();
   if (!orgId || orgRole !== "org:admin") throw new Error("Unauthorized");
 
@@ -82,7 +88,11 @@ export async function getPastServicesListDal(page = 1): Promise<{ data: PastServ
     const offset = (page - 1) * pageSize;
 
     const list = await getPastServicesListDb(orgId, pageSize, offset);
-    const totalCount = list.length > 0 ? Number((list[0] as any).total_count) : 0;
+    const totalCount =
+      list.length > 0
+        ? Number((list[0] as { total_count: number }).total_count)
+        : 0;
+
     const totalPages = Math.ceil(totalCount / pageSize);
 
     return {
@@ -105,11 +115,8 @@ export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
   const today = startOfDay(now);
 
   try {
-    const { completedJobs, schedules, assignments } = await getMonthlyStatsRawDb(
-      orgId,
-      start,
-      end,
-    );
+    const { completedJobs, schedules, assignments } =
+      await getMonthlyStatsRawDb(orgId, start, end);
 
     const userStats: Record<
       string,
@@ -121,9 +128,16 @@ export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
       }
     > = {};
 
-    const typedCompletedJobs = completedJobs as (CompletedJobRow & { completed_by_name: string | null })[];
-    const typedAssignments = assignments as (AssignmentRow & { user_name: string | null })[];
-    const typedSchedules = schedules as (ScheduleRow & { assigned_to: string | null; assigned_to_name: string | null })[];
+    const typedCompletedJobs = completedJobs as (CompletedJobRow & {
+      completed_by_name: string | null;
+    })[];
+    const typedAssignments = assignments as (AssignmentRow & {
+      user_name: string | null;
+    })[];
+    const typedSchedules = schedules as (ScheduleRow & {
+      assigned_to: string | null;
+      assigned_to_name: string | null;
+    })[];
 
     // Process Completed
     typedCompletedJobs.forEach((job) => {
@@ -131,7 +145,9 @@ export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
       if (!userStats[userId]) {
         userStats[userId] = {
           id: userId,
-          name: job.completed_by_name || (userId === "unassigned" ? "Unassigned" : "Unknown"),
+          name:
+            job.completed_by_name ||
+            (userId === "unassigned" ? "Unassigned" : "Unknown"),
           completed: 0,
           scheduled: 0,
         };
@@ -177,9 +193,11 @@ export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
 
             // If we have a scheduled_date, use it to match the instance
             if (j.scheduled_date) {
-              return format(new Date(j.scheduled_date), "yyyy-MM-dd") === dateStr;
+              return (
+                format(new Date(j.scheduled_date), "yyyy-MM-dd") === dateStr
+              );
             }
-        
+
             return format(new Date(j.completed_at), "yyyy-MM-dd") === dateStr;
           });
 
@@ -187,7 +205,8 @@ export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
 
           const assignment = assignmentMap.get(`${s.address_id}-${dateStr}`);
           const userId = assignment?.id || s.assigned_to || "unassigned";
-          const userName = assignment?.name || s.assigned_to_name || "Unassigned";
+          const userName =
+            assignment?.name || s.assigned_to_name || "Unassigned";
 
           if (!userStats[userId]) {
             userStats[userId] = {

@@ -121,6 +121,18 @@ export function ClientSearchBar({
                   className="w-full text-left flex flex-col p-2 hover:bg-accent hover:text-accent-foreground rounded-sm transition-colors"
                 >
                   <span className="font-medium text-sm">{client.name}</span>
+                  {client.addresses && client.addresses.length > 0 && (
+                    <div className="flex flex-col">
+                      {client.addresses.map((addr) => (
+                        <span
+                          key={addr.id}
+                          className="text-xs text-muted-foreground"
+                        >
+                          {addr.street}, {addr.city}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {(client.email || client.phone) && (
                     <span className="text-xs text-muted-foreground mt-0.5">
                       {client.phone} {client.phone && client.email ? "•" : ""}{" "}

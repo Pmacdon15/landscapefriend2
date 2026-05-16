@@ -2,7 +2,11 @@ import { CheckCircle2, Image as ImageIcon, Users } from "lucide-react";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getPastServicesListDal, getPastServicesStatsDal } from "@/dal/admin";
+import {
+  getPastServicesListDal,
+  getPastServicesStatsDal,
+  type PastServicesStats,
+} from "@/dal/admin";
 import { HistoryList } from "../history/history-list";
 
 export default async function PastServicesPage() {
@@ -56,15 +60,17 @@ async function StatsSection({
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
-            {stats.cutsByServiceType.map((s: any) => (
-              <div
-                key={s.service_type}
-                className="flex items-center justify-between"
-              >
-                <span className="text-xs capitalize">{s.service_type}</span>
-                <span className="text-sm font-bold">{s.count}</span>
-              </div>
-            ))}
+            {stats.cutsByServiceType.map(
+              (s: PastServicesStats["cutsByServiceType"][0]) => (
+                <div
+                  key={s.service_type}
+                  className="flex items-center justify-between"
+                >
+                  <span className="text-xs capitalize">{s.service_type}</span>
+                  <span className="text-sm font-bold">{s.count}</span>
+                </div>
+              ),
+            )}
           </div>
         </CardContent>
       </Card>
@@ -76,7 +82,7 @@ async function StatsSection({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            {stats.cutsByUser.map((u: any) => (
+            {stats.cutsByUser.map((u: PastServicesStats["cutsByUser"][0]) => (
               <div
                 key={u.user_name}
                 className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1"
@@ -117,6 +123,7 @@ function StatsSkeleton() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {[...Array(4)].map((_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: stable IDs not available for skeleton items
         <Card key={i} className="animate-pulse">
           <CardHeader className="h-20" />
           <CardContent className="h-10" />
