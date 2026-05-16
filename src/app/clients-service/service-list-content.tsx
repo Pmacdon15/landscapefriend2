@@ -8,6 +8,7 @@ import { startTransition, use, useOptimistic, useState } from "react";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
 import { ServiceListItem } from "@/components/service/ServiceListItem";
+import { ImageViewer } from "@/components/clients/image-viewer";
 import { CameraCapture } from "@/components/ui/camera-capture";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCompleteJob } from "@/mutations/jobs";
@@ -41,7 +42,7 @@ export function ServiceListContent({
   const [completingAddressId, setCompletingAddressId] = useState<string | null>(
     null,
   );
-  const [_viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
+  const [viewingImage, setViewingImage] = useState<SiteMap | null>(null);
 
   const currentUserId = use(currentUserIdPromise);
   const isAdmin = use(isAdminPromise);
@@ -176,7 +177,7 @@ export function ServiceListContent({
                       index={index}
                       isCompleting={isCompleting}
                       onMarkComplete={setCompletingAddressId}
-                      onViewPhoto={setViewingSiteMap}
+                      onViewPhoto={setViewingImage}
                     />
                   ))}
                   {provided.placeholder}
@@ -209,6 +210,12 @@ export function ServiceListContent({
           )}
         </DialogContent>
       </Dialog>
+
+      <ImageViewer
+        isAdmin={isAdmin}
+        viewingImage={viewingImage}
+        onClose={() => setViewingImage(null)}
+      />
     </div>
   );
 }

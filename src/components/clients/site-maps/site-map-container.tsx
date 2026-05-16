@@ -30,7 +30,7 @@ import {
   useUpdateSiteMap,
 } from "@/mutations/clients";
 import type { Address, SiteMap } from "@/zod/schemas";
-import { SiteMapViewer } from "../site-map-viewer";
+import { ImageViewer } from "../image-viewer";
 import { SiteMapDetailsForm } from "./site-map-details-form";
 import { SiteMapEditor } from "./site-map-editor";
 
@@ -411,9 +411,9 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
         </DialogContent>
       </Dialog>
 
-      <SiteMapViewer
+      <ImageViewer
         isAdmin={true}
-        viewingSiteMap={viewingSiteMap}
+        viewingImage={viewingSiteMap}
         onClose={() => setViewingSiteMap(null)}
       />
 

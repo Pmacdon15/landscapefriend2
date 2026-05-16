@@ -1,0 +1,102 @@
+"use client";
+
+import { format } from "date-fns";
+import { Download, X } from "lucide-react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import type { SiteMap } from "@/zod/schemas";
+import { SiteMapEditor } from "./site-maps/site-map-editor";
+
+interface ImageViewerProps {
+  viewingImage: SiteMap | null;
+  onClose: () => void;
+  isAdmin: boolean;
+}
+
+export function ImageViewer({
+  viewingImage,
+  onClose,
+  isAdmin,
+}: ImageViewerProps) {
+  const handleDownload = async () => {
+    if (!viewingImage) return;
+    try {
+      const response = await fetch(`/api/site-maps/image/${viewingImage.id}`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${viewingImage.name || "photo"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
+  return (
+    <Dialog open={!!viewingImage} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="fixed inset-0 top-0 left-0 translate-x-0 translate-y-0 max-w-none w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white rounded-none sm:max-w-none">
+        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/60 to-transparent z-50 flex items-center justify-between px-4 md:px-8">
+          <div className="flex flex-col">
+            <h3 className="text-lg font-semibold truncate max-w-[200px] md:max-w-md">
+              {viewingImage?.name || "Viewing Photo"}
+            </h3>
+            {viewingImage?.created_at && (
+              <p className="text-xs text-slate-300">
+                {format(new Date(viewingImage.created_at), "PPP p")}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {viewingImage?.blob_path && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 text-white hover:bg-white/20 transition-colors rounded-full"
+                onClick={handleDownload}
+              >
+                <Download className="h-5 w-5" />
+                <span className="sr-only">Download</span>
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-white hover:bg-white/20 transition-colors rounded-full"
+              onClick={onClose}
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </div>
+        </div>
+
+        {viewingImage && (
+          <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8 pt-16">
+            {viewingImage.blob_path ? (
+              <Image
+                src={`/api/site-maps/image/${viewingImage.id}`}
+                alt={viewingImage.name || "Viewing photo"}
+                fill
+                unoptimized
+                className="object-contain shadow-2xl transition-all duration-300"
+              />
+            ) : viewingImage.map_data && isAdmin ? (
+              <div className="w-full max-w-5xl aspect-12/8 bg-white rounded-lg overflow-hidden shadow-2xl">
+                <SiteMapEditor
+                  address={"Site Area"}
+                  readOnlyPolygons={viewingImage.map_data}
+                />
+              </div>
+            ) : null}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
