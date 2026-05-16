@@ -336,65 +336,65 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                         new Date(a.created_at).getTime(),
                     )
                     .map((sm) => (
-                    <TableRow key={sm.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {sm.map_data ? (
-                            <MapIcon className="h-4 w-4 text-emerald-500" />
-                          ) : sm.blob_path ? (
-                            <FileImage className="h-4 w-4 text-primary" />
-                          ) : null}
-                          <p className="font-semibold">
-                            {sm.name || "Site Map"}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {sm.notes && (
-                          <p className="text-xs text-slate-500 italic line-clamp-1">
-                            {sm.notes}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(sm.created_at), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {(sm.blob_path || sm.map_data) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => setViewingSiteMap(sm)}
-                            >
-                              View
-                            </Button>
+                      <TableRow key={sm.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {sm.map_data ? (
+                              <MapIcon className="h-4 w-4 text-emerald-500" />
+                            ) : sm.blob_path ? (
+                              <FileImage className="h-4 w-4 text-primary" />
+                            ) : null}
+                            <p className="font-semibold">
+                              {sm.name || "Site Map"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {sm.notes && (
+                            <p className="text-xs text-slate-500 italic line-clamp-1">
+                              {sm.notes}
+                            </p>
                           )}
-                          {isAdmin && (
-                            <>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(sm.created_at), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {(sm.blob_path || sm.map_data) && (
                               <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-slate-500 hover:text-primary"
-                                onClick={() => setEditingSiteMap(sm)}
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => setViewingSiteMap(sm)}
                               >
-                                <Edit2 className="h-4 w-4" />
+                                View
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => setSiteMapToDelete(sm)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            )}
+                            {isAdmin && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-slate-500 hover:text-primary"
+                                  onClick={() => setEditingSiteMap(sm)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => setSiteMapToDelete(sm)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
                 ) : (
                   <TableRow>
                     <TableCell

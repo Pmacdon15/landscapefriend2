@@ -242,13 +242,7 @@ export function SiteMapEditor({
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
     const url = `https://maps.googleapis.com/maps/api/staticmap?center=${encoded}&zoom=20&size=1200x800&maptype=satellite&key=${key}`;
     setMapImage(url);
-    if (!isReadOnly) {
-      setPolygons([]);
-      setCurrentPoints([]);
-      setOffset({ x: 0, y: 0 });
-      setScale(1);
-    }
-  }, [search, isReadOnly]);
+  }, [search]);
 
   useEffect(() => {
     if (search) loadMap();
