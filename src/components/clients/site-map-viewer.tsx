@@ -64,7 +64,7 @@ export function SiteMapViewer({
               <div className="w-full max-w-5xl aspect-12/8 bg-white rounded-lg overflow-hidden shadow-2xl">
                 <SiteMapEditor
                   address={"Site Area"}
-                  readOnlyPoints={viewingSiteMap.map_data}
+                  readOnlyPolygons={viewingSiteMap.map_data}
                 />
               </div>
             ) : null}

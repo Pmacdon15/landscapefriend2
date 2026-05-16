@@ -425,14 +425,15 @@ export async function getSiteMapsDb(orgId: string): Promise<SiteMapRow[]> {
 export async function insertSiteMapDb(
   addressId: string,
   name: string | null,
+  notes: string | null,
   blobPath: string | null,
   mapData: Record<string, unknown> | null,
 ): Promise<SiteMapWithOrgSchema> {
   const jsonMapData = mapData ? JSON.stringify(mapData) : null;
 
   const [row] = (await sql`
-    INSERT INTO site_maps (address_id, name, blob_path, map_data)
-    VALUES (${addressId}, ${name}, ${blobPath}, ${jsonMapData})
+    INSERT INTO site_maps (address_id, name, notes, blob_path, map_data)
+    VALUES (${addressId}, ${name}, ${notes}, ${blobPath}, ${jsonMapData})
     RETURNING *
   `) as unknown as SiteMapRow[];
 
@@ -440,6 +441,31 @@ export async function insertSiteMapDb(
     SELECT c.org_id FROM addresses a
     JOIN clients c ON a.client_id = c.id
     WHERE a.id = ${addressId}
+  `) as unknown as { org_id: string }[];
+
+  return { ...row, org_id: orgRow.org_id };
+}
+
+export async function updateSiteMapDb(
+  siteMapId: string,
+  name: string | null,
+  notes: string | null,
+  mapData: Record<string, unknown> | null,
+): Promise<SiteMapWithOrgSchema> {
+  const jsonMapData = mapData ? JSON.stringify(mapData) : null;
+
+  const [row] = (await sql`
+    UPDATE site_maps
+    SET name = ${name}, notes = ${notes}, map_data = ${jsonMapData}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${siteMapId}
+    RETURNING *
+  `) as unknown as SiteMapRow[];
+
+  const [orgRow] = (await sql`
+    SELECT c.org_id FROM site_maps sm
+    JOIN addresses a ON sm.address_id = a.id
+    JOIN clients c ON a.client_id = c.id
+    WHERE sm.id = ${siteMapId}
   `) as unknown as { org_id: string }[];
 
   return { ...row, org_id: orgRow.org_id };

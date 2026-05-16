@@ -178,7 +178,10 @@ export async function upsertAssignmentDal(
       return ResultAsync.fromPromise(
         deleteAssignmentDb(parsedAddressId.data, date).then(() => null),
         (error) => {
-          console.error(`Failed to delete assignment for address ${addressId} on date ${date}:`, error);
+          console.error(
+            `Failed to delete assignment for address ${addressId} on date ${date}:`,
+            error,
+          );
           return { reason: "Failed to delete assignment" };
         },
       );
@@ -192,12 +195,18 @@ export async function upsertAssignmentDal(
         date,
       ) as Promise<Assignment>,
       (error) => {
-        console.error(`Failed to upsert assignment for address ${addressId} to user ${userId} on date ${date}:`, error);
+        console.error(
+          `Failed to upsert assignment for address ${addressId} to user ${userId} on date ${date}:`,
+          error,
+        );
         return { reason: "Failed to upsert assignment" };
       },
     );
   } catch (error) {
-    console.error(`Unexpected error in upsertAssignmentDal (addressId: ${addressId}, userId: ${userId}, date: ${date}):`, error);
+    console.error(
+      `Unexpected error in upsertAssignmentDal (addressId: ${addressId}, userId: ${userId}, date: ${date}):`,
+      error,
+    );
     return errAsync({ reason: "An unexpected error occurred" });
   }
 }
@@ -221,12 +230,18 @@ export async function updateAddressAssigneeDal(
         userId === "unassigned" ? null : userId,
       ),
       (error) => {
-        console.error(`Failed to update address assignee for address ${addressId} to user ${userId}:`, error);
+        console.error(
+          `Failed to update address assignee for address ${addressId} to user ${userId}:`,
+          error,
+        );
         return { reason: "Failed to update address assignee" };
       },
     );
   } catch (error) {
-    console.error(`Unexpected error in updateAddressAssigneeDal (addressId: ${addressId}, userId: ${userId}):`, error);
+    console.error(
+      `Unexpected error in updateAddressAssigneeDal (addressId: ${addressId}, userId: ${userId}):`,
+      error,
+    );
     return errAsync({ reason: "An unexpected error occurred" });
   }
 }

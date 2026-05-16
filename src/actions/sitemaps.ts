@@ -2,11 +2,16 @@
 
 import { put } from "@vercel/blob";
 import { updateTag } from "next/cache";
-import { deleteSiteMapDal, saveSiteMapDal } from "@/dal/sitemap";
+import {
+  deleteSiteMapDal,
+  saveSiteMapDal,
+  updateSiteMapDal,
+} from "@/dal/sitemap";
 
 export async function saveSiteMapAction(formData: FormData) {
   const addressId = formData.get("addressId") as string;
   const name = formData.get("name") as string | null;
+  const notes = formData.get("notes") as string | null;
   const mapDataRaw = formData.get("mapData") as string | null;
   const file = formData.get("file") as File | null;
 
@@ -43,7 +48,13 @@ export async function saveSiteMapAction(formData: FormData) {
     }
   }
 
-  const result = await saveSiteMapDal(addressId, name, blobPath, mapData);
+  const result = await saveSiteMapDal(
+    addressId,
+    name,
+    notes,
+    blobPath,
+    mapData,
+  );
 
   return result.match(
     (siteMap) => {
@@ -52,6 +63,28 @@ export async function saveSiteMapAction(formData: FormData) {
     },
     (err) => {
       console.error("Save site map failure:", err);
+      return { success: false, siteMap: null, error: err.reason };
+    },
+  );
+}
+
+export async function updateSiteMapAction(formData: FormData) {
+  const siteMapId = formData.get("siteMapId") as string;
+  const name = formData.get("name") as string | null;
+  const notes = formData.get("notes") as string | null;
+  const mapDataRaw = formData.get("mapData") as string | null;
+
+  const mapData = mapDataRaw ? JSON.parse(mapDataRaw) : null;
+
+  const result = await updateSiteMapDal(siteMapId, name, notes, mapData);
+
+  return result.match(
+    (siteMap) => {
+      updateTag(`sitemaps-${siteMap.org_id}`);
+      return { success: true, siteMap, error: null };
+    },
+    (err) => {
+      console.error("Update site map failure:", err);
       return { success: false, siteMap: null, error: err.reason };
     },
   );

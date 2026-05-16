@@ -47,8 +47,9 @@ export function ServiceHeader({
         {isAdmin && (
           <p className="text-sm text-slate-500">
             Admin View: Filtering by{" "}
-            {members.find((m) => m.id === (currentFilterUserId || currentUserId))
-              ?.name || "Yourself"}
+            {members.find(
+              (m) => m.id === (currentFilterUserId || currentUserId),
+            )?.name || "Yourself"}
           </p>
         )}
       </div>
@@ -58,8 +59,9 @@ export function ServiceHeader({
           <div className="w-full sm:w-50">
             <Select
               value={
-                members.find((m) => m.id === (currentFilterUserId || currentUserId))
-                  ?.name || ""
+                members.find(
+                  (m) => m.id === (currentFilterUserId || currentUserId),
+                )?.name || ""
               }
               onValueChange={(selectedName) => {
                 const member = members.find((m) => m.name === selectedName);

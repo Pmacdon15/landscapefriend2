@@ -3,10 +3,7 @@ import { NextResponse } from "next/server";
 import { searchClientsDal } from "@/dal/clients";
 
 export async function GET(request: Request) {
-  const { has } = await auth.protect();
-  // if (!has({ role: "org:admin" }))
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+  await auth.protect();
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
 

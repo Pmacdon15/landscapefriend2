@@ -36,6 +36,7 @@ export interface ScheduleRow {
   day_of_week: number | null;
   frequency: string;
   first_cut_date: Date;
+  next_cut_date?: Date;
   created_at: Date;
   updated_at: Date;
 }
@@ -71,12 +72,15 @@ export interface CompletedJobRow {
   updated_at: Date;
 }
 
+export type Point = { x: number; y: number };
+
 export interface SiteMapRow {
   id: string;
   address_id: string;
   name: string | null;
+  notes: string | null;
   blob_path: string | null;
-  map_data: Record<string, unknown> | null;
+  map_data: Point[][] | null;
   created_at: Date;
   updated_at: Date;
 }

@@ -6,7 +6,11 @@ import {
   updateAddressAssigneeAction,
   updateClientAction,
 } from "@/actions/clients";
-import { deleteSiteMapAction, saveSiteMapAction } from "@/actions/sitemaps";
+import {
+  deleteSiteMapAction,
+  saveSiteMapAction,
+  updateSiteMapAction,
+} from "@/actions/sitemaps";
 import type { CreateClientInput } from "@/zod/schemas";
 
 export function useCreateClient() {
@@ -108,17 +112,20 @@ export function useSaveSiteMap() {
     mutationFn: async ({
       addressId,
       name,
+      notes,
       mapData,
       file,
     }: {
       addressId: string;
       name: string | null;
-      mapData: { x: number; y: number }[] | null;
+      notes: string | null;
+      mapData: { x: number; y: number }[][] | null;
       file?: File;
     }) => {
       const formData = new FormData();
       formData.append("addressId", addressId);
       if (name) formData.append("name", name);
+      if (notes) formData.append("notes", notes);
       if (mapData) formData.append("mapData", JSON.stringify(mapData));
       if (file) formData.append("file", file);
 
@@ -131,6 +138,41 @@ export function useSaveSiteMap() {
     },
     onSuccess: () => {
       toast.success("Site map saved");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+export function useUpdateSiteMap() {
+  return useMutation({
+    mutationFn: async ({
+      siteMapId,
+      name,
+      notes,
+      mapData,
+    }: {
+      siteMapId: string;
+      name: string | null;
+      notes: string | null;
+      mapData: { x: number; y: number }[][] | null;
+    }) => {
+      const formData = new FormData();
+      formData.append("siteMapId", siteMapId);
+      if (name) formData.append("name", name);
+      if (notes) formData.append("notes", notes);
+      if (mapData) formData.append("mapData", JSON.stringify(mapData));
+
+      const { success, siteMap, error } = await updateSiteMapAction(formData);
+
+      if (!success || !siteMap) {
+        throw new Error(error ?? "Failed to update site map");
+      }
+      return siteMap;
+    },
+    onSuccess: () => {
+      toast.success("Site map updated");
     },
     onError: (error: Error) => {
       toast.error(error.message);
