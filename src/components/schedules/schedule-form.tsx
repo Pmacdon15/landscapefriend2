@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn, formatDateUtc } from "@/lib/utils";
+import { cn, formatDateNaive } from "@/lib/utils";
 import { useDeleteSchedule, useUpsertSchedule } from "@/mutations/schedules";
 import type { OptimisticAction } from "@/types/types";
 
@@ -139,7 +139,7 @@ export function ScheduleForm({
                   onBlur={field.handleBlur}
                 >
                   {field.state.value ? (
-                    formatDateUtc(field.state.value, "PPP")
+                    formatDateNaive(field.state.value, "PPP")
                   ) : (
                     <span>Pick a date</span>
                   )}

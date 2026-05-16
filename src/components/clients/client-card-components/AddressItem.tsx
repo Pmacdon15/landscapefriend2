@@ -1,6 +1,6 @@
 "use client";
 
-import { isValid, parseISO } from "date-fns";
+import { isValid } from "date-fns";
 import { CalendarDays, FileImage, MapPin, User } from "lucide-react";
 import { startTransition, useState } from "react";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
@@ -18,7 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDateUtc, getGoogleMapsUrl, getNextCutDate } from "@/lib/utils";
+import {
+  formatDateNaive,
+  getGoogleMapsUrl,
+  getNextCutDate,
+  toLocalMidnight,
+} from "@/lib/utils";
 import { useUpdateAddressAssignee } from "@/mutations/clients";
 import type { Address, OptimisticAction } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
@@ -139,7 +144,7 @@ export function AddressItem({
                         address.schedule.frequency,
                       );
                       return isValid(nextDate)
-                        ? formatDateUtc(nextDate, "MMM do, yyyy")
+                        ? formatDateNaive(nextDate, "MMM do, yyyy")
                         : "Not set";
                     })()}
                   </span>
@@ -176,25 +181,7 @@ export function AddressItem({
               <ScheduleForm
                 addressId={address.id}
                 initialFrequency={address.schedule?.frequency}
-                initialDate={
-                  address.schedule
-                    ? (() => {
-                        const dateValue = address.schedule.first_cut_date;
-                        if (!dateValue) return undefined;
-                        try {
-                          const dateStr =
-                            typeof dateValue === "string"
-                              ? dateValue
-                              : dateValue instanceof Date && isValid(dateValue)
-                                ? dateValue.toISOString().split("T")[0]
-                                : null;
-                          return dateStr ? parseISO(dateStr) : undefined;
-                        } catch (_e) {
-                          return undefined;
-                        }
-                      })()
-                    : undefined
-                }
+                initialDate={toLocalMidnight(address.schedule?.first_cut_date)}
                 setOptimistic={setOptimistic}
                 onSuccess={() => setIsSchedulePopoverOpen(false)}
               />

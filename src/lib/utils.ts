@@ -29,26 +29,37 @@ export function getGoogleMapsUrl(address: {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
-export function formatDateUtc(
+/**
+ * Converts a date (string or object) to a Date object at local midnight
+ * using the UTC year, month, and day. This is essential for components
+ * like calendars that expect a "naive" date representation.
+ */
+export function toLocalMidnight(
+  date: Date | string | null | undefined,
+): Date | undefined {
+  if (!date) return undefined;
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (!isValid(d)) return undefined;
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+/**
+ * Formats a date using local time. Assumes the date is already
+ * shifted to local midnight if it originated from a UTC source.
+ */
+export function formatDateNaive(
   date: Date | string | null | undefined,
   formatStr: string,
 ) {
   if (!date) return "Not set";
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (!isValid(d)) return "Invalid Date";
-
-  // Create a local date that has the same YMD as the UTC date
-  const localDate = new Date(
-    d.getUTCFullYear(),
-    d.getUTCMonth(),
-    d.getUTCDate(),
-  );
-  return format(localDate, formatStr);
+  const d = date instanceof Date ? date : toLocalMidnight(date);
+  if (!d || !isValid(d)) return "Invalid Date";
+  return format(d, formatStr);
 }
 
 export function getNextCutDate(startDate: Date | string, frequency: string) {
   try {
-    // Force to date-only string to avoid timezone shifting during parseISO
+    // Force to date-only string to ensure parseISO creates a local midnight date
     const dateStr =
       typeof startDate === "string"
         ? startDate.split("T")[0]
