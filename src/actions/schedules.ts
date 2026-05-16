@@ -13,6 +13,8 @@ export async function upsertScheduleAction(
   return result.match(
     (schedule) => {
       updateTag(`schedules-${schedule.org_id}`);
+      updateTag(`clients-info-${schedule.org_id}`);
+      updateTag(`clients-cutlist-${schedule.org_id}`);
       return { success: true, schedule, error: null };
     },
     (err) => ({ success: false, schedule: null, error: err.reason }),
@@ -25,6 +27,8 @@ export async function deleteScheduleAction(addressId: string) {
   return result.match(
     (schedule) => {
       updateTag(`schedules-${schedule.org_id}`);
+      updateTag(`clients-info-${schedule.org_id}`);
+      updateTag(`clients-cutlist-${schedule.org_id}`);
       return { success: true, schedule, error: null };
     },
     (err) => ({ success: false, schedule: null, error: err.reason }),

@@ -59,6 +59,8 @@ export async function saveSiteMapAction(formData: FormData) {
   return result.match(
     (siteMap) => {
       updateTag(`sitemaps-${siteMap.org_id}`);
+      updateTag(`clients-info-${siteMap.org_id}`);
+      updateTag(`clients-cutlist-${siteMap.org_id}`);
       return { success: true, siteMap, error: null };
     },
     (err) => {
@@ -81,6 +83,8 @@ export async function updateSiteMapAction(formData: FormData) {
   return result.match(
     (siteMap) => {
       updateTag(`sitemaps-${siteMap.org_id}`);
+      updateTag(`clients-info-${siteMap.org_id}`);
+      updateTag(`clients-cutlist-${siteMap.org_id}`);
       return { success: true, siteMap, error: null };
     },
     (err) => {
@@ -96,6 +100,8 @@ export async function deleteSiteMapAction(siteMapId: string) {
   return result.match(
     (siteMap) => {
       updateTag(`sitemaps-${siteMap.org_id}`);
+      updateTag(`clients-info-${siteMap.org_id}`);
+      updateTag(`clients-cutlist-${siteMap.org_id}`);
       return { success: true, siteMap, error: null };
     },
     (err) => ({ success: false, error: err.reason }),

@@ -18,7 +18,7 @@ import type { SiteMap } from "@/zod/schemas";
 
 interface ServiceListContentProps {
   isAdminPromise: Promise<boolean>;
-  clientsPromise: Promise<CutListItem[]>;
+  clientsPromise: Promise<Client[]>;
   datePromise: Promise<string | null>;
   userIdPromise: Promise<string>;
   membersPromise: Promise<{ id: string; name: string }[]>;
@@ -54,8 +54,17 @@ export function ServiceListContent({
     defaultDate = new Date().toLocaleDateString("en-CA");
 
   const [date, setDate] = useState<Date>(parseISO(defaultDate));
+
+  // Flatten clients into CutListItems for the UI list
+  const flatCuts = initialClients.flatMap((client) =>
+    (client.addresses ?? []).map((address) => ({
+      client: { id: client.id, name: client.name },
+      address,
+    })),
+  );
+
   const [optimisticCuts, setOptimisticCuts] = useOptimistic(
-    initialClients,
+    flatCuts,
     (_, newCuts: CutListItem[]) => newCuts,
   );
 

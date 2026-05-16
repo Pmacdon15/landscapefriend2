@@ -17,6 +17,7 @@ export async function createClientAction(data: CreateClientInput) {
   return result.match(
     (client) => {
       updateTag(`clients-info-${orgId}`);
+      updateTag(`clients-cutlist-${orgId}`);
       return {
         success: true,
         client,
@@ -50,6 +51,7 @@ export async function updateClientAction(
   return result.match(
     (client) => {
       updateTag(`clients-info-${orgId}`);
+      updateTag(`clients-cutlist-${orgId}`);
       return {
         success: true,
         client,
@@ -70,6 +72,7 @@ export async function updateAddressAssigneeAction(
   return result.match(
     (address) => {
       updateTag(`clients-info-${orgId}`);
+      updateTag(`clients-cutlist-${orgId}`);
       updateTag(`addresses-${orgId}`);
       return {
         success: true,
@@ -88,6 +91,7 @@ export async function deleteClientAction(clientId: string) {
   return result.match(
     (client) => {
       updateTag(`clients-info-${orgId}`);
+      updateTag(`clients-cutlist-${orgId}`);
       updateTag(`job-history-${orgId}`);
       return {
         success: true,

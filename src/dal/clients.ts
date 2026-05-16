@@ -1,16 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
-import { differenceInCalendarDays, parseISO, startOfDay } from "date-fns";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
-import type {
-  Address,
-  AddressRow,
-  Client,
-  ClientRow,
-  CutListItem,
-  ScheduleRow,
-  SiteMapRow,
-} from "@/types/types";
+import type { Address, Client, ClientRow, CutListItem } from "@/types/types";
 import {
   type AddressInputSchema,
   type CreateClientInput,
@@ -20,11 +11,9 @@ import {
   deleteAddressDb,
   deleteClientDb,
   getAddressesDb,
-  getAssignmentsDb,
-  getClientsDb,
+  getClientsForCutListDb,
   getClientsForInfoDb,
   getCompletedJobsDb,
-  getRouteOrdersDb,
   getSchedulesDb,
   getSiteMapsDb,
   insertAddressDb,
@@ -69,10 +58,10 @@ export async function getClientsForInfoDal(
     if (results.length === 0) {
       return { clients: [], totalPages: 1 };
     }
-    
+
     const totalCount = results[0].total_count;
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-    
+
     return { clients: results, totalPages };
   } catch (error) {
     console.error("Error in getClientsForInfoDal:", error);
@@ -83,7 +72,7 @@ export async function getClientsForInfoDal(
 export async function getClientsForCutListDal(
   date: string,
   userIdOverride?: string,
-): Promise<CutListItem[]> {
+): Promise<Client[]> {
   try {
     const { orgId, userId, orgRole } = await auth.protect();
     if (!orgId || !userId) throw new Error("Unauthorized");
@@ -92,86 +81,14 @@ export async function getClientsForCutListDal(
     const targetUserId = isAdmin && userIdOverride ? userIdOverride : userId;
     const showAll = isAdmin && userIdOverride === "all";
 
-    const [
-      clients,
-      addresses,
-      schedules,
-      routeOrders,
-      assignments,
-      completedJobs,
-      siteMaps,
-    ] = await Promise.all([
-      getClientsDb(orgId),
-      getAddressesDb(orgId),
-      getSchedulesDb(orgId),
-      getRouteOrdersDb(orgId),
-      getAssignmentsDb(orgId, date),
-      getCompletedJobsDb(orgId, date),
-      getSiteMapsDb(orgId),
-    ]);
-
-    const scheduleMap = new Map(schedules.map((s) => [s.address_id, s]));
-    const orderMap = new Map(
-      routeOrders.map((r) => [r.address_id, r.sort_order]),
+    const results = await getClientsForCutListDb(
+      orgId,
+      date,
+      targetUserId,
+      showAll,
     );
-    const assignmentMap = new Map(assignments.map((a) => [a.address_id, a]));
-    const jobMap = new Map(completedJobs.map((j) => [j.address_id, j]));
-    const clientMap = new Map(clients.map((c) => [c.id, c]));
 
-    const siteMapGroupMap = new Map<string, SiteMapRow[]>();
-    siteMaps.forEach((sm) => {
-      const group = siteMapGroupMap.get(sm.address_id) || [];
-      group.push(sm);
-      siteMapGroupMap.set(sm.address_id, group);
-    });
-
-    const targetDate = startOfDay(parseISO(date));
-    const results: CutListItem[] = [];
-
-    for (const addr of addresses) {
-      if (addr.status === "deleted") continue;
-
-      const schedule = scheduleMap.get(addr.id);
-      if (!schedule || !schedule.first_cut_date) continue;
-
-      const scheduleDate = startOfDay(new Date(schedule.first_cut_date));
-      const diffDays = differenceInCalendarDays(targetDate, scheduleDate);
-      if (diffDays < 0) continue;
-
-      let isScheduled = false;
-      const freq = schedule.frequency.toLowerCase();
-
-      if (freq === "daily") isScheduled = true;
-      else if (diffDays === 0) isScheduled = true;
-      else if (freq === "weekly") isScheduled = diffDays % 7 === 0;
-      else if (freq === "bi-weekly") isScheduled = diffDays % 14 === 0;
-      else if (freq === "monthly")
-        isScheduled = targetDate.getDate() === scheduleDate.getDate();
-
-      if (!isScheduled) continue;
-
-      const assignment = assignmentMap.get(addr.id);
-      const assigneeId = assignment?.user_id || addr.assigned_to;
-
-      if (!showAll && assigneeId !== targetUserId) continue;
-
-      const client = clientMap.get(addr.client_id);
-      if (!client) continue;
-
-      results.push({
-        client: { id: client.id, name: client.name },
-        address: {
-          ...addr,
-          schedule,
-          sort_order: orderMap.get(addr.id) ?? 0,
-          assignment: assignment ?? null,
-          completed_job: jobMap.get(addr.id) ?? null,
-          site_maps: siteMapGroupMap.get(addr.id) || [],
-        } as Address,
-      });
-    }
-
-    return results.sort((a, b) => a.address.sort_order - b.address.sort_order);
+    return results;
   } catch (error) {
     console.error("DAL Error:", error);
     return [];

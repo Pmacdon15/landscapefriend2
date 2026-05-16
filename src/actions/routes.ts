@@ -11,6 +11,8 @@ export async function updateRouteOrderAction(
   return result.match(
     (route) => {
       updateTag(`route-order-${route.org_id}`);
+      updateTag(`clients-info-${route.org_id}`);
+      updateTag(`clients-cutlist-${route.org_id}`);
       return {
         success: true,
         route,
