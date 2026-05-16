@@ -122,7 +122,7 @@ export function ServiceListContent({
         assignedTo: addr.assignment?.user_id || addr.assigned_to || null,
         photoFile: fileToUpload as File,
         capturedAt: timestamp,
-        completedAt: date,
+        completedAt: timestamp,
       },
       { onSuccess: () => setCompletingAddressId(null) },
     );
