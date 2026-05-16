@@ -115,6 +115,7 @@ export async function completeJobDal(
   photoBlobPath?: string | null,
   capturedAt?: Date | null,
   completedAt?: Date | null,
+  scheduledDate?: Date | null,
 ): Promise<Result<CompletedJob, { reason: string }>> {
   try {
     const { orgId, userId } = await auth.protect();
@@ -140,6 +141,7 @@ export async function completeJobDal(
           completedAt || new Date(),
           capturedAt || null,
           notes,
+          scheduledDate || null,
         );
 
         if (photoBlobPath) {

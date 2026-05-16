@@ -15,9 +15,11 @@ export async function completeJobAction(formData: FormData) {
   const photoFile = formData.get("photoFile") as File | null;
   const capturedAtRaw = formData.get("capturedAt") as string | null;
   const completedAtRaw = formData.get("completedAt") as string | null;
+  const scheduledDateRaw = formData.get("scheduledDate") as string | null;
 
   const capturedAt = capturedAtRaw ? new Date(capturedAtRaw) : null;
   const completedAt = completedAtRaw ? new Date(completedAtRaw) : null;
+  const scheduledDate = scheduledDateRaw ? new Date(scheduledDateRaw) : null;
 
   let photoBlobPath: string | null = null;
 
@@ -42,6 +44,7 @@ export async function completeJobAction(formData: FormData) {
     photoBlobPath,
     capturedAt,
     completedAt,
+    scheduledDate,
   );
 
   return result.match(
@@ -49,6 +52,9 @@ export async function completeJobAction(formData: FormData) {
       updateTag(`job-history-${orgId}`);
       if (completedAt) {
         updateTag(`job-history-${orgId}-${format(completedAt, "yyyy-MM-dd")}`);
+      }
+      if (scheduledDate) {
+        updateTag(`job-history-${orgId}-${format(scheduledDate, "yyyy-MM-dd")}`);
       }
       return {
         success: true,

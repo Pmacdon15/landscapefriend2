@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS completed_jobs (
     assigned_to TEXT, -- Clerk user_id
     completed_by TEXT, -- Clerk user_id
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    scheduled_date DATE, -- The date the job was scheduled for
     captured_at TIMESTAMP WITH TIME ZONE, -- The exact time completion was recorded on client
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

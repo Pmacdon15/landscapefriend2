@@ -2,7 +2,7 @@ import { cacheTag } from "next/cache";
 import { sql } from "../client";
 export async function getPastServicesStatsDb(orgId: string) {
   "use cache";
-  cacheTag(`past-services-stats-${orgId}`, "job-history");
+  cacheTag(`past-services-stats-${orgId}`, `job-history-${orgId}`);
 
   const [result] = await sql`
     WITH 
@@ -89,7 +89,7 @@ export async function getPastServicesListDb(
   offset = 0,
 ) {
   "use cache";
-  cacheTag(`past-services-list-${orgId}`, "job-history");
+  cacheTag(`past-services-list-${orgId}`, `job-history-${orgId}`);
 
   const result = await sql`
     SELECT 
@@ -123,7 +123,7 @@ export async function getMonthlyStatsRawDb(
   endDate: Date,
 ) {
   "use cache";
-  cacheTag(`monthly-stats-${orgId}`, `monthly-stats`);
+  cacheTag(`monthly-stats-${orgId}`, `job-history-${orgId}`);
 
   // Convert dates to ISO strings for the assignments table filter consistency
   const startIsoStr = startDate.toISOString().split("T")[0];

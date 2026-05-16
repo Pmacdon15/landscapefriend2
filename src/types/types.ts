@@ -67,6 +67,7 @@ export interface CompletedJobRow {
   assigned_to: string | null;
   completed_by: string | null;
   completed_at: Date;
+  scheduled_date: Date | null;
   notes: string | null;
   created_at: Date;
   updated_at: Date;

@@ -12,6 +12,7 @@ export function useCompleteJob() {
       photoFile,
       capturedAt,
       completedAt,
+      scheduledDate,
     }: {
       addressId: string;
       serviceType: "grass" | "snow";
@@ -20,6 +21,7 @@ export function useCompleteJob() {
       photoFile?: File;
       capturedAt?: Date | null;
       completedAt?: Date | null;
+      scheduledDate?: Date | null;
     }) => {
       const formData = new FormData();
       formData.append("addressId", addressId);
@@ -30,6 +32,8 @@ export function useCompleteJob() {
       if (capturedAt) formData.append("capturedAt", capturedAt.toISOString());
       if (completedAt)
         formData.append("completedAt", completedAt.toISOString());
+      if (scheduledDate)
+        formData.append("scheduledDate", scheduledDate.toISOString());
 
       const { success, job, error } = await completeJobAction(formData);
 

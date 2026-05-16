@@ -171,16 +171,19 @@ export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
           isScheduled = d.getDate() === firstCut.getDate();
 
         if (isScheduled) {
-          // If today, check if already completed
-          if (isToday) {
-            const alreadyDone = typedCompletedJobs.some(
-              (j) =>
-                j.address_id === s.address_id &&
-                startOfDay(new Date(j.completed_at)).getTime() ===
-                  today.getTime(),
-            );
-            if (alreadyDone) continue;
-          }
+          // Check if this specific instance was already completed
+          const alreadyDone = typedCompletedJobs.some((j) => {
+            if (j.address_id !== s.address_id) return false;
+
+            // If we have a scheduled_date, use it to match the instance
+            if (j.scheduled_date) {
+              return format(new Date(j.scheduled_date), "yyyy-MM-dd") === dateStr;
+            }
+        
+            return format(new Date(j.completed_at), "yyyy-MM-dd") === dateStr;
+          });
+
+          if (alreadyDone) continue;
 
           const assignment = assignmentMap.get(`${s.address_id}-${dateStr}`);
           const userId = assignment?.id || s.assigned_to || "unassigned";

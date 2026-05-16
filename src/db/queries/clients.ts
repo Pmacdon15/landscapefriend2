@@ -356,10 +356,11 @@ export async function insertCompletedJobDb(
   completedAt: Date = new Date(),
   capturedAt: Date | null = null,
   notes?: string | null,
+  scheduledDate: Date | null = null,
 ): Promise<CompletedJobRow> {
   const result = await sql`
-    INSERT INTO completed_jobs (address_id, org_id, service_type, completed_by, assigned_to, completed_at, captured_at, notes)
-    VALUES (${addressId}, ${orgId}, ${serviceType}, ${completedBy || null}, ${assignedTo || null}, ${completedAt}, ${capturedAt}, ${notes || null})
+    INSERT INTO completed_jobs (address_id, org_id, service_type, completed_by, assigned_to, completed_at, captured_at, notes, scheduled_date)
+    VALUES (${addressId}, ${orgId}, ${serviceType}, ${completedBy || null}, ${assignedTo || null}, ${completedAt}, ${capturedAt}, ${notes || null}, ${scheduledDate})
     RETURNING *
   `;
   return result[0] as unknown as CompletedJobRow;
@@ -382,7 +383,7 @@ export async function getCompletedJobsDb(
              '[]'::json
            ) as photos
     FROM completed_jobs cj
-    WHERE cj.org_id = ${orgId} AND cj.completed_at::date = ${date}::date
+    WHERE cj.org_id = ${orgId} AND (cj.completed_at::date = ${date}::date OR cj.scheduled_date = ${date}::date)
   `
     : await sql`
     SELECT cj.*, 

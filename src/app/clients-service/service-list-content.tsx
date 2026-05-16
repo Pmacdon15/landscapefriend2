@@ -123,6 +123,7 @@ export function ServiceListContent({
         photoFile: fileToUpload as File,
         capturedAt: timestamp,
         completedAt: timestamp,
+        scheduledDate: date,
       },
       { onSuccess: () => setCompletingAddressId(null) },
     );

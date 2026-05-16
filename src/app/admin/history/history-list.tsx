@@ -7,6 +7,8 @@ import {
   ImageIcon,
   MapPin,
   User,
+  Calendar as CalendarIcon,
+  Clock,
 } from "lucide-react";
 import { useState } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
@@ -40,7 +42,7 @@ export function HistoryList({ history }: HistoryListProps) {
                 Client & Address
               </TableHead>
               <TableHead className="font-bold h-12">Completed By</TableHead>
-              <TableHead className="font-bold h-12">Date & Time</TableHead>
+              <TableHead className="font-bold h-12">Service Info</TableHead>
               <TableHead className="font-bold h-12">Service</TableHead>
               <TableHead className="text-right font-bold h-12 pr-6">
                 Photo
@@ -92,7 +94,20 @@ export function HistoryList({ history }: HistoryListProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <LocalDateDisplay date={job.completed_at} />
+                    <div className="flex flex-col gap-1.5">
+                      {job.scheduled_date && (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                          <CalendarIcon className="h-3 w-3" />
+                          <span className="font-medium">Scheduled:</span>
+                          <span>{format(new Date(job.scheduled_date), "MMM d, yyyy")}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5 text-xs text-slate-900 dark:text-slate-200">
+                        <Clock className="h-3 w-3 text-emerald-500" />
+                        <span className="font-bold">Completed:</span>
+                        <LocalDateDisplay date={job.completed_at} />
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase tracking-tight">
