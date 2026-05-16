@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getGoogleMapsUrl, getNextCutDate } from "@/lib/utils";
+import { formatDateUtc, getGoogleMapsUrl, getNextCutDate } from "@/lib/utils";
 import { useUpdateAddressAssignee } from "@/mutations/clients";
 import type { Address, OptimisticAction } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
@@ -139,7 +139,7 @@ export function AddressItem({
                         address.schedule.frequency,
                       );
                       return isValid(nextDate)
-                        ? format(nextDate, "MMM do, yyyy")
+                        ? formatDateUtc(nextDate, "MMM do, yyyy")
                         : "Not set";
                     })()}
                   </span>

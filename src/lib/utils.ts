@@ -3,6 +3,7 @@ import {
   addMonths,
   addWeeks,
   differenceInCalendarDays,
+  format,
   isBefore,
   isValid,
   parseISO,
@@ -28,14 +29,34 @@ export function getGoogleMapsUrl(address: {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
+export function formatDateUtc(
+  date: Date | string | null | undefined,
+  formatStr: string,
+) {
+  if (!date) return "Not set";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (!isValid(d)) return "Invalid Date";
+
+  // Create a local date that has the same YMD as the UTC date
+  const localDate = new Date(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate(),
+  );
+  return format(localDate, formatStr);
+}
+
 export function getNextCutDate(startDate: Date | string, frequency: string) {
   try {
-    const start =
+    // Force to date-only string to avoid timezone shifting during parseISO
+    const dateStr =
       typeof startDate === "string"
-        ? parseISO(startDate)
+        ? startDate.split("T")[0]
         : startDate instanceof Date
-          ? parseISO(startDate.toISOString().split("T")[0])
-          : new Date(NaN);
+          ? startDate.toISOString().split("T")[0]
+          : "";
+
+    const start = parseISO(dateStr);
 
     if (!isValid(start)) {
       return new Date(NaN);
