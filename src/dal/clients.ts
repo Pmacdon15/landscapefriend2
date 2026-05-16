@@ -22,6 +22,7 @@ import {
   getAddressesDb,
   getAssignmentsDb,
   getClientsDb,
+  getClientsForInfoDb,
   getCompletedJobsDb,
   getRouteOrdersDb,
   getSchedulesDb,
@@ -40,7 +41,6 @@ export async function getClientsForInfoDal(
 ): Promise<{ clients: Client[]; totalPages: number }> {
   try {
     const { orgId, orgRole } = await auth.protect();
-
     const isAdmin = orgRole === "org:admin";
 
     if (!orgId || !isAdmin) {
@@ -55,73 +55,25 @@ export async function getClientsForInfoDal(
         .map((m) => m.id);
     }
 
-    const [clients, addresses, schedules, siteMaps, jobHistory] =
-      await Promise.all([
-        searchQuery
-          ? searchClientsDb(orgId, searchQuery, matchedAssigneeIds)
-          : getClientsDb(orgId),
-        getAddressesDb(orgId),
-        getSchedulesDb(orgId),
-        getSiteMapsDb(orgId),
-        getCompletedJobsDb(orgId),
-      ]);
-
-    const addressMap = new Map<string, AddressRow[]>();
-    addresses.forEach((a) => {
-      if (a.status !== "deleted") {
-        const list = addressMap.get(a.client_id) || [];
-        list.push(a);
-        addressMap.set(a.client_id, list);
-      }
-    });
-
-    const scheduleMap = new Map<string, ScheduleRow>();
-    schedules.forEach((s) => {
-      // Fallback for transition period/stale cache
-      if (!s.first_cut_date && s.next_cut_date) {
-        s.first_cut_date = s.next_cut_date;
-      }
-      scheduleMap.set(s.address_id, s);
-    });
-
-    const siteMapLookup = new Map<string, typeof siteMaps>();
-    siteMaps.forEach((sm) => {
-      const list = siteMapLookup.get(sm.address_id) || [];
-      list.push(sm);
-      siteMapLookup.set(sm.address_id, list);
-    });
-
-    const historyMap = new Map<string, (typeof jobHistory)[0]>();
-    jobHistory.forEach((j) => {
-      historyMap.set(j.address_id, j);
-    });
-
-    const mappedClients = clients.map((client: ClientRow) => {
-      const clientAddresses = (addressMap.get(client.id) || []).map(
-        (address) => {
-          return {
-            ...address,
-            schedule: scheduleMap.get(address.id) || null,
-            sort_order: 0,
-            assignment: null,
-            completed_job: historyMap.get(address.id) || null,
-            site_maps: siteMapLookup.get(address.id) || [],
-          } as Address;
-        },
-      );
-
-      return { ...client, addresses: clientAddresses } as Client;
-    });
-
     const pageSize = 6;
-    const totalPages = Math.max(1, Math.ceil(mappedClients.length / pageSize));
-    const safePage = Math.max(1, Math.min(page, totalPages));
-    const paginatedClients = mappedClients.slice(
-      (safePage - 1) * pageSize,
-      safePage * pageSize,
+    const offset = (page - 1) * pageSize;
+
+    const results = await getClientsForInfoDb(
+      orgId,
+      pageSize,
+      offset,
+      searchQuery,
+      matchedAssigneeIds,
     );
 
-    return { clients: paginatedClients, totalPages };
+    if (results.length === 0) {
+      return { clients: [], totalPages: 1 };
+    }
+    
+    const totalCount = results[0].total_count;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    
+    return { clients: results, totalPages };
   } catch (error) {
     console.error("Error in getClientsForInfoDal:", error);
     return { clients: [], totalPages: 0 };

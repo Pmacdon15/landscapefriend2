@@ -128,3 +128,7 @@ export interface CutListItem {
   };
   address: Address;
 }
+
+export interface DbClientResult extends Client {
+  total_count: number;
+}
