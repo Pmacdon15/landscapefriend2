@@ -9,7 +9,7 @@ import {
   UserButton,
   useAuth,
 } from "@clerk/nextjs";
-import { LayoutDashboard, LogOut, Menu, Users } from "lucide-react";
+import { CheckCircle2, LayoutDashboard, LogOut, Menu, Users } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { buttonVariants } from "@/components/ui/button";
@@ -26,6 +26,12 @@ const navLinks = [
     href: "/client-info-list",
     label: "Manage Clients",
     icon: Users,
+    roles: ["org:admin"],
+  },
+  {
+    href: "/admin/history",
+    label: "History",
+    icon: CheckCircle2,
     roles: ["org:admin"],
   },
   {
