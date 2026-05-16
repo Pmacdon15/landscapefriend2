@@ -9,7 +9,13 @@ import {
   UserButton,
   useAuth,
 } from "@clerk/nextjs";
-import { CheckCircle2, LayoutDashboard, LogOut, Menu, Users } from "lucide-react";
+import {
+  CheckCircle2,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { buttonVariants } from "@/components/ui/button";
@@ -54,17 +60,20 @@ export function NavBar() {
 
   return (
     <nav className="border-b border-green-200/50 dark:border-green-800/50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 w-full overflow-hidden">
-      <div 
+      <div
         className="absolute inset-0 z-0 opacity-10 dark:opacity-5 pointer-events-none"
-        style={{ 
+        style={{
           backgroundImage: 'url("/lawn.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       />
       <div className="relative z-10 flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
         <div className="flex   items-center gap-6 ">
-          <Link href="/" className="font-bold text-xl tracking-tight text-green-900 dark:text-green-50">
+          <Link
+            href="/"
+            className="font-bold text-xl tracking-tight text-green-900 dark:text-green-50"
+          >
             Landscape Friend
           </Link>
 
@@ -97,7 +106,12 @@ export function NavBar() {
               <SignInButton mode="modal">
                 <button
                   type="button"
-                  className={buttonVariants({ variant: "ghost", size: "sm", className: "text-green-700 dark:text-green-300 hover:bg-green-100/50 dark:hover:bg-green-900/50" })}
+                  className={buttonVariants({
+                    variant: "ghost",
+                    size: "sm",
+                    className:
+                      "text-green-700 dark:text-green-300 hover:bg-green-100/50 dark:hover:bg-green-900/50",
+                  })}
                 >
                   Sign In
                 </button>
@@ -105,7 +119,12 @@ export function NavBar() {
               <SignUpButton mode="modal">
                 <button
                   type="button"
-                  className={buttonVariants({ variant: "default", size: "sm", className: "bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20" })}
+                  className={buttonVariants({
+                    variant: "default",
+                    size: "sm",
+                    className:
+                      "bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20",
+                  })}
                 >
                   Sign Up
                 </button>
@@ -124,21 +143,23 @@ export function NavBar() {
             >
               <Menu className="h-5 w-5" />
             </SheetTrigger>
-            <SheetContent 
-              side="right" 
+            <SheetContent
+              side="right"
               className="w-75 border-green-200/50 dark:border-green-800/50 p-0 overflow-hidden"
             >
-              <div 
+              <div
                 className="absolute inset-0 z-0 opacity-20 dark:opacity-10 pointer-events-none"
-                style={{ 
+                style={{
                   backgroundImage: 'url("/lawn.png")',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
                 }}
               />
               <div className="relative z-10 flex flex-col h-full bg-green-50/90 dark:bg-green-950/90 backdrop-blur-sm p-6">
                 <SheetHeader>
-                  <SheetTitle className="text-left text-green-900 dark:text-green-50">Navigation</SheetTitle>
+                  <SheetTitle className="text-left text-green-900 dark:text-green-50">
+                    Navigation
+                  </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-2 mt-4">
                   <Show when="signed-in">

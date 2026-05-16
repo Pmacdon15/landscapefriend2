@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
-import type { Address, AddressRow, Client, ClientRow, CutListItem, ScheduleRow, SiteMapRow } from "@/types/types";
+import type { Address, Client, ClientRow } from "@/types/types";
 import {
   type AddressInputSchema,
   type CreateClientInput,
@@ -10,12 +10,8 @@ import {
 import {
   deleteAddressDb,
   deleteClientDb,
-  getAddressesDb,
   getClientsForCutListDb,
   getClientsForInfoDb,
-  getCompletedJobsDb,
-  getSchedulesDb,
-  getSiteMapsDb,
   insertAddressDb,
   insertClientDb,
   searchClientsDb,

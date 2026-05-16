@@ -56,7 +56,9 @@ export async function completeJobAction(formData: FormData) {
         updateTag(`job-history-${orgId}-${format(completedAt, "yyyy-MM-dd")}`);
       }
       if (scheduledDate) {
-        updateTag(`job-history-${orgId}-${format(scheduledDate, "yyyy-MM-dd")}`);
+        updateTag(
+          `job-history-${orgId}-${format(scheduledDate, "yyyy-MM-dd")}`,
+        );
       }
       return {
         success: true,

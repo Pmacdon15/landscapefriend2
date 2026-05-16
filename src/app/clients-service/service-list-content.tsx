@@ -5,10 +5,10 @@ import imageCompression from "browser-image-compression";
 import { format, parseISO } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
+import { ImageViewer } from "@/components/clients/image-viewer";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
 import { ServiceListItem } from "@/components/service/ServiceListItem";
-import { ImageViewer } from "@/components/clients/image-viewer";
 import { CameraCapture } from "@/components/ui/camera-capture";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCompleteJob } from "@/mutations/jobs";
@@ -110,7 +110,7 @@ export function ServiceListContent({
     const addr = optimisticCuts.find(
       (c) => c.address.id === currentAddrId,
     )?.address;
-    
+
     if (!currentAddrId || !addr) return;
 
     // Close camera immediately for snappier feel

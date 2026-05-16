@@ -526,7 +526,8 @@ export async function searchClientsDb(
 ): Promise<DbClientResult[]> {
   "use cache";
   cacheTag(
-    `clients-search-${orgId}-${query}-${matchedAssigneeIds.sort().join("-")}`, `clients-search-${orgId}`,
+    `clients-search-${orgId}-${query}-${matchedAssigneeIds.sort().join("-")}`,
+    `clients-search-${orgId}`,
   );
   const searchPattern = `%${query}%`;
   const hasAssignees = matchedAssigneeIds.length > 0;
@@ -673,8 +674,8 @@ export async function getClientsForCutListDb(
   targetUserId?: string,
   showAll = false,
 ): Promise<DbClientResult[]> {
-  "use cache";  
-  cacheTag(`clients-cutlist-${orgId}-${date}`,`clients-cutlist-${orgId}`);
+  "use cache";
+  cacheTag(`clients-cutlist-${orgId}-${date}`, `clients-cutlist-${orgId}`);
   if (targetUserId && !showAll) {
     cacheTag(`clients-cutlist-${orgId}-${date}-${targetUserId}`);
   }

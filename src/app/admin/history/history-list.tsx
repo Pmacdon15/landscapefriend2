@@ -1,14 +1,13 @@
 "use client";
 
-import { format } from "date-fns";
 import {
+  Calendar as CalendarIcon,
   CheckCircle2,
+  Clock,
   ExternalLink,
   ImageIcon,
   MapPin,
   User,
-  Calendar as CalendarIcon,
-  Clock,
 } from "lucide-react";
 import { useState } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
