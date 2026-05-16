@@ -14,7 +14,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 import type { CutListItem } from "@/types/types";
-import type { SiteMap } from "@/zod/schemas";
+import type { Client, SiteMap } from "@/zod/schemas";
 
 interface ServiceListContentProps {
   isAdminPromise: Promise<boolean>;

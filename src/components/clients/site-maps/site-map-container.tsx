@@ -330,11 +330,15 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                 {optimisticAddress.site_maps &&
                 optimisticAddress.site_maps.length > 0 ? (
                   [...optimisticAddress.site_maps]
-                    .sort(
-                      (a, b) =>
-                        new Date(b.created_at).getTime() -
-                        new Date(a.created_at).getTime(),
-                    )
+                    .sort((a, b) => {
+                      const timeB = b.created_at
+                        ? new Date(b.created_at).getTime()
+                        : 0;
+                      const timeA = a.created_at
+                        ? new Date(a.created_at).getTime()
+                        : 0;
+                      return timeB - timeA;
+                    })
                     .map((sm) => (
                       <TableRow key={sm.id}>
                         <TableCell className="font-medium">
@@ -357,7 +361,9 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                           )}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(sm.created_at), "MMM d, yyyy")}
+                          {sm.created_at
+                            ? format(new Date(sm.created_at), "MMM d, yyyy")
+                            : "Pending..."}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
