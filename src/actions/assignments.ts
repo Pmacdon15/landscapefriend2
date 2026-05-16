@@ -11,7 +11,7 @@ export async function upsertAssignmentAction(
 ) {
   const { orgId } = await auth.protect();
   const result = await upsertAssignmentDal(addressId, userId, date);
-  
+
   return result.match(
     (assignment) => {
       updateTag(`assignments-${orgId}`);

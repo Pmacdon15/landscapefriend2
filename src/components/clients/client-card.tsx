@@ -13,7 +13,7 @@ export function ClientCard({
   client,
   members,
   setOptimistic,
-  isAdmin
+  isAdmin,
 }: ClientCardProps) {
   const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
   const addresses = client.addresses || [];

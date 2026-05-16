@@ -3,7 +3,7 @@ require("dotenv").config({ path: ".env.local" });
 
 async function run() {
   const sql = neon(process.env.DATABASE_URL);
-  
+
   console.log("Fetching addresses...");
   const addresses = await sql`
     SELECT a.id as address_id, c.org_id, ro.sort_order

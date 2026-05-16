@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const PointSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+});
+
 export const ScheduleSchema = z.object({
   id: z.string().uuid(),
   address_id: z.string().uuid(),
@@ -39,8 +44,9 @@ export const SiteMapSchema = z.object({
   id: z.string().uuid(),
   address_id: z.string().uuid(),
   name: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   blob_path: z.string().nullable().optional(),
-  map_data: z.any().nullable().optional(),
+  map_data: z.array(z.array(PointSchema)).nullable().optional(),
   created_at: z.date(),
 });
 

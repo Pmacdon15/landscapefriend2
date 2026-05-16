@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useUpsertSchedule, useDeleteSchedule } from "@/mutations/schedules";
+import { useDeleteSchedule, useUpsertSchedule } from "@/mutations/schedules";
 import type { OptimisticAction } from "@/types/types";
 
 interface ScheduleFormProps {
@@ -165,7 +165,11 @@ export function ScheduleForm({
           )}
         </form.Field>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || isDeleting}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isSubmitting || isDeleting}
+        >
           {isSubmitting ? "Saving..." : "Save Schedule"}
         </Button>
       </form>

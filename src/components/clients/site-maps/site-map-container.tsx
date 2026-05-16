@@ -2,7 +2,7 @@
 
 import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
-import { FileImage, Map as MapIcon, Plus, Trash2 } from "lucide-react";
+import { Edit2, FileImage, Map as MapIcon, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +25,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { useDeleteSiteMap, useSaveSiteMap } from "@/mutations/clients";
+import {
+  useDeleteSiteMap,
+  useSaveSiteMap,
+  useUpdateSiteMap,
+} from "@/mutations/clients";
 import type { Address, SiteMap } from "@/zod/schemas";
 import { SiteMapViewer } from "../site-map-viewer";
 import { SiteMapEditor } from "./site-map-editor";
@@ -38,28 +42,32 @@ interface SiteMapContainerProps {
 export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingSiteMap, setEditingSiteMap] = useState<SiteMap | null>(null);
   const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
   const [siteMapToDelete, setSiteMapToDelete] = useState<SiteMap | null>(null);
   const [name, setName] = useState("");
+  const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [mapData, setMapData] = useState<{ x: number; y: number }[] | null>(
-    null,
-  );
   const [activeTab, setActiveTab] = useState<"upload" | "draw">("upload");
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
   const { mutate: saveSiteMap, isPending: isMutationPending } =
     useSaveSiteMap();
+  const { mutate: updateSiteMap, isPending: isUpdatePending } =
+    useUpdateSiteMap();
   const { mutate: deleteSiteMap } = useDeleteSiteMap();
 
-  const isSaving = isMutationPending || isSavingLocal;
+  const isSaving = isMutationPending || isUpdatePending || isSavingLocal;
   const [compressionStatus, setCompressionStatus] = useState("");
 
   const handleSave = async (
-    finalMapData?: { x: number; y: number }[],
+    drawingName?: string,
+    drawingNotes?: string,
+    polygons?: { x: number; y: number }[][],
     drawingFile?: File,
   ) => {
-    if (!name && !file && !finalMapData && !drawingFile) return;
+    if (!name && !file && !polygons && !drawingFile && !drawingName && !notes)
+      return;
 
     setIsSavingLocal(true);
     let fileToUpload = file || drawingFile || undefined;
@@ -83,20 +91,43 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
     saveSiteMap(
       {
         addressId: address.id,
-        name: name || (drawingFile ? "Drawn Area" : null),
-        mapData: finalMapData || mapData,
+        name: drawingName || name || (drawingFile ? "Site Area" : "Site Map"),
+        notes: drawingNotes || notes || null,
+        mapData: polygons || null,
         file: fileToUpload,
       },
       {
         onSuccess: () => {
           setIsAddOpen(false);
           setName("");
+          setNotes("");
           setFile(null);
-          setMapData(null);
           setIsSavingLocal(false);
         },
         onError: () => {
           setIsSavingLocal(false);
+        },
+      },
+    );
+  };
+
+  const handleUpdate = async (
+    newName: string,
+    newNotes: string,
+    newPolygons: { x: number; y: number }[][],
+  ) => {
+    if (!editingSiteMap) return;
+
+    updateSiteMap(
+      {
+        siteMapId: editingSiteMap.id,
+        name: newName,
+        notes: newNotes,
+        mapData: newPolygons,
+      },
+      {
+        onSuccess: () => {
+          setEditingSiteMap(null);
         },
       },
     );
@@ -136,16 +167,6 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                       <DialogTitle>Add New Site Map</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-6 py-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="name">Name / Description</Label>
-                        <Input
-                          id="name"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          placeholder="e.g., Front Yard Area"
-                        />
-                      </div>
-
                       <div className="flex gap-4 border-b">
                         <button
                           type="button"
@@ -172,34 +193,47 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                       </div>
 
                       {activeTab === "upload" ? (
-                        <div className="grid gap-2">
-                          <Label htmlFor="file">
-                            Upload Image{" "}
-                            <span className="text-[10px] font-normal text-muted-foreground">
-                              (Max 1MB, will be compressed)
-                            </span>
-                          </Label>
-                          <Input
-                            id="file"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) =>
-                              setFile(e.target.files?.[0] || null)
-                            }
-                          />
-                          <Button
-                            onClick={() => handleSave()}
-                            disabled={isSaving || !file}
-                          >
-                            {isSaving
-                              ? compressionStatus || "Saving..."
-                              : "Save Upload"}
-                          </Button>
+                        <div className="grid gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="notes">Notes</Label>
+                            <Input
+                              id="notes"
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              placeholder="Optional notes..."
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="file">
+                              Upload Image{" "}
+                              <span className="text-[10px] font-normal text-muted-foreground">
+                                (Max 1MB, will be compressed)
+                              </span>
+                            </Label>
+                            <Input
+                              id="file"
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) =>
+                                setFile(e.target.files?.[0] || null)
+                              }
+                            />
+                            <Button
+                              onClick={() => handleSave()}
+                              disabled={isSaving || !file}
+                            >
+                              {isSaving
+                                ? compressionStatus || "Saving..."
+                                : "Save Upload"}
+                            </Button>
+                          </div>
                         </div>
                       ) : (
                         <SiteMapEditor
                           address={`${address.street}, ${address.city}, ${address.state}`}
-                          onSave={(data, file) => handleSave(data, file)}
+                          onSave={(newName, notes, polygons, file) =>
+                            handleSave(newName, notes, polygons, file)
+                          }
                         />
                       )}
                     </div>
@@ -213,7 +247,7 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Site Map</TableHead>
                   <TableHead>Date Added</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -229,7 +263,16 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                           ) : sm.blob_path ? (
                             <FileImage className="h-4 w-4 text-primary" />
                           ) : null}
-                          {sm.name || "Unnamed Site Map"}
+                          <div>
+                            <p className="font-semibold">
+                              {sm.name || "Site Map"}
+                            </p>
+                            {sm.notes && (
+                              <p className="text-xs text-slate-500 italic line-clamp-1">
+                                {sm.notes}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -248,14 +291,26 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                             </Button>
                           )}
                           {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => setSiteMapToDelete(sm)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <>
+                              {sm.map_data && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-slate-500 hover:text-primary"
+                                  onClick={() => setEditingSiteMap(sm)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setSiteMapToDelete(sm)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -284,6 +339,29 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
       />
 
       <Dialog
+        open={!!editingSiteMap}
+        onOpenChange={(open) => !open && setEditingSiteMap(null)}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Site Map</DialogTitle>
+          </DialogHeader>
+          {editingSiteMap && (
+            <div className="py-4">
+              <SiteMapEditor
+                address={`${address.street}, ${address.city}, ${address.state}`}
+                initialNotes={editingSiteMap.notes || ""}
+                initialPolygons={editingSiteMap.map_data}
+                onSave={(newName, newNotes, newPolygons) =>
+                  handleUpdate(newName, newNotes, newPolygons)
+                }
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={!!siteMapToDelete}
         onOpenChange={(open) => !open && setSiteMapToDelete(null)}
       >
@@ -291,11 +369,8 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
           <DialogHeader>
             <DialogTitle>Delete Site Map</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete{" "}
-              <span className="font-semibold">
-                {siteMapToDelete?.name || "this site map"}
-              </span>
-              ? This action cannot be undone.
+              Are you sure you want to delete this site map? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

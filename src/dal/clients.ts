@@ -78,8 +78,8 @@ export async function getClientsForInfoDal(
     const scheduleMap = new Map<string, ScheduleRow>();
     schedules.forEach((s) => {
       // Fallback for transition period/stale cache
-      if (!s.first_cut_date && (s as any).next_cut_date) {
-        s.first_cut_date = (s as any).next_cut_date;
+      if (!s.first_cut_date && s.next_cut_date) {
+        s.first_cut_date = s.next_cut_date;
       }
       scheduleMap.set(s.address_id, s);
     });
@@ -419,8 +419,8 @@ export async function searchClientsDal(query: string): Promise<Client[]> {
 
   const scheduleMap = new Map<string, ScheduleRow>();
   schedules.forEach((s) => {
-    if (!s.first_cut_date && (s as any).next_cut_date) {
-      s.first_cut_date = (s as any).next_cut_date;
+    if (!s.first_cut_date && s.next_cut_date) {
+      s.first_cut_date = s.next_cut_date;
     }
     scheduleMap.set(s.address_id, s);
   });
