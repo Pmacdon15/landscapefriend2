@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { CalendarIcon, UserIcon } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -20,12 +21,10 @@ import { cn } from "@/lib/utils";
 
 interface ServiceHeaderProps {
   date: Date;
-  onDateChange: (date: Date | undefined) => void;
   isAdmin: boolean;
   members: { id: string; name: string }[];
   currentFilterUserId: string;
   currentUserId: string;
-  handleUserChange: (val: string | null) => void;
   searchComponent?: React.ReactNode;
   stats?: {
     total: number;
@@ -36,15 +35,37 @@ interface ServiceHeaderProps {
 
 export function ServiceHeader({
   date,
-  onDateChange,
   isAdmin,
   members,
   currentFilterUserId,
   currentUserId,
-  handleUserChange,
   searchComponent,
   stats,
 }: ServiceHeaderProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (newDate) {
+      const params = new URLSearchParams(searchParams);
+      params.set("date", format(newDate, "yyyy-MM-dd"));
+      params.delete("clientId"); // Clear precise ID on date change
+      router.push(`/clients-service?${params.toString()}`);
+    }
+  };
+
+  const handleUserChange = (val: string | null) => {
+    if (!val) return;
+    const params = new URLSearchParams(searchParams);
+    if (val === currentUserId) {
+      params.delete("userId");
+    } else {
+      params.set("userId", val);
+    }
+    params.delete("clientId"); // Clear precise ID on user change
+    router.push(`/clients-service?${params.toString()}`);
+  };
+
   return (
     <div className="flex flex-col lg:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 gap-4">
       <div className="flex flex-col gap-2 text-center md:text-left">
@@ -137,7 +158,11 @@ export function ServiceHeader({
             }
           />
           <PopoverContent className="w-auto p-0" align="end">
-            <Calendar mode="single" selected={date} onSelect={onDateChange} />
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleDateChange}
+            />
           </PopoverContent>
         </Popover>
       </div>

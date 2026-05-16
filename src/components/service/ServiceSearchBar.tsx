@@ -1,23 +1,25 @@
 "use client";
 
 import { Search, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { startTransition, useEffect, useRef, useState } from "react";
 import type { CutListItem } from "@/types/types";
 import { Button } from "../ui/button";
 
 interface ServiceSearchBarProps {
   items: CutListItem[];
-  onSelectResult: (item: CutListItem) => void;
-  onEnterSearch: (query: string) => void;
+  setOptimisticCuts: (action: CutListItem[]) => void;
   initialValue?: string;
 }
 
 export function ServiceSearchBar({
   items,
-  onSelectResult,
-  onEnterSearch,
+  setOptimisticCuts,
   initialValue = "",
 }: ServiceSearchBarProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [inputValue, setInputValue] = useState(initialValue);
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,13 +48,29 @@ export function ServiceSearchBar({
   );
 
   const handleSelect = (item: CutListItem) => {
-    onSelectResult(item);
+    startTransition(() => {
+      // Optimistically filter to only this client's addresses
+      const filteredCuts = items.filter((c) => c.client.id === item.client.id);
+      setOptimisticCuts(filteredCuts);
+
+      const params = new URLSearchParams(searchParams);
+      params.delete("search"); // Clear normal search when using precise ID
+      params.set("clientId", item.client.id);
+      router.push(`/clients-service?${params.toString()}`);
+    });
     setInputValue(item.client.name);
     setIsFocused(false);
   };
 
   const handleSearch = (query: string) => {
-    onEnterSearch(query);
+    const params = new URLSearchParams(searchParams);
+    params.delete("clientId"); // Clear precise ID on normal search
+    if (query) {
+      params.set("search", query);
+    } else {
+      params.delete("search");
+    }
+    router.push(`/clients-service?${params.toString()}`);
     setIsFocused(false);
   };
 

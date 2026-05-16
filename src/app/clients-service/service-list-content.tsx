@@ -2,8 +2,8 @@
 
 import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd";
 import imageCompression from "browser-image-compression";
-import { format, parseISO } from "date-fns";
-import { useRouter, useSearchParams } from "next/navigation";
+import { parseISO } from "date-fns";
+import { useSearchParams } from "next/navigation";
 import { startTransition, use, useOptimistic, useState } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
@@ -22,6 +22,7 @@ interface ServiceListContentProps {
   clientsPromise: Promise<Client[]>;
   datePromise: Promise<string | null>;
   userIdPromise: Promise<string>;
+  searchPromise: Promise<string>;
   membersPromise: Promise<{ id: string; name: string }[]>;
   currentUserIdPromise: Promise<string>;
 }
@@ -31,11 +32,11 @@ export function ServiceListContent({
   clientsPromise,
   datePromise,
   userIdPromise,
+  searchPromise,
   membersPromise,
   currentUserIdPromise,
 }: ServiceListContentProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const _searchParams = useSearchParams();
 
   const { mutate: updateRouteOrder } = useUpdateRouteOrder();
   const { mutate: completeJob, isPending: isCompleting } = useCompleteJob();
@@ -50,6 +51,7 @@ export function ServiceListContent({
   let defaultDate = use(datePromise);
   const initialClients = use(clientsPromise);
   const currentFilterUserId = use(userIdPromise);
+  const initialSearch = use(searchPromise);
   const members = use(membersPromise);
   if (defaultDate === null)
     defaultDate = new Date().toLocaleDateString("en-CA");
@@ -173,42 +175,6 @@ export function ServiceListContent({
     });
   };
 
-  const handleDateChange = (newDate: Date | undefined) => {
-    if (newDate) {
-      const params = new URLSearchParams(searchParams);
-      params.set("date", format(newDate, "yyyy-MM-dd"));
-      params.delete("clientId"); // Clear precise ID on date change
-      router.push(`/clients-service?${params.toString()}`);
-    }
-  };
-
-  const handleUserChange = (val: string | null) => {
-    if (!val) return;
-    const params = new URLSearchParams(searchParams);
-    if (val === currentUserId) {
-      params.delete("userId");
-    } else {
-      params.set("userId", val);
-    }
-    params.delete("clientId"); // Clear precise ID on user change
-    router.push(`/clients-service?${params.toString()}`);
-  };
-
-  const handleSelectResult = (item: CutListItem) => {
-    startTransition(() => {
-      // Optimistically filter to only this client's addresses
-      const filteredCuts = flatCuts.filter(
-        (c) => c.client.id === item.client.id,
-      );
-      setOptimisticCuts(filteredCuts);
-
-      const params = new URLSearchParams(searchParams);
-      params.delete("search"); // Clear normal search when using precise ID
-      params.set("clientId", item.client.id);
-      router.push(`/clients-service?${params.toString()}`);
-    });
-  };
-
   const totalServices = optimisticCuts.length;
   const completedServices = optimisticCuts.filter(
     (item) => !!item.address.completed_job,
@@ -219,12 +185,10 @@ export function ServiceListContent({
     <div className="space-y-6">
       <ServiceHeader
         date={date}
-        onDateChange={handleDateChange}
         isAdmin={isAdmin}
         members={members}
         currentFilterUserId={currentFilterUserId}
         currentUserId={currentUserId ?? ""}
-        handleUserChange={handleUserChange}
         stats={{
           total: totalServices,
           completed: completedServices,
@@ -232,16 +196,9 @@ export function ServiceListContent({
         }}
         searchComponent={
           <ServiceSearchBar
-            items={optimisticCuts}
-            onSelectResult={handleSelectResult}
-            onEnterSearch={(query: string) => {
-              const params = new URLSearchParams(searchParams);
-              if (query) params.set("search", query);
-              else params.delete("search");
-              params.delete("clientId");
-              router.push(`/clients-service?${params.toString()}`);
-            }}
-            initialValue={searchParams.get("search") || ""}
+            items={flatCuts}
+            setOptimisticCuts={setOptimisticCuts}
+            initialValue={initialSearch}
           />
         }
       />
