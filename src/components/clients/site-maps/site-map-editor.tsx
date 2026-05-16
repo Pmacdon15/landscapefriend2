@@ -17,6 +17,7 @@ interface SiteMapEditorProps {
   address: string;
   readOnlyPolygons?: Point[][] | null;
   initialPolygons?: Point[][] | null;
+  initialName?: string;
   initialNotes?: string;
   readOnly?: boolean;
 }
@@ -26,6 +27,7 @@ export function SiteMapEditor({
   address,
   readOnlyPolygons,
   initialPolygons,
+  initialName = "",
   initialNotes = "",
   readOnly = false,
 }: SiteMapEditorProps) {
@@ -61,7 +63,7 @@ export function SiteMapEditor({
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
   const handleSave = useCallback(
-    (notes: string) => {
+    (name: string, notes: string) => {
       if (!canvasRef.current) return;
 
       canvasRef.current.toBlob((blob) => {
@@ -69,9 +71,9 @@ export function SiteMapEditor({
           const file = new File([blob], `drawing-${Date.now()}.png`, {
             type: "image/png",
           });
-          onSave?.("", notes, polygons, file);
+          onSave?.(name, notes, polygons, file);
         } else {
-          onSave?.("", notes, polygons);
+          onSave?.(name, notes, polygons);
         }
       }, "image/png");
     },
@@ -80,10 +82,11 @@ export function SiteMapEditor({
 
   const form = useForm({
     defaultValues: {
+      name: initialName,
       notes: initialNotes,
     },
     onSubmit: async ({ value }) => {
-      handleSave(value.notes);
+      handleSave(value.name, value.notes);
     },
   });
 
@@ -281,7 +284,21 @@ export function SiteMapEditor({
     >
       {!isReadOnly && (
         <>
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <form.Field name="name">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Map Name</Label>
+                  <Input
+                    id={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="e.g. Front Lawn, Back Yard..."
+                  />
+                </div>
+              )}
+            </form.Field>
             <form.Field name="notes">
               {(field) => (
                 <div className="space-y-2">

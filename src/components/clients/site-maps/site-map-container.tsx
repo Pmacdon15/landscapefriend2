@@ -195,6 +195,15 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                       {activeTab === "upload" ? (
                         <div className="grid gap-4">
                           <div className="grid gap-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                              id="name"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                              placeholder="e.g. Front Lawn..."
+                            />
+                          </div>
+                          <div className="grid gap-2">
                             <Label htmlFor="notes">Notes</Label>
                             <Input
                               id="notes"
@@ -248,6 +257,7 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Site Map</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead>Date Added</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -263,17 +273,17 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                           ) : sm.blob_path ? (
                             <FileImage className="h-4 w-4 text-primary" />
                           ) : null}
-                          <div>
-                            <p className="font-semibold">
-                              {sm.name || "Site Map"}
-                            </p>
-                            {sm.notes && (
-                              <p className="text-xs text-slate-500 italic line-clamp-1">
-                                {sm.notes}
-                              </p>
-                            )}
-                          </div>
+                          <p className="font-semibold">
+                            {sm.name || "Site Map"}
+                          </p>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {sm.notes && (
+                          <p className="text-xs text-slate-500 italic line-clamp-1">
+                            {sm.notes}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell>
                         {format(new Date(sm.created_at), "MMM d, yyyy")}
@@ -319,7 +329,7 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={3}
+                      colSpan={4}
                       className="h-24 text-center text-muted-foreground"
                     >
                       No site maps found for this address.
@@ -350,6 +360,7 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
             <div className="py-4">
               <SiteMapEditor
                 address={`${address.street}, ${address.city}, ${address.state}`}
+                initialName={editingSiteMap.name || ""}
                 initialNotes={editingSiteMap.notes || ""}
                 initialPolygons={editingSiteMap.map_data}
                 onSave={(newName, newNotes, newPolygons) =>
