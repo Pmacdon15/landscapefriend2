@@ -288,7 +288,7 @@ export function SiteMapEditor({
             <form.Field name="name">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Map Name</Label>
+                  <Label htmlFor={field.name}>Area Name</Label>
                   <Input
                     id={field.name}
                     value={field.state.value}

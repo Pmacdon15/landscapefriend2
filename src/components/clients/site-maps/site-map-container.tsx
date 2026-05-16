@@ -3,7 +3,7 @@
 import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
 import { Edit2, FileImage, Map as MapIcon, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { startTransition, useOptimistic, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,7 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import {
   useDeleteSiteMap,
   useSaveSiteMap,
@@ -32,6 +31,7 @@ import {
 } from "@/mutations/clients";
 import type { Address, SiteMap } from "@/zod/schemas";
 import { SiteMapViewer } from "../site-map-viewer";
+import { SiteMapDetailsForm } from "./site-map-details-form";
 import { SiteMapEditor } from "./site-map-editor";
 
 interface SiteMapContainerProps {
@@ -59,6 +59,45 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
 
   const isSaving = isMutationPending || isUpdatePending || isSavingLocal;
   const [compressionStatus, setCompressionStatus] = useState("");
+
+  const [optimisticAddress, setOptimisticAction] = useOptimistic(
+    address,
+    (
+      state,
+      action:
+        | { type: "ADD"; payload: SiteMap }
+        | { type: "UPDATE"; payload: Partial<SiteMap> & { id: string } }
+        | { type: "DELETE"; payload: string },
+    ) => {
+      if (!state.site_maps) return state;
+
+      switch (action.type) {
+        case "ADD":
+          return {
+            ...state,
+            site_maps: [action.payload, ...state.site_maps],
+          };
+        case "UPDATE":
+          return {
+            ...state,
+            site_maps: state.site_maps.map((map) =>
+              map.id === action.payload.id
+                ? { ...map, ...action.payload }
+                : map,
+            ),
+          };
+        case "DELETE":
+          return {
+            ...state,
+            site_maps: state.site_maps.filter(
+              (map) => map.id !== action.payload,
+            ),
+          };
+        default:
+          return state;
+      }
+    },
+  );
 
   const handleSave = async (
     drawingName?: string,
@@ -88,27 +127,45 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
       }
     }
 
-    saveSiteMap(
-      {
-        addressId: address.id,
-        name: drawingName || name || (drawingFile ? "Site Area" : "Site Map"),
-        notes: drawingNotes || notes || null,
-        mapData: polygons || null,
-        file: fileToUpload,
-      },
-      {
-        onSuccess: () => {
-          setIsAddOpen(false);
-          setName("");
-          setNotes("");
-          setFile(null);
-          setIsSavingLocal(false);
+    const optimisticName =
+      drawingName || name || (drawingFile ? "Site Area" : "Site Map");
+    const optimisticNotes = drawingNotes || notes || null;
+    setIsAddOpen(false);
+    startTransition(() => {
+      setOptimisticAction({
+        type: "ADD",
+        payload: {
+          id: crypto.randomUUID(),
+          address_id: optimisticAddress.id,
+          name: optimisticName,
+          notes: optimisticNotes,
+          map_data: polygons || null,
+          blob_path: fileToUpload ? "pending" : null,
+          created_at: new Date(),
         },
-        onError: () => {
-          setIsSavingLocal(false);
+      });
+
+      saveSiteMap(
+        {
+          addressId: optimisticAddress.id,
+          name: optimisticName,
+          notes: optimisticNotes,
+          mapData: polygons || null,
+          file: fileToUpload,
         },
-      },
-    );
+        {
+          onSuccess: () => {
+            setName("");
+            setNotes("");
+            setFile(null);
+            setIsSavingLocal(false);
+          },
+          onError: () => {
+            setIsSavingLocal(false);
+          },
+        },
+      );
+    });
   };
 
   const handleUpdate = async (
@@ -117,20 +174,25 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
     newPolygons: { x: number; y: number }[][],
   ) => {
     if (!editingSiteMap) return;
+    setEditingSiteMap(null);
+    startTransition(() => {
+      setOptimisticAction({
+        type: "UPDATE",
+        payload: {
+          id: editingSiteMap.id,
+          name: newName,
+          notes: newNotes,
+          map_data: newPolygons,
+        },
+      });
 
-    updateSiteMap(
-      {
+      updateSiteMap({
         siteMapId: editingSiteMap.id,
         name: newName,
         notes: newNotes,
         mapData: newPolygons,
-      },
-      {
-        onSuccess: () => {
-          setEditingSiteMap(null);
-        },
-      },
-    );
+      });
+    });
   };
 
   return (
@@ -144,7 +206,7 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
               className="h-7 text-[10px] gap-1.5 text-slate-500 hover:text-primary"
             >
               <MapIcon className="h-3 w-3" />
-              Site Maps ({address.site_maps?.length || 0})
+              Site Maps ({optimisticAddress.site_maps?.length || 0})
             </Button>
           }
         />
@@ -152,7 +214,9 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
           {isAdmin && (
             <DialogHeader>
               <div className="flex items-center justify-between">
-                <DialogTitle>Site Maps for {address.street}</DialogTitle>
+                <DialogTitle>
+                  Site Maps for {optimisticAddress.street}
+                </DialogTitle>
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                   <DialogTrigger
                     render={
@@ -195,7 +259,7 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                       {activeTab === "upload" ? (
                         <div className="grid gap-4">
                           <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
+                            <Label htmlFor="name">Area Name</Label>
                             <Input
                               id="name"
                               value={name}
@@ -239,7 +303,7 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                         </div>
                       ) : (
                         <SiteMapEditor
-                          address={`${address.street}, ${address.city}, ${address.state}`}
+                          address={`${optimisticAddress.street}, ${optimisticAddress.city}, ${optimisticAddress.state}`}
                           onSave={(newName, notes, polygons, file) =>
                             handleSave(newName, notes, polygons, file)
                           }
@@ -263,8 +327,15 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {address.site_maps && address.site_maps.length > 0 ? (
-                  address.site_maps.map((sm) => (
+                {optimisticAddress.site_maps &&
+                optimisticAddress.site_maps.length > 0 ? (
+                  [...optimisticAddress.site_maps]
+                    .sort(
+                      (a, b) =>
+                        new Date(b.created_at).getTime() -
+                        new Date(a.created_at).getTime(),
+                    )
+                    .map((sm) => (
                     <TableRow key={sm.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -302,16 +373,14 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
                           )}
                           {isAdmin && (
                             <>
-                              {sm.map_data && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-slate-500 hover:text-primary"
-                                  onClick={() => setEditingSiteMap(sm)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-slate-500 hover:text-primary"
+                                onClick={() => setEditingSiteMap(sm)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -354,19 +423,31 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
       >
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Site Map</DialogTitle>
+            <DialogTitle>Edit Site Map Details</DialogTitle>
           </DialogHeader>
           {editingSiteMap && (
             <div className="py-4">
-              <SiteMapEditor
-                address={`${address.street}, ${address.city}, ${address.state}`}
-                initialName={editingSiteMap.name || ""}
-                initialNotes={editingSiteMap.notes || ""}
-                initialPolygons={editingSiteMap.map_data}
-                onSave={(newName, newNotes, newPolygons) =>
-                  handleUpdate(newName, newNotes, newPolygons)
-                }
-              />
+              {editingSiteMap.map_data ? (
+                <SiteMapEditor
+                  address={`${optimisticAddress.street}, ${optimisticAddress.city}, ${optimisticAddress.state}`}
+                  initialName={editingSiteMap.name || ""}
+                  initialNotes={editingSiteMap.notes || ""}
+                  initialPolygons={editingSiteMap.map_data}
+                  onSave={(newName, newNotes, newPolygons) =>
+                    handleUpdate(newName, newNotes, newPolygons)
+                  }
+                />
+              ) : (
+                <SiteMapDetailsForm
+                  initialName={editingSiteMap.name || ""}
+                  initialNotes={editingSiteMap.notes || ""}
+                  isPending={isUpdatePending}
+                  onCancel={() => setEditingSiteMap(null)}
+                  onSubmit={(newName, newNotes) =>
+                    handleUpdate(newName, newNotes, [])
+                  }
+                />
+              )}
             </div>
           )}
         </DialogContent>
@@ -392,7 +473,13 @@ export function SiteMapContainer({ address, isAdmin }: SiteMapContainerProps) {
               variant="destructive"
               onClick={() => {
                 if (siteMapToDelete) {
-                  deleteSiteMap(siteMapToDelete.id);
+                  startTransition(() => {
+                    setOptimisticAction({
+                      type: "DELETE",
+                      payload: siteMapToDelete.id,
+                    });
+                    deleteSiteMap(siteMapToDelete.id);
+                  });
                   setSiteMapToDelete(null);
                 }
               }}
