@@ -3,6 +3,7 @@ import {
   addMonths,
   addWeeks,
   differenceInCalendarDays,
+  format,
   isBefore,
   isValid,
   parseISO,
@@ -28,14 +29,45 @@ export function getGoogleMapsUrl(address: {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
+/**
+ * Converts a date (string or object) to a Date object at local midnight
+ * using the UTC year, month, and day. This is essential for components
+ * like calendars that expect a "naive" date representation.
+ */
+export function toLocalMidnight(
+  date: Date | string | null | undefined,
+): Date | undefined {
+  if (!date) return undefined;
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (!isValid(d)) return undefined;
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+/**
+ * Formats a date using local time. Assumes the date is already
+ * shifted to local midnight if it originated from a UTC source.
+ */
+export function formatDateNaive(
+  date: Date | string | null | undefined,
+  formatStr: string,
+) {
+  if (!date) return "Not set";
+  const d = date instanceof Date ? date : toLocalMidnight(date);
+  if (!d || !isValid(d)) return "Invalid Date";
+  return format(d, formatStr);
+}
+
 export function getNextCutDate(startDate: Date | string, frequency: string) {
   try {
-    const start =
+    // Force to date-only string to ensure parseISO creates a local midnight date
+    const dateStr =
       typeof startDate === "string"
-        ? parseISO(startDate)
+        ? startDate.split("T")[0]
         : startDate instanceof Date
-          ? parseISO(startDate.toISOString().split("T")[0])
-          : new Date(NaN);
+          ? startDate.toISOString().split("T")[0]
+          : "";
+
+    const start = parseISO(dateStr);
 
     if (!isValid(start)) {
       return new Date(NaN);
