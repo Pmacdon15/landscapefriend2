@@ -194,31 +194,26 @@ export function ServiceListContent({
     router.push(`/clients-service?${params.toString()}`);
   };
 
-  // const handleEnterSearch = (query: string) => {
-  //   const params = new URLSearchParams(searchParams);
-  //   params.delete("clientId"); // Clear precise ID on normal search
-  //   if (query) {
-  //     params.set("search", query);
-  //   } else {
-  //     params.delete("search");
-  //   }
-  //   router.push(`/clients-service?${params.toString()}`);
-  // };
+  const handleSelectResult = (item: CutListItem) => {
+    startTransition(() => {
+      // Optimistically filter to only this client's addresses
+      const filteredCuts = flatCuts.filter(
+        (c) => c.client.id === item.client.id,
+      );
+      setOptimisticCuts(filteredCuts);
 
-  // const handleSelectResult = (item: CutListItem) => {
-  //   startTransition(() => {
-  //     // Optimistically filter to only this client's addresses
-  //     const filteredCuts = flatCuts.filter(
-  //       (c) => c.client.id === item.client.id,
-  //     );
-  //     setOptimisticCuts(filteredCuts);
+      const params = new URLSearchParams(searchParams);
+      params.delete("search"); // Clear normal search when using precise ID
+      params.set("clientId", item.client.id);
+      router.push(`/clients-service?${params.toString()}`);
+    });
+  };
 
-  //     const params = new URLSearchParams(searchParams);
-  //     params.delete("search"); // Clear normal search when using precise ID
-  //     params.set("clientId", item.client.id);
-  //     router.push(`/clients-service?${params.toString()}`);
-  //   });
-  // };
+  const totalServices = optimisticCuts.length;
+  const completedServices = optimisticCuts.filter(
+    (item) => !!item.address.completed_job,
+  ).length;
+  const remainingServices = totalServices - completedServices;
 
   return (
     <div className="space-y-6">
@@ -230,12 +225,22 @@ export function ServiceListContent({
         currentFilterUserId={currentFilterUserId}
         currentUserId={currentUserId ?? ""}
         handleUserChange={handleUserChange}
+        stats={{
+          total: totalServices,
+          completed: completedServices,
+          remaining: remainingServices,
+        }}
         searchComponent={
           <ServiceSearchBar
             items={optimisticCuts}
-            setOptimisticCuts={setOptimisticCuts}
-            // onSelectResult={handleSelectResult}
-            // onEnterSearch={handleEnterSearch}
+            onSelectResult={handleSelectResult}
+            onEnterSearch={(query: string) => {
+              const params = new URLSearchParams(searchParams);
+              if (query) params.set("search", query);
+              else params.delete("search");
+              params.delete("clientId");
+              router.push(`/clients-service?${params.toString()}`);
+            }}
             initialValue={searchParams.get("search") || ""}
           />
         }
