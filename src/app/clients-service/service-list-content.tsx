@@ -9,6 +9,7 @@ import { ImageViewer } from "@/components/clients/image-viewer";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
 import { ServiceListItem } from "@/components/service/ServiceListItem";
+import { ServiceSearchBar } from "@/components/service/ServiceSearchBar";
 import { CameraCapture } from "@/components/ui/camera-capture";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCompleteJob } from "@/mutations/jobs";
@@ -176,6 +177,7 @@ export function ServiceListContent({
     if (newDate) {
       const params = new URLSearchParams(searchParams);
       params.set("date", format(newDate, "yyyy-MM-dd"));
+      params.delete("clientId"); // Clear precise ID on date change
       router.push(`/clients-service?${params.toString()}`);
     }
   };
@@ -188,8 +190,35 @@ export function ServiceListContent({
     } else {
       params.set("userId", val);
     }
+    params.delete("clientId"); // Clear precise ID on user change
     router.push(`/clients-service?${params.toString()}`);
   };
+
+  // const handleEnterSearch = (query: string) => {
+  //   const params = new URLSearchParams(searchParams);
+  //   params.delete("clientId"); // Clear precise ID on normal search
+  //   if (query) {
+  //     params.set("search", query);
+  //   } else {
+  //     params.delete("search");
+  //   }
+  //   router.push(`/clients-service?${params.toString()}`);
+  // };
+
+  // const handleSelectResult = (item: CutListItem) => {
+  //   startTransition(() => {
+  //     // Optimistically filter to only this client's addresses
+  //     const filteredCuts = flatCuts.filter(
+  //       (c) => c.client.id === item.client.id,
+  //     );
+  //     setOptimisticCuts(filteredCuts);
+
+  //     const params = new URLSearchParams(searchParams);
+  //     params.delete("search"); // Clear normal search when using precise ID
+  //     params.set("clientId", item.client.id);
+  //     router.push(`/clients-service?${params.toString()}`);
+  //   });
+  // };
 
   return (
     <div className="space-y-6">
@@ -201,6 +230,15 @@ export function ServiceListContent({
         currentFilterUserId={currentFilterUserId}
         currentUserId={currentUserId ?? ""}
         handleUserChange={handleUserChange}
+        searchComponent={
+          <ServiceSearchBar
+            items={optimisticCuts}
+            setOptimisticCuts={setOptimisticCuts}
+            // onSelectResult={handleSelectResult}
+            // onEnterSearch={handleEnterSearch}
+            initialValue={searchParams.get("search") || ""}
+          />
+        }
       />
 
       <div className="max-w-4xl mx-auto">
@@ -214,15 +252,19 @@ export function ServiceListContent({
                   className="space-y-4"
                 >
                   {optimisticCuts.map((item, index) => (
-                    <ServiceListItem
-                      isAdmin={isAdmin}
+                    <div
                       key={item.address.id}
-                      item={item}
-                      index={index}
-                      isCompleting={isCompleting}
-                      onMarkComplete={setCompletingAddressId}
-                      onViewPhoto={setViewingImage}
-                    />
+                      id={`address-${item.address.id}`}
+                    >
+                      <ServiceListItem
+                        isAdmin={isAdmin}
+                        item={item}
+                        index={index}
+                        isCompleting={isCompleting}
+                        onMarkComplete={setCompletingAddressId}
+                        onViewPhoto={setViewingImage}
+                      />
+                    </div>
                   ))}
                   {provided.placeholder}
                 </div>

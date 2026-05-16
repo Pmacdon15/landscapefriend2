@@ -26,6 +26,9 @@ export default async function ClientInfoListPage(
       Array.isArray(params.search)
         ? params.search[0]
         : (params.search ?? undefined),
+      Array.isArray(params.clientId)
+        ? params.clientId[0]
+        : (params.clientId ?? undefined),
     ).then((data) => data.clients),
   );
   const membersPromise = getOrganizationMembersDal();
@@ -39,6 +42,9 @@ export default async function ClientInfoListPage(
       Array.isArray(params.search)
         ? params.search[0]
         : (params.search ?? undefined),
+      Array.isArray(params.clientId)
+        ? params.clientId[0]
+        : (params.clientId ?? undefined),
     ).then((data) => data.totalPages),
   );
 

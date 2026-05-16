@@ -11,7 +11,7 @@ export default function Home() {
             <Leaf className="w-12 h-12 text-green-600 dark:text-green-400" />
           </div>
         </div>
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight bg-gradient-to-br from-green-900 to-green-500 dark:from-white dark:to-green-400 bg-clip-text text-transparent">
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight bg-linear-to-br from-green-900 to-green-500 dark:from-white dark:to-green-400 bg-clip-text text-transparent">
           Landscape Friend
           <br />
           <span className="text-primary text-4xl md:text-5xl">

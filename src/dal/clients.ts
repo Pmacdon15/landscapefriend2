@@ -23,6 +23,7 @@ import { getOrganizationMembersDal } from "./clerk";
 export async function getClientsForInfoDal(
   page: number,
   searchQuery?: string,
+  clientId?: string,
 ): Promise<{ clients: Client[]; totalPages: number }> {
   try {
     const { orgId, orgRole } = await auth.protect();
@@ -49,6 +50,7 @@ export async function getClientsForInfoDal(
       offset,
       searchQuery,
       matchedAssigneeIds,
+      clientId,
     );
 
     if (results.length === 0) {
@@ -67,7 +69,9 @@ export async function getClientsForInfoDal(
 
 export async function getClientsForCutListDal(
   date: string,
+  searchQuery?: string,
   userIdOverride?: string,
+  clientId?: string,
 ): Promise<Client[]> {
   try {
     const { orgId, userId, orgRole } = await auth.protect();
@@ -82,6 +86,8 @@ export async function getClientsForCutListDal(
       date,
       targetUserId,
       showAll,
+      searchQuery,
+      clientId,
     );
 
     return results;

@@ -26,6 +26,7 @@ interface ServiceHeaderProps {
   currentFilterUserId: string;
   currentUserId: string;
   handleUserChange: (val: string | null) => void;
+  searchComponent?: React.ReactNode;
 }
 
 export function ServiceHeader({
@@ -36,9 +37,10 @@ export function ServiceHeader({
   currentFilterUserId,
   currentUserId,
   handleUserChange,
+  searchComponent,
 }: ServiceHeaderProps) {
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 gap-4">
+    <div className="flex flex-col lg:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 gap-4">
       <div className="flex flex-col gap-1 text-center md:text-left">
         <h2 className="text-xl font-semibold">
           Showing services for:{" "}
@@ -54,7 +56,10 @@ export function ServiceHeader({
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+        {searchComponent && (
+          <div className="w-full lg:w-auto">{searchComponent}</div>
+        )}
         {isAdmin && (
           <div className="w-full sm:w-50">
             <Select
