@@ -1,62 +1,26 @@
 "use client";
 
 import { Search, X } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-
-import { startTransition, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CutListItem } from "@/types/types";
 import { Button } from "../ui/button";
 
 interface ServiceSearchBarProps {
   items: CutListItem[];
-  setOptimisticCuts: (action: CutListItem[]) => void;
+  onSelectResult: (item: CutListItem) => void;
+  onEnterSearch: (query: string) => void;
   initialValue?: string;
 }
 
 export function ServiceSearchBar({
   items,
-  setOptimisticCuts,
+  onSelectResult,
+  onEnterSearch,
   initialValue = "",
 }: ServiceSearchBarProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
   const [inputValue, setInputValue] = useState(initialValue);
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleSelectResult = (item: CutListItem) => {
-    startTransition(() => {
-      const filteredCuts = items.filter((c) => c.client.id === item.client.id);
-      setOptimisticCuts(filteredCuts);
-
-      const params = new URLSearchParams(searchParams);
-      params.delete("search"); 
-      params.set("clientId", item.client.id);
-      router.push(`/clients-service?${params.toString()}`);
-    });
-  };
-
-  const handleGlobalSearch = (query: string) => {
-    startTransition(() => {
-      const normalizedQuery = query.toLowerCase().trim();
-      const filteredCuts = items.filter(
-        (item) =>
-          item.client.name.toLowerCase().includes(normalizedQuery) ||
-          item.address.street.toLowerCase().includes(normalizedQuery)
-      );
-      setOptimisticCuts(filteredCuts);
-
-      const params = new URLSearchParams(searchParams);
-      params.delete("clientId");
-      if (query) {
-        params.set("search", query);
-      } else {
-        params.delete("search");
-      }
-      router.push(`/clients-service?${params.toString()}`);
-    });
-  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -82,19 +46,14 @@ export function ServiceSearchBar({
   );
 
   const handleSelect = (item: CutListItem) => {
-    handleSelectResult(item);
+    onSelectResult(item);
     setInputValue(item.client.name);
     setIsFocused(false);
   };
 
-  const handleSubmitSearch = (query: string) => {
-    if (filteredItems.length > 0 && query.trim().length > 0) {
-      const bestMatch = filteredItems[0];
-      handleSelect(bestMatch);
-    } else {
-      handleGlobalSearch(query);
-      setIsFocused(false);
-    }
+  const handleSearch = (query: string) => {
+    onEnterSearch(query);
+    setIsFocused(false);
   };
 
   return (
@@ -109,7 +68,11 @@ export function ServiceSearchBar({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              handleSubmitSearch(inputValue);
+              if (filteredItems.length > 0) {
+                handleSelect(filteredItems[0]);
+              } else {
+                handleSearch(inputValue);
+              }
             }
           }}
           placeholder="Search this route..."
@@ -122,8 +85,7 @@ export function ServiceSearchBar({
             className="absolute right-1 h-8 w-8"
             onClick={() => {
               setInputValue("");
-              handleGlobalSearch("");
-              setIsFocused(false);
+              handleSearch("");
             }}
           >
             <X className="h-4 w-4" />

@@ -27,6 +27,11 @@ interface ServiceHeaderProps {
   currentUserId: string;
   handleUserChange: (val: string | null) => void;
   searchComponent?: React.ReactNode;
+  stats?: {
+    total: number;
+    completed: number;
+    remaining: number;
+  };
 }
 
 export function ServiceHeader({
@@ -38,21 +43,47 @@ export function ServiceHeader({
   currentUserId,
   handleUserChange,
   searchComponent,
+  stats,
 }: ServiceHeaderProps) {
   return (
     <div className="flex flex-col lg:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 gap-4">
-      <div className="flex flex-col gap-1 text-center md:text-left">
-        <h2 className="text-xl font-semibold">
-          Showing services for:{" "}
-          <span className="text-primary">{format(date, "PPPP")}</span>
-        </h2>
-        {isAdmin && (
-          <p className="text-sm text-slate-500">
-            Admin View: Filtering by{" "}
-            {members.find(
-              (m) => m.id === (currentFilterUserId || currentUserId),
-            )?.name || "Yourself"}
-          </p>
+      <div className="flex flex-col gap-2 text-center md:text-left">
+        <div>
+          <h2 className="text-xl font-semibold">
+            Showing services for:{" "}
+            <span className="text-primary">{format(date, "PPPP")}</span>
+          </h2>
+          {isAdmin && (
+            <p className="text-sm text-slate-500">
+              Admin View: Filtering by{" "}
+              {members.find(
+                (m) => m.id === (currentFilterUserId || currentUserId),
+              )?.name || "Yourself"}
+            </p>
+          )}
+        </div>
+
+        {stats && stats.total > 0 && (
+          <div className="flex items-center justify-center md:justify-start gap-2 text-xs font-medium">
+            <div className="flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+              <span className="opacity-70 mr-1.5 text-[10px] uppercase tracking-wider">
+                Total:
+              </span>
+              <span className="font-bold">{stats.total}</span>
+            </div>
+            <div className="flex items-center px-2.5 py-0.5 rounded-full bg-green-50 dark:bg-emerald-950/30 text-green-600 dark:text-emerald-400 border border-green-100 dark:border-emerald-900/50">
+              <span className="opacity-70 mr-1.5 text-[10px] uppercase tracking-wider">
+                Done:
+              </span>
+              <span className="font-bold">{stats.completed}</span>
+            </div>
+            <div className="flex items-center px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50">
+              <span className="opacity-70 mr-1.5 text-[10px] uppercase tracking-wider">
+                Left:
+              </span>
+              <span className="font-bold">{stats.remaining}</span>
+            </div>
+          </div>
         )}
       </div>
 
