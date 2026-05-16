@@ -97,10 +97,15 @@ export function ServiceListContent({
   };
 
   const onPhotoCapture = async (file: File, timestamp: Date) => {
+    const currentAddrId = completingAddressId;
     const addr = optimisticCuts.find(
-      (c) => c.address.id === completingAddressId,
+      (c) => c.address.id === currentAddrId,
     )?.address;
-    if (!completingAddressId || !addr) return;
+    
+    if (!currentAddrId || !addr) return;
+
+    // Close camera immediately for snappier feel
+    setCompletingAddressId(null);
 
     let fileToUpload: File | Blob = file;
     if (fileToUpload.size > 1024 * 1024) {
@@ -115,18 +120,47 @@ export function ServiceListContent({
       }
     }
 
-    completeJob(
-      {
-        addressId: completingAddressId,
+    startTransition(() => {
+      // Optimistically mark as completed
+      const newCuts = optimisticCuts.map((item) => {
+        if (item.address.id === currentAddrId) {
+          return {
+            ...item,
+            address: {
+              ...item.address,
+              completed_job: {
+                id: "pending",
+                address_id: currentAddrId,
+                org_id: "",
+                service_type: "grass",
+                assigned_to:
+                  item.address.assignment?.user_id ||
+                  item.address.assigned_to ||
+                  null,
+                completed_by: currentUserId,
+                completed_at: timestamp,
+                scheduled_date: date,
+                notes: null,
+                created_at: new Date(),
+                updated_at: new Date(),
+              },
+            },
+          } as CutListItem;
+        }
+        return item;
+      });
+      setOptimisticCuts(newCuts);
+
+      completeJob({
+        addressId: currentAddrId,
         serviceType: "grass",
         assignedTo: addr.assignment?.user_id || addr.assigned_to || null,
         photoFile: fileToUpload as File,
         capturedAt: timestamp,
         completedAt: timestamp,
         scheduledDate: date,
-      },
-      { onSuccess: () => setCompletingAddressId(null) },
-    );
+      });
+    });
   };
 
   const handleDateChange = (newDate: Date | undefined) => {

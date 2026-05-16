@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
 import { LocalDateDisplay } from "@/components/history/local-date-display";
+import { LocalDateOnlyDisplay } from "@/components/history/local-date-only-display";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -99,7 +100,7 @@ export function HistoryList({ history }: HistoryListProps) {
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                           <CalendarIcon className="h-3 w-3" />
                           <span className="font-medium">Scheduled:</span>
-                          <span>{format(new Date(job.scheduled_date), "MMM d, yyyy")}</span>
+                          <LocalDateOnlyDisplay date={job.scheduled_date} />
                         </div>
                       )}
                       <div className="flex items-center gap-1.5 text-xs text-slate-900 dark:text-slate-200">
