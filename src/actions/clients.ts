@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { updateTag } from "next/cache";
 import {
   createClientDal,
@@ -11,13 +10,13 @@ import { updateAddressAssigneeDal } from "@/dal/service";
 import type { CreateClientInput } from "@/zod/schemas";
 
 export async function createClientAction(data: CreateClientInput) {
-  const { orgId } = await auth.protect();
   const result = await createClientDal(data);
 
   return result.match(
     (client) => {
-      updateTag(`clients-info-${orgId}`);
-      updateTag(`clients-cutlist-${orgId}`);
+      updateTag(`clients-info-${client.org_id}`);
+      updateTag(`clients-cutlist-${client.org_id}`);
+      updateTag(`clients-search-${client.org_id}`);
       return {
         success: true,
         client,
@@ -45,13 +44,13 @@ export async function updateClientAction(
     }[];
   },
 ) {
-  const { orgId } = await auth.protect();
   const result = await updateClientDal(clientId, data);
 
   return result.match(
     (client) => {
-      updateTag(`clients-info-${orgId}`);
-      updateTag(`clients-cutlist-${orgId}`);
+      updateTag(`clients-info-${client.org_id}`);
+      updateTag(`clients-cutlist-${client.org_id}`);
+      updateTag(`clients-search-${client.org_id}`);
       return {
         success: true,
         client,
@@ -66,14 +65,14 @@ export async function updateAddressAssigneeAction(
   addressId: string,
   userId: string | null,
 ) {
-  const { orgId } = await auth.protect();
   const result = await updateAddressAssigneeDal(addressId, userId);
 
   return result.match(
     (address) => {
-      updateTag(`clients-info-${orgId}`);
-      updateTag(`clients-cutlist-${orgId}`);
-      updateTag(`addresses-${orgId}`);
+      updateTag(`clients-info-${address.org_id}`);
+      updateTag(`clients-cutlist-${address.org_id}`);
+      updateTag(`addresses-${address.org_id}`);
+      updateTag(`clients-search-${address.org_id}`);
       return {
         success: true,
         address,
@@ -85,14 +84,14 @@ export async function updateAddressAssigneeAction(
 }
 
 export async function deleteClientAction(clientId: string) {
-  const { orgId } = await auth.protect();
   const result = await deleteClientDal(clientId);
 
   return result.match(
     (client) => {
-      updateTag(`clients-info-${orgId}`);
-      updateTag(`clients-cutlist-${orgId}`);
-      updateTag(`job-history-${orgId}`);
+      updateTag(`clients-info-${client.org_id}`);
+      updateTag(`clients-cutlist-${client.org_id}`);
+      updateTag(`job-history-${client.org_id}`);
+      updateTag(`clients-search-${client.org_id}`);
       return {
         success: true,
         client,

@@ -18,6 +18,7 @@ export async function upsertAssignmentAction(
       updateTag(`assignments-${orgId}-${date}`);
       updateTag(`clients-info-${orgId}`);
       updateTag(`clients-cutlist-${orgId}`);
+      updateTag(`clients-search-${orgId}`);
       return {
         success: true,
         assignment,

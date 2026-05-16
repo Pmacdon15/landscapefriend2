@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
-import type { Address, Client, ClientRow, CutListItem } from "@/types/types";
+import type { Address, AddressRow, Client, ClientRow, CutListItem, ScheduleRow, SiteMapRow } from "@/types/types";
 import {
   type AddressInputSchema,
   type CreateClientInput,
@@ -268,56 +268,7 @@ export async function searchClientsDal(query: string): Promise<Client[]> {
     .filter((m) => m.name.toLowerCase().includes(query.toLowerCase()))
     .map((m) => m.id);
 
-  const [clients, addresses, schedules, siteMaps, jobHistory] =
-    await Promise.all([
-      searchClientsDb(orgId, query, matchedAssigneeIds),
-      getAddressesDb(orgId),
-      getSchedulesDb(orgId),
-      getSiteMapsDb(orgId),
-      getCompletedJobsDb(orgId),
-    ]);
+  const results = await searchClientsDb(orgId, query, matchedAssigneeIds);
 
-  const addressMap = new Map<string, AddressRow[]>();
-  addresses.forEach((a) => {
-    if (a.status !== "deleted") {
-      const list = addressMap.get(a.client_id) || [];
-      list.push(a);
-      addressMap.set(a.client_id, list);
-    }
-  });
-
-  const scheduleMap = new Map<string, ScheduleRow>();
-  schedules.forEach((s) => {
-    if (!s.first_cut_date && s.next_cut_date) {
-      s.first_cut_date = s.next_cut_date;
-    }
-    scheduleMap.set(s.address_id, s);
-  });
-
-  const siteMapLookup = new Map<string, SiteMapRow[]>();
-  siteMaps.forEach((sm) => {
-    const list = siteMapLookup.get(sm.address_id) || [];
-    list.push(sm);
-    siteMapLookup.set(sm.address_id, list);
-  });
-
-  const historyMap = new Map<string, (typeof jobHistory)[0]>();
-  jobHistory.forEach((j) => {
-    historyMap.set(j.address_id, j);
-  });
-
-  return clients.map((client: ClientRow) => {
-    const clientAddresses = (addressMap.get(client.id) || []).map((address) => {
-      return {
-        ...address,
-        schedule: scheduleMap.get(address.id) || null,
-        sort_order: 0,
-        assignment: null,
-        completed_job: historyMap.get(address.id) || null,
-        site_maps: siteMapLookup.get(address.id) || [],
-      } as Address;
-    });
-
-    return { ...client, addresses: clientAddresses } as Client;
-  });
+  return results as Client[];
 }
