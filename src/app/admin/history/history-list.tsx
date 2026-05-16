@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
+import { LocalDateDisplay } from "@/components/history/local-date-display";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -91,14 +92,7 @@ export function HistoryList({ history }: HistoryListProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                        {format(new Date(job.completed_at), "MMM d, yyyy")}
-                      </span>
-                      <span className="text-[11px] text-slate-400 uppercase tracking-wider mt-0.5">
-                        {format(new Date(job.completed_at), "p")}
-                      </span>
-                    </div>
+                    <LocalDateDisplay date={job.completed_at} />
                   </TableCell>
                   <TableCell>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase tracking-tight">
