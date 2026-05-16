@@ -51,19 +51,35 @@ export function ClientSearchBar({
   }, []);
 
   const handleSearch = (query: string, immediateClients?: Client[]) => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("clientId");
+
     if (immediateClients && query) {
       startTransition(() => {
         setOptimistic({ type: "optimistic-search", clients: immediateClients });
       });
     }
-    const params = new URLSearchParams(searchParams);
+
     if (query) {
       params.set("search", query);
-      params.set("page", "1"); // Reset pagination on search
+      params.set("page", "1");
     } else {
       params.delete("search");
       params.delete("page");
     }
+    router.push(`?${params.toString()}`);
+    setIsFocused(false);
+  };
+
+  const handleSelectClient = (client: Client) => {
+    startTransition(() => {
+      setOptimistic({ type: "optimistic-search", clients: [client] });
+    });
+
+    const params = new URLSearchParams(searchParams);
+    params.delete("search");
+    params.set("clientId", client.id);
+    params.set("page", "1");
     router.push(`?${params.toString()}`);
     setIsFocused(false);
   };
@@ -114,10 +130,7 @@ export function ClientSearchBar({
                 <button
                   type="button"
                   key={client.id}
-                  onClick={() => {
-                    setIsFocused(false);
-                    router.push(`/client/${client.id}`);
-                  }}
+                  onClick={() => handleSelectClient(client)}
                   className="w-full text-left flex flex-col p-2 hover:bg-accent hover:text-accent-foreground rounded-sm transition-colors"
                 >
                   <span className="font-medium text-sm">{client.name}</span>

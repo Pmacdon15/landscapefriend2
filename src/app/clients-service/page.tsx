@@ -22,7 +22,9 @@ export default async function ClientsServicePage(
         (Array.isArray(p.date) ? p.date[0] : p.date) ??
           new Date().toISOString().split("T")[0],
       ),
+      String((Array.isArray(p.search) ? p.search[0] : p.search) ?? ""),
       String((Array.isArray(p.userId) ? p.userId[0] : p.userId) ?? ""),
+      String((Array.isArray(p.clientId) ? p.clientId[0] : p.clientId) ?? ""),
     ),
   );
 

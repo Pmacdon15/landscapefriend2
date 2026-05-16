@@ -673,12 +673,22 @@ export async function getClientsForCutListDb(
   date: string,
   targetUserId?: string,
   showAll = false,
+  searchQuery?: string,
+  clientId?: string,
 ): Promise<DbClientResult[]> {
   "use cache";
   cacheTag(`clients-cutlist-${orgId}-${date}`, `clients-cutlist-${orgId}`);
   if (targetUserId && !showAll) {
     cacheTag(`clients-cutlist-${orgId}-${date}-${targetUserId}`);
   }
+  if (searchQuery) {
+    cacheTag(`clients-cutlist-${orgId}-${date}-search-${searchQuery}`);
+  }
+  if (clientId) {
+    cacheTag(`clients-cutlist-${orgId}-${date}-client-${clientId}`);
+  }
+
+  const searchPattern = searchQuery ? `%${searchQuery}%` : null;
 
   const result = (await sql`
     WITH scheduled_addresses AS (
@@ -704,6 +714,15 @@ export async function getClientsForCutListDb(
           (s.frequency = 'weekly' AND ((${date}::date - s.first_cut_date) % 7) = 0) OR
           (s.frequency = 'bi-weekly' AND ((${date}::date - s.first_cut_date) % 14) = 0) OR
           (s.frequency = 'monthly' AND EXTRACT(DAY FROM s.first_cut_date) = EXTRACT(DAY FROM ${date}::date))
+        )
+        AND (
+          ${!clientId}::boolean OR c.id = ${clientId || null}
+        )
+        AND (
+          ${!searchQuery}::boolean OR
+          c.name ILIKE ${searchPattern} OR
+          a.street ILIKE ${searchPattern} OR
+          a.city ILIKE ${searchPattern}
         )
     ),
     filtered_addresses AS (
@@ -818,6 +837,7 @@ export async function getClientsForInfoDb(
   offset: number,
   searchQuery?: string,
   matchedAssigneeIds: string[] = [],
+  clientId?: string,
 ): Promise<DbClientResult[]> {
   "use cache";
   const searchPattern = searchQuery ? `%${searchQuery}%` : null;
@@ -827,6 +847,9 @@ export async function getClientsForInfoDb(
   if (searchQuery) {
     cacheTag(`clients-info-search-${orgId}-${searchQuery}`);
   }
+  if (clientId) {
+    cacheTag(`clients-info-client-${orgId}-${clientId}`);
+  }
 
   const result = (await sql`
     WITH filtered_clients AS (
@@ -834,6 +857,9 @@ export async function getClientsForInfoDb(
       FROM clients c
       LEFT JOIN addresses a ON c.id = a.client_id AND a.status != 'deleted'
       WHERE c.org_id = ${orgId}
+      AND (
+        ${!clientId}::boolean OR c.id = ${clientId || null}
+      )
       AND (
         ${!searchQuery}::boolean OR
         c.name ILIKE ${searchPattern} OR
