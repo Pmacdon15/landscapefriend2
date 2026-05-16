@@ -39,7 +39,10 @@ export function ImageViewer({
 
   return (
     <Dialog open={!!viewingImage} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="fixed inset-0 top-0 left-0 translate-x-0 translate-y-0 max-w-none w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white rounded-none sm:max-w-none">
+      <DialogContent
+        showCloseButton={false}
+        className="fixed inset-0 top-0 left-0 translate-x-0 translate-y-0 max-w-none w-full h-full p-0 border-none bg-black/95 overflow-hidden flex flex-col items-center justify-center text-white rounded-none sm:max-w-none"
+      >
         <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/60 to-transparent z-50 flex items-center justify-between px-4 md:px-8">
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold truncate max-w-[200px] md:max-w-md">
@@ -57,7 +60,7 @@ export function ImageViewer({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 text-white hover:bg-white/20 transition-colors rounded-full"
+                className="h-10 w-10 text-white hover:bg-white/20 transition-colors rounded-full focus-visible:ring-0"
                 onClick={handleDownload}
               >
                 <Download className="h-5 w-5" />
@@ -67,7 +70,7 @@ export function ImageViewer({
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 text-white hover:bg-white/20 transition-colors rounded-full"
+              className="h-10 w-10 text-white hover:bg-white/20 transition-colors rounded-full focus-visible:ring-0"
               onClick={onClose}
             >
               <X className="h-5 w-5" />
