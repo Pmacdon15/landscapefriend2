@@ -75,7 +75,7 @@ export function ServiceSearchBar({
   };
 
   return (
-    <div className="relative w-full max-w-md z-50" ref={containerRef}>
+    <div className="relative w-full max-w-md z-40" ref={containerRef}>
       <div className="relative flex items-center">
         <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
         <input

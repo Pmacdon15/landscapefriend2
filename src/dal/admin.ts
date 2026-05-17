@@ -179,7 +179,7 @@ export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
 
         let isScheduled = false;
         const freq = s.frequency.toLowerCase();
-        if (freq === "daily") isScheduled = true;
+        if (freq === "daily") isScheduled = false; // Snow is as-needed, not pre-scheduled
         else if (diff === 0) isScheduled = true;
         else if (freq === "weekly") isScheduled = diff % 7 === 0;
         else if (freq === "bi-weekly") isScheduled = diff % 14 === 0;

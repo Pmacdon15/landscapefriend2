@@ -13,7 +13,7 @@ export async function HistorySection({
   const { data: history, totalPages } = await historyPromise;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" id="history-section">
       <h2 className="text-xl font-bold">Service History</h2>
       <Card>
         <CardContent className="p-0">
@@ -23,6 +23,7 @@ export async function HistorySection({
       <PaginationButtons
         pagePromise={pagePromise}
         totalPagesPromise={Promise.resolve(totalPages)}
+        hash="history-section"
       />
     </div>
   );

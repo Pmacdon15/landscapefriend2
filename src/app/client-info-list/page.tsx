@@ -62,17 +62,20 @@ export default async function ClientInfoListPage(
           </div>
         }
       >
-        <ClientInfoContainer
-          isAdminPromise={isAdminPromise}
-          clientsPromise={clientsPromise}
-          membersPromise={membersPromise}
-        />
+        <div id="client-list">
+          <ClientInfoContainer
+            isAdminPromise={isAdminPromise}
+            clientsPromise={clientsPromise}
+            membersPromise={membersPromise}
+          />
+        </div>
       </Suspense>
 
       <Suspense>
         <PaginationButtons
           pagePromise={pagePromise}
           totalPagesPromise={totalPagesPromise}
+          hash="client-list"
         />
       </Suspense>
     </div>

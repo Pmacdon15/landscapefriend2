@@ -108,7 +108,7 @@ export function ScheduleForm({
                   <SelectValue placeholder="Select a cut frequency" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="daily">Daily (Snow/As Needed)</SelectItem>
                   <SelectItem value="weekly">Every Week</SelectItem>
                   <SelectItem value="bi-weekly">Every 2 Weeks</SelectItem>
                   <SelectItem value="monthly">Every Month</SelectItem>
