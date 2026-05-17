@@ -156,16 +156,18 @@ export async function upsertScheduleDb(
   orgId: string,
   frequency: string,
   firstCutDate: string,
+  notes?: string | null,
 ): Promise<ScheduleWithOrgSchema> {
   const results = (await sql`
     WITH upserted_schedule AS (
-      INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date)
-      VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate})
+      INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date, notes)
+      VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate}, ${notes || null})
       ON CONFLICT (address_id)
       DO UPDATE SET
         day_of_week = EXCLUDED.day_of_week,
         frequency = EXCLUDED.frequency,
         first_cut_date = EXCLUDED.first_cut_date,
+        notes = EXCLUDED.notes,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *
     ),
@@ -234,85 +236,6 @@ export async function deleteAssignmentDb(
     DELETE FROM assignments
     WHERE address_id = ${addressId} AND scheduled_date = ${date}
   `;
-}
-
-export async function getMockClientsDb(orgId: string): Promise<{
-  clients: ClientRow[];
-  addresses: AddressRow[];
-  schedules: ScheduleRow[];
-  routeOrders: RouteOrderRow[];
-}> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Normalize to start of day for easier matching
-
-  const clients: ClientRow[] = [];
-  const addresses: AddressRow[] = [];
-  const schedules: ScheduleRow[] = [];
-  const routeOrders: RouteOrderRow[] = [];
-
-  let currentSortOrder = 1000;
-
-  for (let i = 1; i <= 15; i++) {
-    const clientId = `mock-client-${i}`;
-    clients.push({
-      id: clientId,
-      org_id: orgId,
-      name: `Client Name ${i}`,
-      email: `client${i}@example.com`,
-      phone: `555-${String(i).padStart(4, "0")}`,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-
-    // 1-2 addresses per client
-    const numAddresses = i % 3 === 0 ? 2 : 1;
-    for (let j = 1; j <= numAddresses; j++) {
-      const addressId = `mock-address-${i}-${j}`;
-      addresses.push({
-        id: addressId,
-        client_id: clientId,
-        street: `${100 * i + j} Main St`,
-        city: "Anytown",
-        state: "CA",
-        zip: "12345",
-        status: "active",
-        assigned_to: null,
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
-
-      // Assign a schedule
-      const nextCut = new Date(today);
-      // Force the first 10 addresses to be cut today
-      if (addresses.length <= 10) {
-        nextCut.setDate(today.getDate());
-      } else {
-        nextCut.setDate(today.getDate() + ((i + j) % 7) + 1); // Scatter dates a bit
-      }
-
-      schedules.push({
-        id: `mock-schedule-${i}-${j}`,
-        address_id: addressId,
-        day_of_week: nextCut.getDay(),
-        frequency: i % 2 === 0 ? "bi-weekly" : "weekly",
-        first_cut_date: nextCut,
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
-
-      // Assign route order
-      routeOrders.push({
-        address_id: addressId,
-        org_id: orgId,
-        sort_order: currentSortOrder,
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
-      currentSortOrder += 1000;
-    }
-  }
-
-  return { clients, addresses, schedules, routeOrders };
 }
 
 export async function updateRouteOrderDb(
@@ -613,7 +536,8 @@ export async function searchClientsDb(
                   'address_id', s.address_id,
                   'frequency', s.frequency,
                   'day_of_week', s.day_of_week,
-                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'notes', s.notes
                 )
                 FROM schedules s 
                 WHERE s.address_id = a.id
@@ -791,7 +715,8 @@ export async function getClientsForCutListDb(
                 'address_id', s.address_id,
                 'frequency', s.frequency,
                 'day_of_week', s.day_of_week,
-                'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                'notes', s.notes
               ) as schedule,
               COALESCE(
                 (
@@ -970,7 +895,8 @@ export async function getClientsForInfoDb(
                   'address_id', s.address_id,
                   'frequency', s.frequency,
                   'day_of_week', s.day_of_week,
-                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'notes', s.notes
                 )
                 FROM schedules s 
                 WHERE s.address_id = a.id

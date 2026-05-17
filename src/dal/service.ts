@@ -50,6 +50,7 @@ export async function upsertScheduleDal(
   addressId: string,
   frequency: string,
   firstCutDate: string,
+  notes?: string | null,
 ): Promise<Result<ScheduleWithOrgSchema, { reason: string }>> {
   try {
     const { orgId } = await auth.protect();
@@ -67,12 +68,16 @@ export async function upsertScheduleDal(
     const parsedDate = z.string().safeParse(firstCutDate);
     if (!parsedDate.success) return errAsync({ reason: "Invalid date" });
 
+    const parsedNotes = z.string().nullable().optional().safeParse(notes);
+    if (!parsedNotes.success) return errAsync({ reason: "Invalid notes" });
+
     return ResultAsync.fromPromise(
       upsertScheduleDb(
         parsedAddressId.data,
         orgId,
         parsedFrequency.data,
         parsedDate.data,
+        parsedNotes.data,
       ) as Promise<ScheduleWithOrgSchema>,
       () => ({ reason: "Failed to update schedule" }),
     );

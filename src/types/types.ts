@@ -37,6 +37,7 @@ export interface ScheduleRow {
   frequency: string;
   first_cut_date: Date;
   next_cut_date?: Date;
+  notes: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -100,6 +101,7 @@ export type OptimisticAction =
       addressId: string;
       frequency: string;
       firstCutDate: Date;
+      notes?: string | null;
     }
   | { type: "delete-schedule"; addressId: string }
   | { type: "add-client"; client: Client }

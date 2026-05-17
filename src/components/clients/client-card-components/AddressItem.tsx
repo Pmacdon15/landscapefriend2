@@ -182,6 +182,7 @@ export function AddressItem({
                 addressId={address.id}
                 initialFrequency={address.schedule?.frequency}
                 initialDate={toLocalMidnight(address.schedule?.first_cut_date)}
+                initialNotes={address.schedule?.notes}
                 setOptimistic={setOptimistic}
                 onSuccess={() => setIsSchedulePopoverOpen(false)}
               />

@@ -1,7 +1,13 @@
 "use client";
 
 import { Draggable } from "@hello-pangea/dnd";
-import { CheckCircle2, GripVertical, MapPin, Snowflake } from "lucide-react";
+import {
+  CheckCircle2,
+  GripVertical,
+  Info,
+  MapPin,
+  Snowflake,
+} from "lucide-react";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,43 +58,57 @@ export function ServiceListItem({
               </div>
 
               <div className="flex-1 py-4 pr-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex flex-col">
-                      <span className="text-lg font-bold text-slate-900 dark:text-white">
-                        {client.name}
-                      </span>
-                      <span
-                        className={cn(
-                          "text-sm font-medium capitalize flex items-center gap-1.5",
-                          isSnow
-                            ? "text-blue-600 dark:text-blue-400"
-                            : "text-primary",
-                        )}
+                <div className="flex-1 space-y-3">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div className="space-y-2">
+                      <div className="flex flex-col">
+                        <span className="text-lg font-bold text-slate-900 dark:text-white">
+                          {client.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-sm font-medium capitalize flex items-center gap-1.5",
+                            isSnow
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-primary",
+                          )}
+                        >
+                          {isSnow && <Snowflake className="h-3.5 w-3.5" />}
+                          {isSnow
+                            ? "Snow (As Needed)"
+                            : `${address.schedule?.frequency} Service`}
+                        </span>
+                      </div>
+
+                      <a
+                        href={getGoogleMapsUrl(address)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-start gap-2 mt-2 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors group"
                       >
-                        {isSnow && <Snowflake className="h-3.5 w-3.5" />}
-                        {isSnow
-                          ? "Snow (As Needed)"
-                          : `${address.schedule?.frequency} Service`}
-                      </span>
+                        <MapPin className="h-4 w-4 mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
+                        <span className="text-sm leading-tight underline-offset-4 group-hover:underline">
+                          {address.street}
+                          <br />
+                          {address.city}, {address.state} {address.zip}
+                        </span>
+                      </a>
                     </div>
 
-                    <a
-                      href={getGoogleMapsUrl(address)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-start gap-2 mt-2 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors group"
-                    >
-                      <MapPin className="h-4 w-4 mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm leading-tight underline-offset-4 group-hover:underline">
-                        {address.street}
-                        <br />
-                        {address.city}, {address.state} {address.zip}
-                      </span>
-                    </a>
-                    <div className="mt-2">
-                      <SiteMapContainer address={address} isAdmin={isAdmin} />
-                    </div>
+                    {address.schedule?.notes && (
+                      <div className="flex-1 max-w-md bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100/50 dark:border-amber-900/30 rounded-lg p-3 self-center">
+                        <div className="flex items-start gap-2.5">
+                          <Info className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                          <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-medium">
+                            {address.schedule.notes}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <SiteMapContainer address={address} isAdmin={isAdmin} />
                   </div>
                 </div>
 

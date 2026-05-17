@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS schedules (
     day_of_week INTEGER, -- 0 for Sunday, 1 for Monday, etc.
     frequency TEXT NOT NULL, -- 'weekly', 'bi-weekly', 'monthly'
     first_cut_date DATE NOT NULL,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
