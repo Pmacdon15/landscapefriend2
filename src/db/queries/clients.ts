@@ -537,6 +537,25 @@ export async function searchClientsDb(
       SELECT DISTINCT c.*
       FROM clients c
       LEFT JOIN addresses a ON c.id = a.client_id AND a.status != 'deleted'
+      LEFT JOIN schedules s ON a.id = s.address_id
+      LEFT JOIN LATERAL (
+        SELECT CASE
+          WHEN s.frequency = 'weekly' THEN
+            s.first_cut_date + (7 * CEIL(GREATEST(0, (CURRENT_DATE - s.first_cut_date)::int)::numeric / 7))::int * INTERVAL '1 day'
+          WHEN s.frequency = 'bi-weekly' THEN
+            s.first_cut_date + (14 * CEIL(GREATEST(0, (CURRENT_DATE - s.first_cut_date)::int)::numeric / 14))::int * INTERVAL '1 day'
+          WHEN s.frequency = 'monthly' THEN
+            (
+              date_trunc('month', CURRENT_DATE) + 
+              (EXTRACT(DAY FROM s.first_cut_date) - 1) * INTERVAL '1 day' +
+              CASE 
+                WHEN EXTRACT(DAY FROM CURRENT_DATE) > EXTRACT(DAY FROM s.first_cut_date) THEN INTERVAL '1 month' 
+                ELSE INTERVAL '0' 
+              END
+            )::date
+          ELSE NULL
+        END::date AS next_date
+      ) nd ON true
       WHERE c.org_id = ${orgId}
       AND (
         c.name ILIKE ${searchPattern} OR
@@ -545,7 +564,14 @@ export async function searchClientsDb(
         a.street ILIKE ${searchPattern} OR
         a.city ILIKE ${searchPattern} OR
         a.zip ILIKE ${searchPattern} OR
-        (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[]))
+        (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[])) OR
+        (nd.next_date IS NOT NULL AND (
+          to_char(nd.next_date, 'FMMonth') ILIKE ${searchPattern} OR
+          to_char(nd.next_date, 'FMMonth FMDD') ILIKE ${searchPattern} OR
+          to_char(nd.next_date, 'YYYY-MM-DD') ILIKE ${searchPattern} OR
+          to_char(nd.next_date, 'FMMM/FMDD/YYYY') ILIKE ${searchPattern} OR
+          to_char(nd.next_date, 'FMMonth FMDDth') ILIKE ${searchPattern}
+        ))
       )
     )
     SELECT 
@@ -856,6 +882,25 @@ export async function getClientsForInfoDb(
       SELECT DISTINCT c.*
       FROM clients c
       LEFT JOIN addresses a ON c.id = a.client_id AND a.status != 'deleted'
+      LEFT JOIN schedules s ON a.id = s.address_id
+      LEFT JOIN LATERAL (
+        SELECT CASE
+          WHEN s.frequency = 'weekly' THEN
+            s.first_cut_date + (7 * CEIL(GREATEST(0, (CURRENT_DATE - s.first_cut_date)::int)::numeric / 7))::int * INTERVAL '1 day'
+          WHEN s.frequency = 'bi-weekly' THEN
+            s.first_cut_date + (14 * CEIL(GREATEST(0, (CURRENT_DATE - s.first_cut_date)::int)::numeric / 14))::int * INTERVAL '1 day'
+          WHEN s.frequency = 'monthly' THEN
+            (
+              date_trunc('month', CURRENT_DATE) + 
+              (EXTRACT(DAY FROM s.first_cut_date) - 1) * INTERVAL '1 day' +
+              CASE 
+                WHEN EXTRACT(DAY FROM CURRENT_DATE) > EXTRACT(DAY FROM s.first_cut_date) THEN INTERVAL '1 month' 
+                ELSE INTERVAL '0' 
+              END
+            )::date
+          ELSE NULL
+        END::date AS next_date
+      ) nd ON true
       WHERE c.org_id = ${orgId}
       AND (
         ${!clientId}::boolean OR c.id = ${clientId || null}
@@ -868,7 +913,14 @@ export async function getClientsForInfoDb(
         a.street ILIKE ${searchPattern} OR
         a.city ILIKE ${searchPattern} OR
         a.zip ILIKE ${searchPattern} OR
-        (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[]))
+        (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[])) OR
+        (nd.next_date IS NOT NULL AND (
+          to_char(nd.next_date, 'FMMonth') ILIKE ${searchPattern} OR
+          to_char(nd.next_date, 'FMMonth FMDD') ILIKE ${searchPattern} OR
+          to_char(nd.next_date, 'YYYY-MM-DD') ILIKE ${searchPattern} OR
+          to_char(nd.next_date, 'FMMM/FMDD/YYYY') ILIKE ${searchPattern} OR
+          to_char(nd.next_date, 'FMMonth FMDDth') ILIKE ${searchPattern}
+        ))
       )
     ),
     total_count AS (

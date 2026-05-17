@@ -1,5 +1,8 @@
+"use client";
+
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { use } from "react";
 import { buttonVariants } from "./ui/button";
 
@@ -14,14 +17,22 @@ export default function PaginationButtons({
 }) {
   const page = use(pagePromise);
   const totalPages = use(totalPagesPromise);
+  const searchParams = useSearchParams();
+
   const safePage = Math.max(1, Math.min(page, totalPages));
   const hashString = hash ? `#${hash}` : "";
+
+  const createPageUrl = (pageNumber: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", pageNumber.toString());
+    return `?${params.toString()}${hashString}`;
+  };
 
   if (totalPages > 1)
     return (
       <div className="flex items-center justify-center gap-4">
         <Link
-          href={`?page=${safePage - 1}${hashString}`}
+          href={createPageUrl(safePage - 1)}
           className={buttonVariants({
             variant: "outline",
             className: safePage <= 1 ? "pointer-events-none opacity-50" : "",
@@ -35,7 +46,7 @@ export default function PaginationButtons({
           Page {safePage} of {totalPages}
         </span>
         <Link
-          href={`?page=${safePage + 1}${hashString}`}
+          href={createPageUrl(safePage + 1)}
           className={buttonVariants({
             variant: "outline",
             className:
