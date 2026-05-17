@@ -42,7 +42,7 @@ export async function MonthlySection() {
               {data.totalCompleted}
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Total jobs finished since the 1st
+              Total services finished since the 1st
             </p>
           </CardContent>
         </Card>
@@ -59,7 +59,7 @@ export async function MonthlySection() {
               {totalScheduled}
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Jobs still to be completed this month
+              Services still to be completed this month
             </p>
           </CardContent>
         </Card>

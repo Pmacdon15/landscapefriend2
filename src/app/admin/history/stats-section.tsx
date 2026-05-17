@@ -20,7 +20,7 @@ export async function StatsSection() {
         <Card className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
             <CardTitle className="text-sm font-medium text-slate-500">
-              Total Cuts
+              Total Services
             </CardTitle>
             <CheckCircle2 className="h-4 w-4 text-slate-300" />
           </CardHeader>
@@ -29,7 +29,7 @@ export async function StatsSection() {
               {stats.totalCuts}
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Lifetime completed jobs
+              Lifetime completed services
             </p>
           </CardContent>
         </Card>
@@ -37,7 +37,7 @@ export async function StatsSection() {
         <Card className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
             <CardTitle className="text-sm font-medium text-slate-500">
-              Cuts by Service
+              Services by Type
             </CardTitle>
             <ImageIcon className="h-4 w-4 text-slate-300" />
           </CardHeader>
@@ -63,7 +63,7 @@ export async function StatsSection() {
         <Card className="md:col-span-2 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
             <CardTitle className="text-sm font-medium text-slate-500">
-              Cuts per User (Lifetime)
+              Services per User (Lifetime)
             </CardTitle>
             <Users className="h-4 w-4 text-slate-300" />
           </CardHeader>

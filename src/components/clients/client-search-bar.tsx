@@ -56,7 +56,11 @@ export function ClientSearchBar({
 
     if (immediateClients && query) {
       startTransition(() => {
-        setOptimistic({ type: "optimistic-search", clients: immediateClients });
+        // Limit optimistic update to first 6 items to match pagination size
+        setOptimistic({
+          type: "optimistic-search",
+          clients: immediateClients.slice(0, 6),
+        });
       });
     }
 
