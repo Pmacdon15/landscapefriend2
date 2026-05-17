@@ -3,15 +3,10 @@ import { errAsync, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
 import {
   deleteSiteMapDb,
-  getAddressesDb,
-  getCompletedJobsDb,
-  getSchedulesDb,
-  getSiteMapsDb,
   insertSiteMapDb,
   updateSiteMapDb,
 } from "@/db/queries/clients";
-import type { AddressRow, ScheduleRow } from "@/types/types";
-import type { Address, Client, SiteMapWithOrgSchema } from "@/zod/schemas";
+import type { SiteMapWithOrgSchema } from "@/zod/schemas";
 
 export async function saveSiteMapDal(
   addressId: string,

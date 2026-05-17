@@ -156,16 +156,18 @@ export async function upsertScheduleDb(
   orgId: string,
   frequency: string,
   firstCutDate: string,
+  notes?: string | null,
 ): Promise<ScheduleWithOrgSchema> {
   const results = (await sql`
     WITH upserted_schedule AS (
-      INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date)
-      VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate})
+      INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date, notes)
+      VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate}, ${notes || null})
       ON CONFLICT (address_id)
       DO UPDATE SET
         day_of_week = EXCLUDED.day_of_week,
         frequency = EXCLUDED.frequency,
         first_cut_date = EXCLUDED.first_cut_date,
+        notes = EXCLUDED.notes,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *
     ),
@@ -613,7 +615,8 @@ export async function searchClientsDb(
                   'address_id', s.address_id,
                   'frequency', s.frequency,
                   'day_of_week', s.day_of_week,
-                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'notes', s.notes
                 )
                 FROM schedules s 
                 WHERE s.address_id = a.id
@@ -791,7 +794,8 @@ export async function getClientsForCutListDb(
                 'address_id', s.address_id,
                 'frequency', s.frequency,
                 'day_of_week', s.day_of_week,
-                'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                'notes', s.notes
               ) as schedule,
               COALESCE(
                 (
@@ -970,7 +974,8 @@ export async function getClientsForInfoDb(
                   'address_id', s.address_id,
                   'frequency', s.frequency,
                   'day_of_week', s.day_of_week,
-                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'notes', s.notes
                 )
                 FROM schedules s 
                 WHERE s.address_id = a.id

@@ -11,15 +11,18 @@ export function useUpsertSchedule() {
       addressId,
       frequency,
       firstCutDate,
+      notes,
     }: {
       addressId: string;
       frequency: string;
       firstCutDate: string;
+      notes?: string | null;
     }) => {
       const { success, schedule, error } = await upsertScheduleAction(
         addressId,
         frequency,
         firstCutDate,
+        notes,
       );
 
       if (!success || !schedule) {

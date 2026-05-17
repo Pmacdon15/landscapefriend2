@@ -27,6 +27,7 @@ interface ScheduleFormProps {
   addressId: string;
   initialFrequency?: string;
   initialDate?: Date;
+  initialNotes?: string | null;
   setOptimistic?: (action: OptimisticAction) => void;
   onSuccess?: () => void;
 }
@@ -35,6 +36,7 @@ export function ScheduleForm({
   addressId,
   initialFrequency,
   initialDate,
+  initialNotes,
   setOptimistic,
   onSuccess,
 }: ScheduleFormProps) {
@@ -47,6 +49,7 @@ export function ScheduleForm({
     defaultValues: {
       frequency: initialFrequency || "weekly",
       firstCutDate: initialDate || new Date(),
+      notes: initialNotes || "",
     },
     onSubmit: async ({ value }) => {
       if (setOptimistic) {
@@ -59,12 +62,14 @@ export function ScheduleForm({
             addressId,
             frequency: value.frequency,
             firstCutDate: utcMidnight,
+            notes: value.notes,
           });
 
           upsertSchedule({
             addressId,
             frequency: value.frequency,
             firstCutDate: dateStr,
+            notes: value.notes,
           });
         });
       }
@@ -161,6 +166,22 @@ export function ScheduleForm({
                   {field.state.meta.errors.join(", ")}
                 </p>
               ) : null}
+            </div>
+          )}
+        </form.Field>
+
+        <form.Field name="notes">
+          {(field) => (
+            <div className="space-y-2">
+              <Label htmlFor="schedule-notes">Service Notes</Label>
+              <textarea
+                id="schedule-notes"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                placeholder="Gate codes, pet warnings, special instructions..."
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
             </div>
           )}
         </form.Field>

@@ -11,6 +11,7 @@ export const ScheduleSchema = z.object({
   day_of_week: z.number().nullable(),
   frequency: z.string(),
   first_cut_date: z.date(),
+  notes: z.string().nullable().optional(),
   created_at: z.date().optional(),
   updated_at: z.date().optional(),
 });

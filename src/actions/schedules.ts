@@ -7,8 +7,14 @@ export async function upsertScheduleAction(
   addressId: string,
   frequency: string,
   firstCutDate: string,
+  notes?: string | null,
 ) {
-  const result = await upsertScheduleDal(addressId, frequency, firstCutDate);
+  const result = await upsertScheduleDal(
+    addressId,
+    frequency,
+    firstCutDate,
+    notes,
+  );
 
   return result.match(
     (schedule) => {
