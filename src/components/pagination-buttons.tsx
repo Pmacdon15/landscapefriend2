@@ -6,18 +6,22 @@ import { buttonVariants } from "./ui/button";
 export default function PaginationButtons({
   pagePromise,
   totalPagesPromise,
+  hash,
 }: {
   pagePromise: Promise<number>;
   totalPagesPromise: Promise<number>;
+  hash?: string;
 }) {
   const page = use(pagePromise);
   const totalPages = use(totalPagesPromise);
   const safePage = Math.max(1, Math.min(page, totalPages));
+  const hashString = hash ? `#${hash}` : "";
+
   if (totalPages > 1)
     return (
       <div className="flex items-center justify-center gap-4">
         <Link
-          href={`?page=${safePage - 1}`}
+          href={`?page=${safePage - 1}${hashString}`}
           className={buttonVariants({
             variant: "outline",
             className: safePage <= 1 ? "pointer-events-none opacity-50" : "",
@@ -31,7 +35,7 @@ export default function PaginationButtons({
           Page {safePage} of {totalPages}
         </span>
         <Link
-          href={`?page=${safePage + 1}`}
+          href={`?page=${safePage + 1}${hashString}`}
           className={buttonVariants({
             variant: "outline",
             className:
