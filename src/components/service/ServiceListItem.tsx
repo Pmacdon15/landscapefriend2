@@ -1,7 +1,7 @@
 "use client";
 
 import { Draggable } from "@hello-pangea/dnd";
-import { CheckCircle2, GripVertical, MapPin } from "lucide-react";
+import { CheckCircle2, GripVertical, MapPin, Snowflake } from "lucide-react";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +27,7 @@ export function ServiceListItem({
   isAdmin,
 }: ServiceListItemProps) {
   const { client, address } = item;
+  const isSnow = address.schedule?.frequency === "daily";
 
   return (
     <Draggable draggableId={address.id} index={index}>
@@ -57,8 +58,18 @@ export function ServiceListItem({
                       <span className="text-lg font-bold text-slate-900 dark:text-white">
                         {client.name}
                       </span>
-                      <span className="text-sm font-medium text-primary capitalize">
-                        {address.schedule?.frequency} Service
+                      <span
+                        className={cn(
+                          "text-sm font-medium capitalize flex items-center gap-1.5",
+                          isSnow
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-primary",
+                        )}
+                      >
+                        {isSnow && <Snowflake className="h-3.5 w-3.5" />}
+                        {isSnow
+                          ? "Snow (As Needed)"
+                          : `${address.schedule?.frequency} Service`}
                       </span>
                     </div>
 

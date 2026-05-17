@@ -133,6 +133,9 @@ export function ServiceListContent({
     }
 
     startTransition(() => {
+      const isSnow = addr.schedule?.frequency === "daily";
+      const serviceType = isSnow ? "snow" : "grass";
+
       // Optimistically mark as completed
       const newCuts = optimisticCuts.map((item) => {
         if (item.address.id === currentAddrId) {
@@ -144,7 +147,7 @@ export function ServiceListContent({
                 id: "pending",
                 address_id: currentAddrId,
                 org_id: "",
-                service_type: "grass",
+                service_type: serviceType,
                 assigned_to:
                   item.address.assignment?.user_id ||
                   item.address.assigned_to ||
@@ -165,7 +168,7 @@ export function ServiceListContent({
 
       completeJob({
         addressId: currentAddrId,
-        serviceType: "grass",
+        serviceType: serviceType,
         assignedTo: addr.assignment?.user_id || addr.assigned_to || null,
         photoFile: fileToUpload as File,
         capturedAt: timestamp,
@@ -175,9 +178,13 @@ export function ServiceListContent({
     });
   };
 
-  const totalServices = optimisticCuts.length;
+  const totalServices = optimisticCuts.filter(
+    (item) => item.address.schedule?.frequency !== "daily",
+  ).length;
   const completedServices = optimisticCuts.filter(
-    (item) => !!item.address.completed_job,
+    (item) =>
+      !!item.address.completed_job &&
+      item.address.schedule?.frequency !== "daily",
   ).length;
   const remainingServices = totalServices - completedServices;
 
