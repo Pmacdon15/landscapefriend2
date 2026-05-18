@@ -2,27 +2,50 @@
 
 import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, use, useEffect, useOptimistic, useRef, useState } from "react";
 import type { CutListItem } from "@/types/types";
 import { Button } from "../ui/button";
 
 interface ServiceSearchBarProps {
   items: CutListItem[];
   setOptimisticCuts: (action: CutListItem[]) => void;
-  initialValue?: string;
+  searchPromise: Promise<string>;
+  clientIdPromise: Promise<string>;
 }
 
 export function ServiceSearchBar({
   items,
   setOptimisticCuts,
-  initialValue = "",
+  searchPromise,
+  clientIdPromise,
 }: ServiceSearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialSearch = use(searchPromise);
+  const clientId = use(clientIdPromise);
 
-  const [inputValue, setInputValue] = useState(initialValue);
-  const [isFocused, setIsFocused] = useState(false);
+  const getInitialValue = () => {
+    if (clientId) {
+      const selectedItem = items.find((i) => i.client.id === clientId);
+      if (selectedItem) return selectedItem.client.name;
+    }
+    return initialSearch;
+  };
+
+  const [optimisticValue, setOptimisticValue] = useOptimistic(
+    getInitialValue(),
+    (_, newValue: string) => newValue,
+  );
+
+  const [inputValue, setInputValue] = useState(optimisticValue);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setInputValue(getInitialValue());
+    }
+  }, [initialSearch, clientId, items, isFocused]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -37,10 +60,6 @@ export function ServiceSearchBar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    setInputValue(initialValue);
-  }, [initialValue]);
-
   const filteredItems = items.filter(
     (item) =>
       item.client.name.toLowerCase().includes(inputValue.toLowerCase()) ||
@@ -49,28 +68,35 @@ export function ServiceSearchBar({
 
   const handleSelect = (item: CutListItem) => {
     startTransition(() => {
+      setOptimisticValue(item.client.name);
+      setInputValue(item.client.name);
+      
       // Optimistically filter to only this client's addresses
       const filteredCuts = items.filter((c) => c.client.id === item.client.id);
       setOptimisticCuts(filteredCuts);
 
       const params = new URLSearchParams(searchParams);
-      params.delete("search"); // Clear normal search when using precise ID
+      params.delete("search");
       params.set("clientId", item.client.id);
       router.push(`/clients-service?${params.toString()}`);
     });
-    setInputValue(item.client.name);
     setIsFocused(false);
   };
 
   const handleSearch = (query: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("clientId"); // Clear precise ID on normal search
-    if (query) {
-      params.set("search", query);
-    } else {
-      params.delete("search");
-    }
-    router.push(`/clients-service?${params.toString()}`);
+    startTransition(() => {
+      setOptimisticValue(query);
+      setInputValue(query);
+      
+      const params = new URLSearchParams(searchParams);
+      params.delete("clientId");
+      if (query) {
+        params.set("search", query);
+      } else {
+        params.delete("search");
+      }
+      router.push(`/clients-service?${params.toString()}`);
+    });
     setIsFocused(false);
   };
 
@@ -80,8 +106,11 @@ export function ServiceSearchBar({
         <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
         <input
           type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          value={isFocused ? inputValue : optimisticValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setIsFocused(true);
+          }}
           onFocus={() => setIsFocused(true)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -96,13 +125,14 @@ export function ServiceSearchBar({
           placeholder="Search this route..."
           className="flex h-10 w-full rounded-md border border-input bg-background px-9 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         />
-        {inputValue && (
+        {(isFocused ? inputValue : optimisticValue) && (
           <Button
             variant="ghost"
             size="icon"
             className="absolute right-1 h-8 w-8"
             onClick={() => {
               setInputValue("");
+              setIsFocused(true);
               handleSearch("");
             }}
           >

@@ -36,6 +36,14 @@ export default async function ClientInfoListPage(
     Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
   );
 
+  const searchPromise = props.searchParams.then((p) =>
+    String((Array.isArray(p.search) ? p.search[0] : p.search) ?? ""),
+  );
+
+  const clientIdPromise = props.searchParams.then((p) =>
+    String((Array.isArray(p.clientId) ? p.clientId[0] : p.clientId) ?? ""),
+  );
+
   const totalPagesPromise = props.searchParams.then((params) =>
     getClientsForInfoDal(
       Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
@@ -67,6 +75,8 @@ export default async function ClientInfoListPage(
             isAdminPromise={isAdminPromise}
             clientsPromise={clientsPromise}
             membersPromise={membersPromise}
+            searchPromise={searchPromise}
+            clientIdPromise={clientIdPromise}
           />
         </div>
       </Suspense>
