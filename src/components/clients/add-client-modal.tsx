@@ -2,6 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +43,7 @@ export function AddClientModal({
   members,
   setOptimistic,
 }: AddClientModalProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { mutate: createClient, isPending } = useCreateClient();
 
@@ -96,7 +98,31 @@ export function AddClientModal({
           // setOpen(false);
           // form.reset();
           setOptimistic({ type: "add-client", client: optimisticClient });
-          createClient({
+          createClient(
+            {
+              name: value.name,
+              email: value.email || null,
+              phone: value.phone || null,
+              addresses: value.addresses.map((addr: AddressFormValue) => ({
+                street: addr.street,
+                city: addr.city,
+                state: addr.state || null,
+                zip: addr.zip || null,
+                assigned_to:
+                  addr.assigned_to === "unassigned" ? null : addr.assigned_to,
+                status: "active" as const,
+              })),
+            },
+            {
+              onSuccess: (newClient) => {
+                router.push(`/client-info-list?clientId=${newClient.id}`);
+              },
+            },
+          );
+        });
+      } else {
+        createClient(
+          {
             name: value.name,
             email: value.email || null,
             phone: value.phone || null,
@@ -109,23 +135,13 @@ export function AddClientModal({
                 addr.assigned_to === "unassigned" ? null : addr.assigned_to,
               status: "active" as const,
             })),
-          });
-        });
-      } else {
-        createClient({
-          name: value.name,
-          email: value.email || null,
-          phone: value.phone || null,
-          addresses: value.addresses.map((addr: AddressFormValue) => ({
-            street: addr.street,
-            city: addr.city,
-            state: addr.state || null,
-            zip: addr.zip || null,
-            assigned_to:
-              addr.assigned_to === "unassigned" ? null : addr.assigned_to,
-            status: "active" as const,
-          })),
-        });
+          },
+          {
+            onSuccess: (newClient) => {
+              router.push(`/client-info-list?clientId=${newClient.id}`);
+            },
+          },
+        );
         setOpen(false);
       }
     },
