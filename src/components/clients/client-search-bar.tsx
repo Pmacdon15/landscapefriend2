@@ -4,20 +4,40 @@ import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, use, useEffect, useOptimistic, useRef, useState } from "react";
 import type { Client, OptimisticAction } from "@/types/types";
 import { Button } from "../ui/button";
 
 export function ClientSearchBar({
   setOptimistic,
+  searchPromise,
+  clientIdPromise,
+  initialClients = [],
 }: {
   setOptimistic: (action: OptimisticAction) => void;
+  searchPromise?: Promise<string>;
+  clientIdPromise?: Promise<string>;
+  initialClients?: Client[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialSearch = searchParams.get("search") || "";
+  const initialSearch = use(searchPromise || Promise.resolve(""));
+  const clientId = use(clientIdPromise || Promise.resolve(""));
 
-  const [inputValue, setInputValue] = useState(initialSearch);
+  const getInitialValue = () => {
+    if (clientId) {
+      let selectedClient = initialClients.find((c) => c.id === clientId);
+      if (selectedClient) return selectedClient.name;
+    }
+    return initialSearch;
+  };
+
+  const [optimisticValue, setOptimisticValue] = useOptimistic(
+    getInitialValue(),
+    (_, newValue: string) => newValue,
+  );
+
+  const [inputValue, setInputValue] = useState(optimisticValue);
   const [isFocused, setIsFocused] = useState(false);
   const [debouncedValue] = useDebouncedValue(inputValue, { wait: 300 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -38,6 +58,12 @@ export function ClientSearchBar({
   const clients = data?.clients || [];
 
   useEffect(() => {
+    if (!isFocused) {
+      setInputValue(getInitialValue());
+    }
+  }, [initialSearch, clientId, initialClients, isFocused]);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         containerRef.current &&
@@ -51,40 +77,45 @@ export function ClientSearchBar({
   }, []);
 
   const handleSearch = (query: string, immediateClients?: Client[]) => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("clientId");
+    startTransition(() => {
+      setOptimisticValue(query);
+      setInputValue(query);
 
-    if (immediateClients && query) {
-      startTransition(() => {
+      const params = new URLSearchParams(searchParams);
+      params.delete("clientId");
+
+      if (immediateClients && query) {
         // Limit optimistic update to first 6 items to match pagination size
         setOptimistic({
           type: "optimistic-search",
           clients: immediateClients.slice(0, 6),
         });
-      });
-    }
+      }
 
-    if (query) {
-      params.set("search", query);
-      params.set("page", "1");
-    } else {
-      params.delete("search");
-      params.delete("page");
-    }
-    router.push(`?${params.toString()}`);
+      if (query) {
+        params.set("search", query);
+        params.set("page", "1");
+      } else {
+        params.delete("search");
+        params.delete("page");
+      }
+      router.push(`?${params.toString()}`);
+    });
     setIsFocused(false);
   };
 
   const handleSelectClient = (client: Client) => {
     startTransition(() => {
+      setOptimisticValue(client.name);
+      setInputValue(client.name);
       setOptimistic({ type: "optimistic-search", clients: [client] });
-    });
 
-    const params = new URLSearchParams(searchParams);
-    params.delete("search");
-    params.set("clientId", client.id);
-    params.set("page", "1");
-    router.push(`?${params.toString()}`);
+      const params = new URLSearchParams(searchParams);
+      params.delete("search");
+      params.set("clientId", client.id);
+      params.set("page", "1");
+      router.push(`?${params.toString()}`);
+    });
     setIsFocused(false);
   };
 
@@ -94,8 +125,11 @@ export function ClientSearchBar({
         <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
         <input
           type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          value={isFocused ? inputValue : optimisticValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setIsFocused(true);
+          }}
           onFocus={() => setIsFocused(true)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -106,13 +140,14 @@ export function ClientSearchBar({
           placeholder="Search clients..."
           className="flex h-10 w-full rounded-md border border-input bg-background px-9 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         />
-        {inputValue && (
+        {(isFocused ? inputValue : optimisticValue) && (
           <Button
             variant="ghost"
             size="icon"
             className="absolute right-1 h-8 w-8"
             onClick={() => {
               setInputValue("");
+              setIsFocused(true);
               handleSearch("");
             }}
           >

@@ -1,5 +1,5 @@
 "use client";
-import { use, useOptimistic } from "react";
+import { Suspense, use, useOptimistic } from "react";
 import type { Client, OptimisticAction, Schedule } from "@/types/types";
 import { AddClientModal } from "../add-client-modal";
 import { ClientCard } from "../client-card";
@@ -9,10 +9,14 @@ export default function ClientInfoContainer({
   clientsPromise,
   membersPromise,
   isAdminPromise,
+  searchPromise,
+  clientIdPromise,
 }: {
   clientsPromise: Promise<Client[]>;
   membersPromise: Promise<{ id: string; name: string }[]>;
   isAdminPromise: Promise<boolean>;
+  searchPromise: Promise<string>;
+  clientIdPromise: Promise<string>;
 }) {
   const initialClients = use(clientsPromise);
   const members = use(membersPromise);
@@ -80,7 +84,14 @@ export default function ClientInfoContainer({
   return (
     <div className="w-full flex flex-col md:p-4 gap-4">
       <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
-        <ClientSearchBar setOptimistic={setOptimistic} />
+        <Suspense>
+          <ClientSearchBar
+            setOptimistic={setOptimistic}
+            searchPromise={searchPromise}
+            clientIdPromise={clientIdPromise}
+            initialClients={optimisticClients}
+          />
+        </Suspense>
         <div className="ml-auto">
           <AddClientModal members={members} setOptimistic={setOptimistic} />
         </div>

@@ -4,7 +4,7 @@ import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd";
 import imageCompression from "browser-image-compression";
 import { parseISO } from "date-fns";
 import { useSearchParams } from "next/navigation";
-import { startTransition, use, useOptimistic, useState } from "react";
+import { startTransition, Suspense, use, useOptimistic, useState } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
@@ -23,6 +23,7 @@ interface ServiceListContentProps {
   datePromise: Promise<string | null>;
   userIdPromise: Promise<string>;
   searchPromise: Promise<string>;
+  clientIdPromise: Promise<string>;
   membersPromise: Promise<{ id: string; name: string }[]>;
   currentUserIdPromise: Promise<string>;
 }
@@ -33,10 +34,10 @@ export function ServiceListContent({
   datePromise,
   userIdPromise,
   searchPromise,
+  clientIdPromise,
   membersPromise,
   currentUserIdPromise,
-}: ServiceListContentProps) {
-  const _searchParams = useSearchParams();
+}: ServiceListContentProps) {  
 
   const { mutate: updateRouteOrder } = useUpdateRouteOrder();
   const { mutate: completeJob, isPending: isCompleting } = useCompleteJob();
@@ -51,7 +52,6 @@ export function ServiceListContent({
   let defaultDate = use(datePromise);
   const initialClients = use(clientsPromise);
   const currentFilterUserId = use(userIdPromise);
-  const initialSearch = use(searchPromise);
   const members = use(membersPromise);
   if (defaultDate === null)
     defaultDate = new Date().toLocaleDateString("en-CA");
@@ -202,11 +202,14 @@ export function ServiceListContent({
           remaining: remainingServices,
         }}
         searchComponent={
-          <ServiceSearchBar
-            items={flatCuts}
-            setOptimisticCuts={setOptimisticCuts}
-            initialValue={initialSearch}
-          />
+          <Suspense>
+            <ServiceSearchBar
+              items={optimisticCuts}
+              setOptimisticCuts={setOptimisticCuts}
+              searchPromise={searchPromise}
+              clientIdPromise={clientIdPromise}
+            />
+          </Suspense>
         }
       />
 

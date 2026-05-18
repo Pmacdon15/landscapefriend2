@@ -40,6 +40,10 @@ export default async function ClientsServicePage(
     String((Array.isArray(p.search) ? p.search[0] : p.search) ?? ""),
   );
 
+  const clientIdPromise = props.searchParams.then((p) =>
+    String((Array.isArray(p.clientId) ? p.clientId[0] : p.clientId) ?? ""),
+  );
+
   const membersPromise = getOrganizationMembersDal();
 
   const isAdminPromise = auth
@@ -71,6 +75,7 @@ export default async function ClientsServicePage(
           datePromise={datePromise}
           userIdPromise={userIdPromise}
           searchPromise={searchPromise}
+          clientIdPromise={clientIdPromise}
           membersPromise={membersPromise}
         />
       </Suspense>
