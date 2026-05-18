@@ -16,9 +16,6 @@ export function ClientSearchBar({
     action: OptimisticAction | { type: "update-search"; value: string },
   ) => void;
   optimisticValue: string;
-  // searchPromise?: Promise<string>;
-  // clientIdPromise?: Promise<string>;
-  // initialClients?: Client[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,22 +60,19 @@ export function ClientSearchBar({
   }, []);
 
   const handleSearch = (query: string, immediateClients?: Client[]) => {
-    startTransition(() => {
-      setOptimistic({ type: "update-search", value: query });
-    });
-    setInputValue(query);
-
     const params = new URLSearchParams(searchParams);
     params.delete("clientId");
+    setInputValue(query);
+    startTransition(() => {
+      setOptimistic({ type: "update-search", value: query });
 
-    if (immediateClients && query) {
-      startTransition(() => {
+      if (immediateClients && query) {
         setOptimistic({
           type: "optimistic-search",
           clients: immediateClients.slice(0, 6),
         });
-      });
-    }
+      }
+    });
 
     if (query) {
       params.set("search", query);

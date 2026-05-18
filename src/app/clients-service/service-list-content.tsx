@@ -3,8 +3,7 @@
 import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd";
 import imageCompression from "browser-image-compression";
 import { parseISO } from "date-fns";
-import { useSearchParams } from "next/navigation";
-import { startTransition, Suspense, use, useOptimistic, useState } from "react";
+import { Suspense, startTransition, use, useOptimistic, useState } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
@@ -14,7 +13,7 @@ import { CameraCapture } from "@/components/ui/camera-capture";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCompleteJob } from "@/mutations/jobs";
 import { useUpdateRouteOrder } from "@/mutations/routes";
-import type { CutListItem } from "@/types/types";
+import type { CutListItem, OptimisticServiceAction } from "@/types/types";
 import type { Client, SiteMap } from "@/zod/schemas";
 
 interface ServiceListContentProps {
@@ -37,8 +36,7 @@ export function ServiceListContent({
   clientIdPromise,
   membersPromise,
   currentUserIdPromise,
-}: ServiceListContentProps) {  
-
+}: ServiceListContentProps) {
   const { mutate: updateRouteOrder } = useUpdateRouteOrder();
   const { mutate: completeJob, isPending: isCompleting } = useCompleteJob();
 
@@ -51,8 +49,11 @@ export function ServiceListContent({
   const isAdmin = use(isAdminPromise);
   let defaultDate = use(datePromise);
   const initialClients = use(clientsPromise);
+  const initialSearch = use(searchPromise);
+  const initialClientId = use(clientIdPromise);
   const currentFilterUserId = use(userIdPromise);
   const members = use(membersPromise);
+
   if (defaultDate === null)
     defaultDate = new Date().toLocaleDateString("en-CA");
 
@@ -66,9 +67,63 @@ export function ServiceListContent({
     })),
   );
 
-  const [optimisticCuts, setOptimisticCuts] = useOptimistic(
-    flatCuts,
-    (_, newCuts: CutListItem[]) => newCuts,
+  const getInitialSearchValue = () => {
+    if (initialClientId) {
+      const selectedItem = flatCuts.find(
+        (i) => i.client.id === initialClientId,
+      );
+      if (selectedItem) return selectedItem.client.name;
+    }
+    return initialSearch;
+  };
+
+  const [optimisticState, dispatch] = useOptimistic(
+    { cuts: flatCuts, searchValue: getInitialSearchValue() },
+    (state, action: OptimisticServiceAction) => {
+      switch (action.type) {
+        case "reorder":
+          return { ...state, cuts: action.cuts };
+        case "complete":
+          return {
+            ...state,
+            cuts: state.cuts.map((item) => {
+              if (item.address.id === action.addressId) {
+                return {
+                  ...item,
+                  address: {
+                    ...item.address,
+                    completed_job: {
+                      id: "pending",
+                      address_id: action.addressId,
+                      org_id: "",
+                      service_type: action.serviceType,
+                      assigned_to:
+                        item.address.assignment?.user_id ||
+                        item.address.assigned_to ||
+                        null,
+                      completed_by: action.currentUserId,
+                      completed_at: action.timestamp,
+                      scheduled_date: action.scheduledDate,
+                      notes: null,
+                      created_at: new Date(),
+                      updated_at: new Date(),
+                    },
+                  },
+                } as CutListItem;
+              }
+              return item;
+            }),
+          };
+        case "update-search":
+          return { ...state, searchValue: action.value };
+        case "optimistic-filter":
+          return { ...state, cuts: action.cuts };
+        case "select-client":
+          return { ...state, searchValue: action.value, cuts: action.cuts };
+        default:
+          return state;
+      }
+    },
   );
 
   const parsedDefaultDate = parseISO(defaultDate);
@@ -82,7 +137,7 @@ export function ServiceListContent({
     const destIndex = result.destination.index;
     if (sourceIndex === destIndex) return;
 
-    const newCuts = Array.from(optimisticCuts);
+    const newCuts = Array.from(optimisticState.cuts);
     const [moved] = newCuts.splice(sourceIndex, 1);
     newCuts.splice(destIndex, 0, moved);
 
@@ -103,14 +158,14 @@ export function ServiceListContent({
 
     moved.address.sort_order = newSortOrder;
     startTransition(() => {
-      setOptimisticCuts(newCuts);
+      dispatch({ type: "reorder", cuts: newCuts });
       updateRouteOrder({ addressId: moved.address.id, newSortOrder });
     });
   };
 
   const onPhotoCapture = async (file: File, timestamp: Date) => {
     const currentAddrId = completingAddressId;
-    const addr = optimisticCuts.find(
+    const addr = optimisticState.cuts.find(
       (c) => c.address.id === currentAddrId,
     )?.address;
 
@@ -136,35 +191,14 @@ export function ServiceListContent({
       const isSnow = addr.schedule?.frequency === "daily";
       const serviceType = isSnow ? "snow" : "grass";
 
-      // Optimistically mark as completed
-      const newCuts = optimisticCuts.map((item) => {
-        if (item.address.id === currentAddrId) {
-          return {
-            ...item,
-            address: {
-              ...item.address,
-              completed_job: {
-                id: "pending",
-                address_id: currentAddrId,
-                org_id: "",
-                service_type: serviceType,
-                assigned_to:
-                  item.address.assignment?.user_id ||
-                  item.address.assigned_to ||
-                  null,
-                completed_by: currentUserId,
-                completed_at: timestamp,
-                scheduled_date: date,
-                notes: null,
-                created_at: new Date(),
-                updated_at: new Date(),
-              },
-            },
-          } as CutListItem;
-        }
-        return item;
+      dispatch({
+        type: "complete",
+        addressId: currentAddrId,
+        timestamp,
+        currentUserId: currentUserId ?? "",
+        serviceType,
+        scheduledDate: date,
       });
-      setOptimisticCuts(newCuts);
 
       completeJob({
         addressId: currentAddrId,
@@ -178,10 +212,10 @@ export function ServiceListContent({
     });
   };
 
-  const totalServices = optimisticCuts.filter(
+  const totalServices = optimisticState.cuts.filter(
     (item) => item.address.schedule?.frequency !== "daily",
   ).length;
-  const completedServices = optimisticCuts.filter(
+  const completedServices = optimisticState.cuts.filter(
     (item) =>
       !!item.address.completed_job &&
       item.address.schedule?.frequency !== "daily",
@@ -204,17 +238,16 @@ export function ServiceListContent({
         searchComponent={
           <Suspense>
             <ServiceSearchBar
-              items={optimisticCuts}
-              setOptimisticCuts={setOptimisticCuts}
-              searchPromise={searchPromise}
-              clientIdPromise={clientIdPromise}
+              items={optimisticState.cuts}
+              optimisticValue={optimisticState.searchValue}
+              setOptimistic={dispatch}
             />
           </Suspense>
         }
       />
 
       <div className="max-w-4xl mx-auto">
-        {optimisticCuts.length > 0 ? (
+        {optimisticState.cuts.length > 0 ? (
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="cut-list-droppable">
               {(provided) => (
@@ -223,7 +256,7 @@ export function ServiceListContent({
                   ref={provided.innerRef}
                   className="space-y-4"
                 >
-                  {optimisticCuts.map((item, index) => (
+                  {optimisticState.cuts.map((item, index) => (
                     <div
                       key={item.address.id}
                       id={`address-${item.address.id}`}

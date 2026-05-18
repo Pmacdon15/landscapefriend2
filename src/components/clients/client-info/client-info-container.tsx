@@ -57,15 +57,16 @@ export default function ClientInfoContainer({
               c.id === action.client.id ? action.client : c,
             ),
           };
-        case "delete-client":
+        case "delete-client": {
+          const remainingClients = state.clients.filter(
+            (c) => c.id !== action.clientId,
+          );
           return {
             ...state,
-            clients: state.clients.filter((c) => c.id !== action.clientId),
-            searchValue:
-              state.clients.length === 1 && state.clients[0].id === action.clientId
-                ? ""
-                : state.searchValue,
+            clients: remainingClients,
+            searchValue: remainingClients.length === 0 ? "" : state.searchValue,
           };
+        }
         case "update-assignee":
         case "update-schedule":
         case "delete-schedule":
@@ -130,8 +131,8 @@ export default function ClientInfoContainer({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 mb-10">
         {optimisticState.clients.map((client: Client) => (
           <ClientCard
-            isAdmin={isAdmin}
             key={client.id}
+            isAdmin={isAdmin}
             client={client}
             members={members}
             setOptimistic={setOptimistic}
