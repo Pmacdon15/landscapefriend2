@@ -1,10 +1,14 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import { startTransition, useEffect, useRef, useState } from "react";
-import type { Client, CutListItem, OptimisticServiceAction } from "@/types/types";
+import type {
+  Client,
+  CutListItem,
+  OptimisticServiceAction,
+} from "@/types/types";
 import { Button } from "../ui/button";
 
 interface ServiceSearchBarProps {

@@ -142,7 +142,12 @@ export interface ClientCardHeaderProps {
   setOptimistic: (action: OptimisticAction) => void;
   clientIdPromise: Promise<string>;
   searchPromise: Promise<string>;
-  isLastClient:boolean
+  isLastClient: boolean;
+}
+
+export interface ClientCardContactProps {
+  email?: string | null;
+  phone?: string | null;
 }
 
 export interface CutListItem {

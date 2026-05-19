@@ -1,8 +1,8 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Trash } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { startTransition, use, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useDeleteClient } from "@/mutations/clients";
-import type { ClientCardHeaderProps } from "@/types/types";
+import type { Client, ClientCardHeaderProps } from "@/types/types";
 
 export function ClientCardHeader({
   client,
@@ -33,7 +33,7 @@ export function ClientCardHeader({
   const { mutate: deleteClient } = useDeleteClient();
 
   const currentClientId = use(clientIdPromise);
-  const currentSearch = use(searchPromise);
+  const _currentSearch = use(searchPromise);
   const queryClient = useQueryClient();
 
   return (
@@ -82,9 +82,11 @@ export function ClientCardHeader({
                   variant="destructive"
                   onClick={() => {
                     startTransition(() => {
-                      let defaultClients: any = undefined;
+                      let defaultClients: Client[] | undefined;
                       if (isLastClient) {
-                        const defaultData = queryClient.getQueryData<{ clients: any[] }>(["client-search", ""]);
+                        const defaultData = queryClient.getQueryData<{
+                          clients: Client[];
+                        }>(["client-search", ""]);
                         defaultClients = defaultData?.clients;
                       }
 
