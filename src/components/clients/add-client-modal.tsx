@@ -2,6 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +27,7 @@ import type { Address, Client, OptimisticAction } from "@/types/types";
 
 interface AddClientModalProps {
   members: { id: string; name: string }[];
-  setOptimistic?: (action: OptimisticAction) => void;
+  setOptimistic: (action: OptimisticAction) => void;
 }
 
 interface AddressFormValue {
@@ -42,6 +43,7 @@ export function AddClientModal({
   members,
   setOptimistic,
 }: AddClientModalProps) {
+  const _router = useRouter();
   const [open, setOpen] = useState(false);
   const { mutate: createClient, isPending } = useCreateClient();
 
@@ -93,8 +95,6 @@ export function AddClientModal({
         setOpen(false);
         form.reset();
         startTransition(() => {
-          // setOpen(false);
-          // form.reset();
           setOptimistic({ type: "add-client", client: optimisticClient });
           createClient({
             name: value.name,
@@ -111,22 +111,6 @@ export function AddClientModal({
             })),
           });
         });
-      } else {
-        createClient({
-          name: value.name,
-          email: value.email || null,
-          phone: value.phone || null,
-          addresses: value.addresses.map((addr: AddressFormValue) => ({
-            street: addr.street,
-            city: addr.city,
-            state: addr.state || null,
-            zip: addr.zip || null,
-            assigned_to:
-              addr.assigned_to === "unassigned" ? null : addr.assigned_to,
-            status: "active" as const,
-          })),
-        });
-        setOpen(false);
       }
     },
   });

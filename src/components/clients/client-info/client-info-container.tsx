@@ -21,60 +21,94 @@ export default function ClientInfoContainer({
   const initialClients = use(clientsPromise);
   const members = use(membersPromise);
   const isAdmin = use(isAdminPromise);
+  const initialSearchValue = use(searchPromise);
+  const initialClientId = use(clientIdPromise);
 
-  const [optimisticClients, setOptimistic] = useOptimistic(
-    initialClients,
-    (state: Client[], action: OptimisticAction) => {
+  const getInitialSearchValue = () => {
+    if (initialClientId) {
+      const selectedClient = initialClients.find(
+        (c) => c.id === initialClientId,
+      );
+      if (selectedClient) return selectedClient.name;
+    }
+    return initialSearchValue;
+  };
+
+  const [optimisticState, setOptimistic] = useOptimistic(
+    { clients: initialClients, searchValue: getInitialSearchValue() },
+    (
+      state,
+      action: OptimisticAction | { type: "update-search"; value: string },
+    ) => {
       switch (action.type) {
         case "optimistic-search":
-          return action.clients;
+          return { ...state, clients: action.clients };
+        case "update-search":
+          return { ...state, searchValue: action.value };
         case "add-client":
-          return [action.client, ...state];
+          return {
+            clients: [action.client],
+            searchValue: action.client.name,
+          };
         case "edit-client":
-          return state.map((c) =>
-            c.id === action.client.id ? action.client : c,
+          return {
+            ...state,
+            clients: state.clients.map((c) =>
+              c.id === action.client.id ? action.client : c,
+            ),
+          };
+        case "delete-client": {
+          const remainingClients = state.clients.filter(
+            (c) => c.id !== action.clientId,
           );
-        case "delete-client":
-          return state.filter((c) => c.id !== action.clientId);
+          return {
+            ...state,
+            clients: remainingClients,
+            searchValue: remainingClients.length === 0 ? "" : state.searchValue,
+          };
+        }
         case "update-assignee":
         case "update-schedule":
         case "delete-schedule":
-          return state.map((client) => {
-            if (!client.addresses) return client;
+          return {
+            ...state,
+            clients: state.clients.map((client) => {
+              if (!client.addresses) return client;
 
-            const hasTargetAddress = client.addresses.some(
-              (a) => a.id === action.addressId,
-            );
-            if (!hasTargetAddress) return client;
+              const hasTargetAddress = client.addresses.some(
+                (a) => a.id === action.addressId,
+              );
+              if (!hasTargetAddress) return client;
 
-            return {
-              ...client,
-              addresses: client.addresses.map((address) => {
-                if (address.id !== action.addressId) return address;
+              return {
+                ...client,
+                addresses: client.addresses.map((address) => {
+                  if (address.id !== action.addressId) return address;
 
-                if (action.type === "update-assignee") {
-                  return { ...address, assigned_to: action.userId };
-                }
+                  if (action.type === "update-assignee") {
+                    return { ...address, assigned_to: action.userId };
+                  }
 
-                if (action.type === "update-schedule") {
-                  const newSchedule: Schedule = {
-                    id: address.schedule?.id || crypto.randomUUID(),
-                    address_id: address.id,
-                    frequency: action.frequency,
-                    first_cut_date: action.firstCutDate,
-                    day_of_week: action.firstCutDate.getDay(),
-                  };
-                  return { ...address, schedule: newSchedule };
-                }
+                  if (action.type === "update-schedule") {
+                    const newSchedule: Schedule = {
+                      id: address.schedule?.id || crypto.randomUUID(),
+                      address_id: address.id,
+                      frequency: action.frequency,
+                      first_cut_date: action.firstCutDate,
+                      day_of_week: action.firstCutDate.getDay(),
+                    };
+                    return { ...address, schedule: newSchedule };
+                  }
 
-                if (action.type === "delete-schedule") {
-                  return { ...address, schedule: null };
-                }
+                  if (action.type === "delete-schedule") {
+                    return { ...address, schedule: null };
+                  }
 
-                return address;
-              }),
-            };
-          });
+                  return address;
+                }),
+              };
+            }),
+          };
         default:
           return state;
       }
@@ -87,9 +121,7 @@ export default function ClientInfoContainer({
         <Suspense>
           <ClientSearchBar
             setOptimistic={setOptimistic}
-            searchPromise={searchPromise}
-            clientIdPromise={clientIdPromise}
-            initialClients={optimisticClients}
+            optimisticValue={optimisticState.searchValue}
           />
         </Suspense>
         <div className="ml-auto">
@@ -97,17 +129,17 @@ export default function ClientInfoContainer({
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 mb-10">
-        {optimisticClients.map((client: Client) => (
+        {optimisticState.clients.map((client: Client) => (
           <ClientCard
-            isAdmin={isAdmin}
             key={client.id}
+            isAdmin={isAdmin}
             client={client}
             members={members}
             setOptimistic={setOptimistic}
           />
         ))}
 
-        {optimisticClients.length === 0 && (
+        {optimisticState.clients.length === 0 && (
           <div className="col-span-full text-center py-20 bg-white/50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-800">
             <h3 className="text-xl font-semibold mb-2">No clients found</h3>
             <p className="text-muted-foreground">

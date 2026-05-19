@@ -4,38 +4,21 @@ import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, use, useEffect, useOptimistic, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import type { Client, OptimisticAction } from "@/types/types";
 import { Button } from "../ui/button";
 
 export function ClientSearchBar({
   setOptimistic,
-  searchPromise,
-  clientIdPromise,
-  initialClients = [],
+  optimisticValue,
 }: {
-  setOptimistic: (action: OptimisticAction) => void;
-  searchPromise?: Promise<string>;
-  clientIdPromise?: Promise<string>;
-  initialClients?: Client[];
+  setOptimistic: (
+    action: OptimisticAction | { type: "update-search"; value: string },
+  ) => void;
+  optimisticValue: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialSearch = use(searchPromise || Promise.resolve(""));
-  const clientId = use(clientIdPromise || Promise.resolve(""));
-
-  const getInitialValue = () => {
-    if (clientId) {
-      let selectedClient = initialClients.find((c) => c.id === clientId);
-      if (selectedClient) return selectedClient.name;
-    }
-    return initialSearch;
-  };
-
-  const [optimisticValue, setOptimisticValue] = useOptimistic(
-    getInitialValue(),
-    (_, newValue: string) => newValue,
-  );
 
   const [inputValue, setInputValue] = useState(optimisticValue);
   const [isFocused, setIsFocused] = useState(false);
@@ -59,9 +42,9 @@ export function ClientSearchBar({
 
   useEffect(() => {
     if (!isFocused) {
-      setInputValue(getInitialValue());
+      setInputValue(optimisticValue);
     }
-  }, [initialSearch, clientId, initialClients, isFocused]);
+  }, [optimisticValue, isFocused]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -77,45 +60,44 @@ export function ClientSearchBar({
   }, []);
 
   const handleSearch = (query: string, immediateClients?: Client[]) => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("clientId");
+    setInputValue(query);
     startTransition(() => {
-      setOptimisticValue(query);
-      setInputValue(query);
-
-      const params = new URLSearchParams(searchParams);
-      params.delete("clientId");
+      setOptimistic({ type: "update-search", value: query });
 
       if (immediateClients && query) {
-        // Limit optimistic update to first 6 items to match pagination size
         setOptimistic({
           type: "optimistic-search",
           clients: immediateClients.slice(0, 6),
         });
       }
-
-      if (query) {
-        params.set("search", query);
-        params.set("page", "1");
-      } else {
-        params.delete("search");
-        params.delete("page");
-      }
-      router.push(`?${params.toString()}`);
     });
+
+    if (query) {
+      params.set("search", query);
+      params.set("page", "1");
+    } else {
+      params.delete("search");
+      params.delete("page");
+    }
+    router.push(`?${params.toString()}`);
     setIsFocused(false);
   };
 
   const handleSelectClient = (client: Client) => {
     startTransition(() => {
-      setOptimisticValue(client.name);
+      setOptimistic({ type: "update-search", value: client.name });
+
       setInputValue(client.name);
       setOptimistic({ type: "optimistic-search", clients: [client] });
-
-      const params = new URLSearchParams(searchParams);
-      params.delete("search");
-      params.set("clientId", client.id);
-      params.set("page", "1");
-      router.push(`?${params.toString()}`);
     });
+
+    const params = new URLSearchParams(searchParams);
+    params.delete("search");
+    params.set("clientId", client.id);
+    params.set("page", "1");
+    router.push(`?${params.toString()}`);
     setIsFocused(false);
   };
 

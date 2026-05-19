@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   createClientAction,
@@ -14,6 +15,7 @@ import {
 import type { CreateClientInput } from "@/zod/schemas";
 
 export function useCreateClient() {
+  const router = useRouter();
   return useMutation({
     mutationFn: async (data: CreateClientInput) => {
       const { success, client, error } = await createClientAction(data);
@@ -25,6 +27,7 @@ export function useCreateClient() {
     },
     onSuccess: (client) => {
       toast.success(`${client.name} created`);
+      router.push(`/client-info-list?clientId=${client.id}`);
     },
     onError: (err: Error) => {
       toast.error(err.message);

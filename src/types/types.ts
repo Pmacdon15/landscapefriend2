@@ -109,6 +109,20 @@ export type OptimisticAction =
   | { type: "delete-client"; clientId: string }
   | { type: "optimistic-search"; clients: Client[] };
 
+export type OptimisticServiceAction =
+  | { type: "reorder"; cuts: CutListItem[] }
+  | {
+      type: "complete";
+      addressId: string;
+      timestamp: Date;
+      currentUserId: string;
+      serviceType: string;
+      scheduledDate: Date;
+    }
+  | { type: "update-search"; value: string }
+  | { type: "optimistic-filter"; cuts: CutListItem[] }
+  | { type: "select-client"; value: string; cuts: CutListItem[] };
+
 export type { Client, Address, Schedule, CompletedJob, Assignment };
 
 export interface ClientCardProps {

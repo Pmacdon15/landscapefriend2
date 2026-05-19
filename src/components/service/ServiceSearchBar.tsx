@@ -2,40 +2,23 @@
 
 import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, use, useEffect, useOptimistic, useRef, useState } from "react";
-import type { CutListItem } from "@/types/types";
+import { startTransition, useEffect, useRef, useState } from "react";
+import type { CutListItem, OptimisticServiceAction } from "@/types/types";
 import { Button } from "../ui/button";
 
 interface ServiceSearchBarProps {
   items: CutListItem[];
-  setOptimisticCuts: (action: CutListItem[]) => void;
-  searchPromise: Promise<string>;
-  clientIdPromise: Promise<string>;
+  optimisticValue: string;
+  setOptimistic: (action: OptimisticServiceAction) => void;
 }
 
 export function ServiceSearchBar({
   items,
-  setOptimisticCuts,
-  searchPromise,
-  clientIdPromise,
+  optimisticValue,
+  setOptimistic,
 }: ServiceSearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialSearch = use(searchPromise);
-  const clientId = use(clientIdPromise);
-
-  const getInitialValue = () => {
-    if (clientId) {
-      const selectedItem = items.find((i) => i.client.id === clientId);
-      if (selectedItem) return selectedItem.client.name;
-    }
-    return initialSearch;
-  };
-
-  const [optimisticValue, setOptimisticValue] = useOptimistic(
-    getInitialValue(),
-    (_, newValue: string) => newValue,
-  );
 
   const [inputValue, setInputValue] = useState(optimisticValue);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,9 +26,9 @@ export function ServiceSearchBar({
 
   useEffect(() => {
     if (!isFocused) {
-      setInputValue(getInitialValue());
+      setInputValue(optimisticValue);
     }
-  }, [initialSearch, clientId, items, isFocused]);
+  }, [optimisticValue, isFocused]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -68,12 +51,15 @@ export function ServiceSearchBar({
 
   const handleSelect = (item: CutListItem) => {
     startTransition(() => {
-      setOptimisticValue(item.client.name);
-      setInputValue(item.client.name);
-      
-      // Optimistically filter to only this client's addresses
+      // Optimistically filter to only this client's addresses and update search value
       const filteredCuts = items.filter((c) => c.client.id === item.client.id);
-      setOptimisticCuts(filteredCuts);
+      setOptimistic({
+        type: "select-client",
+        value: item.client.name,
+        cuts: filteredCuts,
+      });
+
+      setInputValue(item.client.name);
 
       const params = new URLSearchParams(searchParams);
       params.delete("search");
@@ -85,9 +71,9 @@ export function ServiceSearchBar({
 
   const handleSearch = (query: string) => {
     startTransition(() => {
-      setOptimisticValue(query);
+      setOptimistic({ type: "update-search", value: query });
       setInputValue(query);
-      
+
       const params = new URLSearchParams(searchParams);
       params.delete("clientId");
       if (query) {
@@ -115,11 +101,7 @@ export function ServiceSearchBar({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              if (filteredItems.length > 0) {
-                handleSelect(filteredItems[0]);
-              } else {
-                handleSearch(inputValue);
-              }
+              handleSearch(inputValue);
             }
           }}
           placeholder="Search this route..."

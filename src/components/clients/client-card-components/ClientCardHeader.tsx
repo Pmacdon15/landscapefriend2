@@ -1,6 +1,7 @@
 "use client";
 
 import { Trash } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export function ClientCardHeader({
   members,
   setOptimistic,
 }: ClientCardHeaderProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { mutate: deleteClient } = useDeleteClient();
 
@@ -81,6 +84,23 @@ export function ClientCardHeader({
                         type: "delete-client",
                         clientId: client.id,
                       });
+
+                      const currentClientId = searchParams.get("clientId");
+                      const currentSearch = searchParams.get("search");
+
+                      if (
+                        currentClientId === client.id ||
+                        currentSearch === client.name
+                      ) {
+                        const params = new URLSearchParams(
+                          searchParams.toString(),
+                        );
+                        params.delete("clientId");
+                        params.delete("search");
+                        params.delete("page");
+                        router.push(`?${params.toString()}`);
+                      }
+
                       deleteClient(client.id);
                       setIsDeleteDialogOpen(false);
                     });
