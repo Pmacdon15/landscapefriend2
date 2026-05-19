@@ -101,11 +101,7 @@ export function ServiceSearchBar({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              if (filteredItems.length > 0) {
-                handleSelect(filteredItems[0]);
-              } else {
-                handleSearch(inputValue);
-              }
+              handleSearch(inputValue);
             }
           }}
           placeholder="Search this route..."
