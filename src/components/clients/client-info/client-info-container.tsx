@@ -1,6 +1,6 @@
 "use client";
 import { Suspense, use, useOptimistic } from "react";
-import type { Client, OptimisticAction, Schedule } from "@/types/types";
+import type { Client, OptimisticAction } from "@/types/types";
 import { AddClientModal } from "../add-client-modal";
 import { ClientCard } from "../client-card";
 import { ClientSearchBar } from "../client-search-bar";
@@ -68,47 +68,63 @@ export default function ClientInfoContainer({
           };
         }
         case "update-assignee":
+          return {
+            ...state,
+            clients: state.clients.map((client) => ({
+              ...client,
+              addresses: client.addresses?.map((address) => {
+                if (address.id !== action.addressId) return address;
+                return {
+                  ...address,
+                  assigned_to: action.userId,
+                  assignment: action.userId
+                    ? {
+                        id: "optimistic",
+                        address_id: action.addressId,
+                        user_id: action.userId,
+                        org_id: client.org_id,
+                        scheduled_date: new Date().toISOString(),
+                      }
+                    : null,
+                };
+              }),
+            })),
+          };
         case "update-schedule":
-        case "delete-schedule":
+          return {
+            ...state,
+            clients: state.clients.map((client) => ({
+              ...client,
+              addresses: client.addresses?.map((address) => {
+                if (address.id !== action.addressId) return address;
+                return {
+                  ...address,
+                  schedule: {
+                    id: address.schedule?.id || "optimistic",
+                    address_id: action.addressId,
+                    frequency: action.frequency,
+                    first_cut_date: action.firstCutDate,
+                    day_of_week: address.schedule?.day_of_week ?? null,
+                    notes: action.notes || null,
+                  },
+                };
+              }),
+            })),
+          };
+        case "delete-schedule": {
           return {
             ...state,
             clients: state.clients.map((client) => {
-              if (!client.addresses) return client;
-
-              const hasTargetAddress = client.addresses.some(
-                (a) => a.id === action.addressId,
-              );
-              if (!hasTargetAddress) return client;
-
               return {
                 ...client,
-                addresses: client.addresses.map((address) => {
+                addresses: client.addresses?.map((address) => {
                   if (address.id !== action.addressId) return address;
-
-                  if (action.type === "update-assignee") {
-                    return { ...address, assigned_to: action.userId };
-                  }
-
-                  if (action.type === "update-schedule") {
-                    const newSchedule: Schedule = {
-                      id: address.schedule?.id || crypto.randomUUID(),
-                      address_id: address.id,
-                      frequency: action.frequency,
-                      first_cut_date: action.firstCutDate,
-                      day_of_week: action.firstCutDate.getDay(),
-                    };
-                    return { ...address, schedule: newSchedule };
-                  }
-
-                  if (action.type === "delete-schedule") {
-                    return { ...address, schedule: null };
-                  }
-
-                  return address;
+                  return { ...address, schedule: null };
                 }),
               };
             }),
           };
+        }
         default:
           return state;
       }

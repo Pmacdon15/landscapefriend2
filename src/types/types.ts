@@ -107,7 +107,8 @@ export type OptimisticAction =
   | { type: "add-client"; client: Client }
   | { type: "edit-client"; client: Client }
   | { type: "delete-client"; clientId: string }
-  | { type: "optimistic-search"; clients: Client[] };
+  | { type: "optimistic-search"; clients: Client[] }
+  | { type: "select-client"; client: Client };
 
 export type OptimisticServiceAction =
   | { type: "reorder"; cuts: CutListItem[] }

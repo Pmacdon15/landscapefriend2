@@ -116,8 +116,6 @@ export function ServiceListContent({
           };
         case "update-search":
           return { ...state, searchValue: action.value };
-        case "optimistic-filter":
-          return { ...state, cuts: action.cuts };
         case "select-client":
           return { ...state, searchValue: action.value, cuts: action.cuts };
         default:

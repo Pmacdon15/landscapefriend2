@@ -87,10 +87,8 @@ export function ClientSearchBar({
 
   const handleSelectClient = (client: Client) => {
     startTransition(() => {
-      setOptimistic({ type: "update-search", value: client.name });
-
       setInputValue(client.name);
-      setOptimistic({ type: "optimistic-search", clients: [client] });
+      setOptimistic({ type: "select-client", client });
     });
 
     const params = new URLSearchParams(searchParams);
