@@ -22,7 +22,11 @@ export function ImageViewer({
   const handleDownload = async () => {
     if (!viewingImage) return;
     try {
-      const response = await fetch(`/api/site-maps/image/${viewingImage.id}`);
+      const type =
+        viewingImage.name === "Completion Photo" ? "photo" : "sitemap";
+      const response = await fetch(
+        `/api/image-view/${viewingImage.id}?type=${type}`,
+      );
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -83,7 +87,7 @@ export function ImageViewer({
           <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8 pt-16">
             {viewingImage.blob_path ? (
               <Image
-                src={`/api/site-maps/image/${viewingImage.id}`}
+                src={`/api/image-view/${viewingImage.id}?type=${viewingImage.name === "Completion Photo" ? "photo" : "sitemap"}`}
                 alt={viewingImage.name || "Viewing photo"}
                 fill
                 unoptimized

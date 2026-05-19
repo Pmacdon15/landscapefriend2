@@ -15,7 +15,11 @@ export function PhotoViewer({ viewingSiteMap, onClose }: PhotoViewerProps) {
   const handleDownload = async () => {
     if (!viewingSiteMap) return;
     try {
-      const response = await fetch(`/api/site-maps/image/${viewingSiteMap.id}`);
+      const type =
+        viewingSiteMap.name === "Completion Photo" ? "photo" : "sitemap";
+      const response = await fetch(
+        `/api/image-view/${viewingSiteMap.id}?type=${type}`,
+      );
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -48,7 +52,7 @@ export function PhotoViewer({ viewingSiteMap, onClose }: PhotoViewerProps) {
           <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
             {viewingSiteMap.blob_path && (
               <Image
-                src={`/api/site-maps/image/${viewingSiteMap.id}`}
+                src={`/api/image-view/${viewingSiteMap.id}?type=${viewingSiteMap.name === "Completion Photo" ? "photo" : "sitemap"}`}
                 alt="Viewing existing sitemap or completion photo"
                 fill
                 unoptimized
