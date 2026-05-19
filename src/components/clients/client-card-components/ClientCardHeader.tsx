@@ -2,7 +2,7 @@
 
 import { Trash } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useState } from "react";
+import { startTransition, use, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { Button } from "@/components/ui/button";
 import { CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,23 +16,23 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useDeleteClient } from "@/mutations/clients";
-import type { Client, OptimisticAction } from "@/types/types";
-
-interface ClientCardHeaderProps {
-  client: Client;
-  members: { id: string; name: string }[];
-  setOptimistic: (action: OptimisticAction) => void;
-}
+import type { ClientCardHeaderProps } from "@/types/types";
 
 export function ClientCardHeader({
   client,
   members,
   setOptimistic,
+  clientIdPromise,
+  searchPromise,
+  isLastClient,
 }: ClientCardHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { mutate: deleteClient } = useDeleteClient();
+
+  const currentClientId = use(clientIdPromise);
+  const currentSearch = use(searchPromise);
 
   return (
     <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -85,12 +85,10 @@ export function ClientCardHeader({
                         clientId: client.id,
                       });
 
-                      const currentClientId = searchParams.get("clientId");
-                      const currentSearch = searchParams.get("search");
-
                       if (
                         currentClientId === client.id ||
-                        currentSearch === client.name
+                        // currentSearch === client.name ||
+                        isLastClient
                       ) {
                         const params = new URLSearchParams(
                           searchParams.toString(),

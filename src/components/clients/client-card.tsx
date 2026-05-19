@@ -14,6 +14,9 @@ export function ClientCard({
   members,
   setOptimistic,
   isAdmin,
+  clientIdPromise,
+  searchPromise,
+  isLastClient,
 }: ClientCardProps) {
   const [viewingSiteMap, setViewingSiteMap] = useState<SiteMap | null>(null);
   const addresses = client.addresses || [];
@@ -24,6 +27,9 @@ export function ClientCard({
         client={client}
         members={members}
         setOptimistic={setOptimistic}
+        clientIdPromise={clientIdPromise}
+        searchPromise={searchPromise}
+        isLastClient={isLastClient}
       />
       <CardContent className="pt-4 grid gap-4">
         <ClientCardContact email={client.email} phone={client.phone} />

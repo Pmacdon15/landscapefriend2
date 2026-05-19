@@ -61,6 +61,7 @@ export default function ClientInfoContainer({
           const remainingClients = state.clients.filter(
             (c) => c.id !== action.clientId,
           );
+
           return {
             ...state,
             clients: remainingClients,
@@ -147,11 +148,14 @@ export default function ClientInfoContainer({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 mb-10">
         {optimisticState.clients.map((client: Client) => (
           <ClientCard
+            isLastClient={optimisticState.clients.length < 2}
             key={client.id}
             isAdmin={isAdmin}
             client={client}
             members={members}
             setOptimistic={setOptimistic}
+            clientIdPromise={clientIdPromise}
+            searchPromise={searchPromise}
           />
         ))}
 

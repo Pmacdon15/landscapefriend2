@@ -131,11 +131,18 @@ export interface ClientCardProps {
   members: { id: string; name: string }[];
   setOptimistic: (action: OptimisticAction) => void;
   isAdmin: boolean;
+  clientIdPromise: Promise<string>;
+  searchPromise: Promise<string>;
+  isLastClient: boolean;
 }
 
-export interface ClientCardContactProps {
-  email: string | null | undefined;
-  phone: string | null | undefined;
+export interface ClientCardHeaderProps {
+  client: Client;
+  members: { id: string; name: string }[];
+  setOptimistic: (action: OptimisticAction) => void;
+  clientIdPromise: Promise<string>;
+  searchPromise: Promise<string>;
+  isLastClient:boolean
 }
 
 export interface CutListItem {
