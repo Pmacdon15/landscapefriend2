@@ -58,9 +58,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <body className="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 relative">
+        <body className="min-h-100svh flex flex-col bg-slate-50 dark:bg-slate-950 relative">
           <div
             className="fixed inset-0 z-[-1] pointer-events-none opacity-40 dark:opacity-20"
             style={{
