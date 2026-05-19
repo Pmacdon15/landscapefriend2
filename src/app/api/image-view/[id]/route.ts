@@ -78,17 +78,7 @@ async function getCachedBlobPath(
   } else if (type === "photo") {
     const completionPhoto = await getCompletionPhotoWithOrgDb(id, orgId);
     if (completionPhoto?.blob_path) blobPath = completionPhoto.blob_path;
-  } else {
-    const siteMap = await getSiteMapWithOrgDb(id, orgId);
-    if (siteMap?.blob_path) {
-      blobPath = siteMap.blob_path;
-    } else {
-      const completionPhoto = await getCompletionPhotoWithOrgDb(id, orgId);
-      if (completionPhoto?.blob_path) {
-        blobPath = completionPhoto.blob_path;
-      }
-    }
-  }
+  } 
 
   return blobPath;
 }
