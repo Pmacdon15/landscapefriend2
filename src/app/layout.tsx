@@ -58,11 +58,11 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <body className="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 relative">
+        <body className="min-h-[100vh] flex flex-col bg-slate-50 dark:bg-slate-950 relative">
           <div
-            className="fixed inset-0 z-[-1] pointer-events-none opacity-40 dark:opacity-20"
+            className="fixed top-0 left-0 w-full h-[100vh] z-[-1] pointer-events-none opacity-40 dark:opacity-20"
             style={{
               backgroundImage: 'url("/lawn.png")',
               backgroundSize: "cover",
