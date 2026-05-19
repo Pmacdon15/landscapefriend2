@@ -62,6 +62,14 @@ export default function ClientInfoContainer({
             (c) => c.id !== action.clientId,
           );
 
+          if (remainingClients.length === 0 && action.defaultClients) {
+            return {
+              ...state,
+              clients: action.defaultClients,
+              searchValue: "",
+            };
+          }
+
           return {
             ...state,
             clients: remainingClients,

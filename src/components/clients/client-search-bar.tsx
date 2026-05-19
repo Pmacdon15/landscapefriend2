@@ -38,6 +38,15 @@ export function ClientSearchBar({
     enabled: debouncedValue.length > 0,
   });
 
+  const { data: defaultData } = useQuery<{ clients: Client[] }>({
+    queryKey: ["client-search", ""],
+    queryFn: async () => {
+      const res = await fetch(`/api/clients/search?q=`);
+      if (!res.ok) throw new Error("Network response was not ok");
+      return res.json();
+    },
+  });
+
   const clients = data?.clients || [];
 
   useEffect(() => {
@@ -70,6 +79,11 @@ export function ClientSearchBar({
         setOptimistic({
           type: "optimistic-search",
           clients: immediateClients.slice(0, 6),
+        });
+      } else if (!query && defaultData?.clients) {
+        setOptimistic({
+          type: "optimistic-search",
+          clients: defaultData.clients,
         });
       }
     });

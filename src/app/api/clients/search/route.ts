@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { searchClientsDal } from "@/dal/clients";
+import { getClientsForInfoDal, searchClientsDal } from "@/dal/clients";
 
 export async function GET(request: Request) {
   await auth.protect();
@@ -8,7 +8,13 @@ export async function GET(request: Request) {
   const q = searchParams.get("q");
 
   if (!q) {
-    return NextResponse.json({ clients: [] });
+    try {
+      const { clients } = await getClientsForInfoDal(1);
+      return NextResponse.json({ clients });
+    } catch (error) {
+      console.error("Failed to fetch default clients", error);
+      return NextResponse.json({ clients: [] });
+    }
   }
 
   try {

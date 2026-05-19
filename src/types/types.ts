@@ -106,7 +106,7 @@ export type OptimisticAction =
   | { type: "delete-schedule"; addressId: string }
   | { type: "add-client"; client: Client }
   | { type: "edit-client"; client: Client }
-  | { type: "delete-client"; clientId: string }
+  | { type: "delete-client"; clientId: string; defaultClients?: Client[] }
   | { type: "optimistic-search"; clients: Client[] }
   | { type: "select-client"; client: Client };
 

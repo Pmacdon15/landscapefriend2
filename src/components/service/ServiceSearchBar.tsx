@@ -2,20 +2,25 @@
 
 import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { startTransition, useEffect, useRef, useState } from "react";
-import type { CutListItem, OptimisticServiceAction } from "@/types/types";
+import type { Client, CutListItem, OptimisticServiceAction } from "@/types/types";
 import { Button } from "../ui/button";
 
 interface ServiceSearchBarProps {
   items: CutListItem[];
   optimisticValue: string;
   setOptimistic: (action: OptimisticServiceAction) => void;
+  date: Date;
+  userId?: string | null;
 }
 
 export function ServiceSearchBar({
   items,
   optimisticValue,
   setOptimistic,
+  date,
+  userId,
 }: ServiceSearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,6 +28,24 @@ export function ServiceSearchBar({
   const [inputValue, setInputValue] = useState(optimisticValue);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
+
+  const { data: defaultData } = useQuery<{ clients: Client[] }>({
+    queryKey: [
+      "service-search",
+      date.toLocaleDateString("en-CA"),
+      userId || "all",
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        date: date.toLocaleDateString("en-CA"),
+      });
+      if (userId) params.set("userId", userId);
+
+      const res = await fetch(`/api/clients/cut-list?${params.toString()}`);
+      if (!res.ok) throw new Error("Network response was not ok");
+      return res.json();
+    },
+  });
 
   useEffect(() => {
     if (!isFocused) {
@@ -71,7 +94,17 @@ export function ServiceSearchBar({
 
   const handleSearch = (query: string) => {
     startTransition(() => {
-      setOptimistic({ type: "update-search", value: query });
+      if (!query && defaultData?.clients) {
+        const flatCuts = defaultData.clients.flatMap((client) =>
+          (client.addresses ?? []).map((address) => ({
+            client: { id: client.id, name: client.name },
+            address,
+          })),
+        );
+        setOptimistic({ type: "select-client", value: query, cuts: flatCuts });
+      } else {
+        setOptimistic({ type: "update-search", value: query });
+      }
       setInputValue(query);
 
       const params = new URLSearchParams(searchParams);

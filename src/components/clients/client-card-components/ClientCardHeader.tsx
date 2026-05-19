@@ -2,6 +2,7 @@
 
 import { Trash } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { startTransition, use, useState } from "react";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export function ClientCardHeader({
 
   const currentClientId = use(clientIdPromise);
   const currentSearch = use(searchPromise);
+  const queryClient = useQueryClient();
 
   return (
     <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -80,9 +82,16 @@ export function ClientCardHeader({
                   variant="destructive"
                   onClick={() => {
                     startTransition(() => {
+                      let defaultClients: any = undefined;
+                      if (isLastClient) {
+                        const defaultData = queryClient.getQueryData<{ clients: any[] }>(["client-search", ""]);
+                        defaultClients = defaultData?.clients;
+                      }
+
                       setOptimistic({
                         type: "delete-client",
                         clientId: client.id,
+                        defaultClients,
                       });
 
                       if (

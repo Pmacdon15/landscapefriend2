@@ -239,6 +239,8 @@ export function ServiceListContent({
               items={optimisticState.cuts}
               optimisticValue={optimisticState.searchValue}
               setOptimistic={dispatch}
+              date={date}
+              userId={currentFilterUserId}
             />
           </Suspense>
         }
