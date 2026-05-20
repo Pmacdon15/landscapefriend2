@@ -23,7 +23,7 @@ export function ImageViewer({
     if (!viewingImage) return;
     try {
       const type =
-        viewingImage.name === "Completion Photo" ? "photo" : "sitemap";
+        viewingImage.name?.startsWith("Completion") ? "photo" : "sitemap";
       const response = await fetch(
         `/api/image-view/${viewingImage.id}?type=${type}`,
       );
@@ -87,7 +87,7 @@ export function ImageViewer({
           <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8 pt-16">
             {viewingImage.blob_path ? (
               <Image
-                src={`/api/image-view/${viewingImage.id}?type=${viewingImage.name === "Completion Photo" ? "photo" : "sitemap"}`}
+                src={`/api/image-view/${viewingImage.id}?type=${viewingImage.name?.startsWith("Completion") ? "photo" : "sitemap"}`}
                 alt={viewingImage.name || "Viewing photo"}
                 fill
                 unoptimized
