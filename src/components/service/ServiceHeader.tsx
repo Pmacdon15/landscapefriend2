@@ -45,6 +45,8 @@ export function ServiceHeader({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  
+
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
       const params = new URLSearchParams(searchParams);

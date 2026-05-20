@@ -20,7 +20,7 @@ export default async function ClientsServicePage(
     getClientsForCutListDal(
       String(
         (Array.isArray(p.date) ? p.date[0] : p.date) ??
-          new Date().toISOString().split("T")[0],
+          new Date().toLocaleDateString("en-CA"),
       ),
       String((Array.isArray(p.search) ? p.search[0] : p.search) ?? ""),
       String((Array.isArray(p.userId) ? p.userId[0] : p.userId) ?? ""),

@@ -6,6 +6,7 @@ import { NavBar } from "@/components/layout/nav-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "@/providers/query-provider";
 import "./globals.css";
+import { Suspense } from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,9 +52,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  searchParams,
 }: Readonly<{
   children: React.ReactNode;
+  searchParams?: Promise<{
+    date?: string;
+  }>;
 }>) {
+  const datePromise: Promise<string | null> = searchParams
+    ? searchParams.then((p) =>
+        Array.isArray(p.date) ? p.date[0] : (p.date ?? null),
+      )
+    : Promise.resolve(null);
+
   return (
     <ClerkProvider>
       <html
@@ -71,7 +82,9 @@ export default function RootLayout({
             }}
           />
           <Providers>
-            <NavBar />
+            <Suspense>
+              <NavBar datePromise={datePromise} />
+            </Suspense>
             <main className="flex-1 flex flex-col">{children}</main>
             <Footer />
             <Toaster />

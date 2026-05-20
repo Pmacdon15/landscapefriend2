@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { use } from "react";
+import { useSearchParams } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
@@ -27,30 +29,55 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-const navLinks = [
-  {
-    href: "/client-info-list",
-    label: "Manage Clients",
-    icon: Users,
-    roles: ["org:admin"],
-  },
-  {
-    href: "/admin/history",
-    label: "History",
-    icon: CheckCircle2,
-    roles: ["org:admin"],
-  },
-  {
-    href: "/clients-service",
-    label: "Service List",
-    icon: LayoutDashboard,
-    // roles: ["org:admin", "org:member"],
-  },
-];
-
-export function NavBar() {
+export function NavBar({
+  datePromise,
+}: {
+  datePromise: Promise<string | null>;
+}) {
   const [open, setOpen] = React.useState(false);
   const { has, isLoaded } = useAuth();
+
+  const searchParams = useSearchParams();
+
+  const dateParam = use(datePromise);
+
+  const defaultDate = new Date().toLocaleDateString("en-CA");
+
+  const date =
+    dateParam === null ? defaultDate : dateParam;
+
+  // clone current params
+  const params = new URLSearchParams(searchParams.toString());
+
+  // ensure date exists, otherwise inject today's date (en-CA format)
+  if (!params.get("date")) {
+    params.set("date", date);
+  }
+
+  const buildHref = (path: string) => {
+    const query = params.toString();
+    return query ? `${path}?${query}` : path;
+  };
+
+  const navLinks = [
+    {
+      href: buildHref("/client-info-list"),
+      label: "Manage Clients",
+      icon: Users,
+      roles: ["org:admin"],
+    },
+    {
+      href: buildHref("/admin/history"),
+      label: "History",
+      icon: CheckCircle2,
+      roles: ["org:admin"],
+    },
+    {
+      href: buildHref("/clients-service"),
+      label: "Service List",
+      icon: LayoutDashboard,
+    },
+  ];
 
   const visibleLinks = isLoaded
     ? navLinks.filter(
@@ -68,8 +95,9 @@ export function NavBar() {
           backgroundPosition: "center",
         }}
       />
+
       <div className="relative z-10 flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
-        <div className="flex   items-center gap-6 ">
+        <div className="flex items-center gap-6">
           <Link
             href="/"
             className="font-bold text-xl tracking-tight text-green-900 dark:text-green-50"
@@ -116,6 +144,7 @@ export function NavBar() {
                   Sign In
                 </button>
               </SignInButton>
+
               <SignUpButton mode="modal">
                 <button
                   type="button"
@@ -132,7 +161,6 @@ export function NavBar() {
             </div>
           </Show>
 
-          {/* Mobile Menu */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               className={buttonVariants({
@@ -143,6 +171,7 @@ export function NavBar() {
             >
               <Menu className="h-5 w-5" />
             </SheetTrigger>
+
             <SheetContent
               side="right"
               className="w-75 border-green-200/50 dark:border-green-800/50 p-0 overflow-hidden"
@@ -155,12 +184,14 @@ export function NavBar() {
                   backgroundPosition: "center",
                 }}
               />
+
               <div className="relative z-10 flex flex-col h-full bg-green-50/90 dark:bg-green-950/90 backdrop-blur-sm p-6">
                 <SheetHeader>
                   <SheetTitle className="text-left text-green-900 dark:text-green-50">
                     Navigation
                   </SheetTitle>
                 </SheetHeader>
+
                 <div className="flex flex-col gap-2 mt-4">
                   <Show when="signed-in">
                     {visibleLinks.map((link) => (
@@ -174,7 +205,9 @@ export function NavBar() {
                         {link.label}
                       </Link>
                     ))}
+
                     <div className="h-px bg-green-200 dark:bg-green-800 my-2" />
+
                     <SignOutButton>
                       <button
                         type="button"
@@ -197,6 +230,7 @@ export function NavBar() {
                         Sign In
                       </button>
                     </SignInButton>
+
                     <SignUpButton mode="modal">
                       <button
                         type="button"
