@@ -14,23 +14,32 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn, getGoogleMapsUrl } from "@/lib/utils";
 import type { CutListItem } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
+import { CompleteJobButton } from "./CompleteJobButton";
 
 interface ServiceListItemProps {
   item: CutListItem;
   index: number;
-  isCompleting: boolean;
-  onMarkComplete: (addressId: string) => void;
   onViewPhoto: (siteMap: SiteMap) => void;
   isAdmin: boolean;
+  date: Date;
+  currentUserId: string | null;
+  onCompleteOptimistic: (params: {
+    addressId: string;
+    timestamp: Date;
+    currentUserId: string;
+    serviceType: "grass" | "snow";
+    scheduledDate: Date;
+  }) => void;
 }
 
 export function ServiceListItem({
   item,
   index,
-  isCompleting,
-  onMarkComplete,
   onViewPhoto,
   isAdmin,
+  date,
+  currentUserId,
+  onCompleteOptimistic,
 }: ServiceListItemProps) {
   const { client, address } = item;
   const isSnow = address.schedule?.frequency === "daily";
@@ -143,21 +152,12 @@ export function ServiceListItem({
                     )}
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    className="shrink-0 gap-2 border-primary/20 hover:border-primary hover:bg-primary/5 transition-all"
-                    disabled={isCompleting}
-                    onClick={() => onMarkComplete(address.id)}
-                  >
-                    {isCompleting ? (
-                      "Completing..."
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        Mark Complete
-                      </>
-                    )}
-                  </Button>
+                  <CompleteJobButton
+                    address={address}
+                    date={date}
+                    currentUserId={currentUserId}
+                    onCompleteOptimistic={onCompleteOptimistic}
+                  />
                 )}
               </div>
             </div>
