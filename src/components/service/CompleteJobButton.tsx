@@ -1,20 +1,24 @@
 "use client";
 
 <<<<<<< Updated upstream
-import { CheckCircle2 } from "lucide-react";
-import { useState, startTransition } from "react";
-import imageCompression from "browser-image-compression";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { CameraCapture } from "@/components/ui/camera-capture";
+
+
+
+
+
+
+
 =======
+
 import imageCompression from "browser-image-compression";
 import { CheckCircle2 } from "lucide-react";
 import { startTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CameraCapture } from "@/components/ui/camera-capture";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+
 >>>>>>> Stashed changes
+
 import { useCompleteJob } from "@/mutations/jobs";
 import type { Address } from "@/zod/schemas";
 

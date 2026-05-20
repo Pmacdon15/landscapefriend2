@@ -19,21 +19,13 @@ export function ImageViewer({
   onClose,
   isAdmin,
 }: ImageViewerProps) {
-  const handleDownload = async () => {
+  const _handleDownload = async () => {
     if (!viewingImage) return;
     try {
-<<<<<<< Updated upstream
-      const type =
-<<<<<<< Updated upstream
-        viewingImage.name?.startsWith("Completion") ? "photo" : "sitemap";
-=======
-        viewingImage.name === "Completion Photo" ? "photo" : "sitemap";
-=======
       const type = viewingImage.name?.startsWith("Completion")
         ? "photo"
         : "sitemap";
->>>>>>> Stashed changes
->>>>>>> Stashed changes
+
       const response = await fetch(
         `/api/image-view/${viewingImage.id}?type=${type}`,
       );
@@ -75,7 +67,7 @@ export function ImageViewer({
                 variant="ghost"
                 size="icon"
                 className="h-10 w-10 text-white hover:bg-white/20 transition-colors rounded-full focus-visible:ring-0"
-                onClick={handleDownload}
+                onClick={_handleDownload}
               >
                 <Download className="h-5 w-5" />
                 <span className="sr-only">Download</span>
