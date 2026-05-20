@@ -216,22 +216,12 @@ export function ServiceListContent({
                         isAdmin={isAdmin}
                         item={item}
                         index={index}
-<<<<<<< Updated upstream
                         date={date}
-                        currentUserId={currentUserId}
-                        onCompleteOptimistic={(params) => dispatch({ type: "complete", ...params })}
-=======
-<<<<<<< Updated upstream
-                        isCompleting={isCompleting}
-                        onMarkComplete={setCompletingAddressId}
-=======
-                        date={date}
-                        currentUserId={currentUserId}
+                        currentUserId={currentUserId}                        
                         onCompleteOptimistic={(params) =>
                           dispatch({ type: "complete", ...params })
                         }
->>>>>>> Stashed changes
->>>>>>> Stashed changes
+
                         onViewPhoto={setViewingImage}
                       />
                     </div>
