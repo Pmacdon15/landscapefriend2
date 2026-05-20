@@ -74,6 +74,7 @@ export async function getClientsForCutListDal(
   clientId?: string,
 ): Promise<Client[]> {
   try {
+    if (date === "") return [];
     const { orgId, userId, orgRole } = await auth.protect();
     if (!orgId || !userId) throw new Error("Unauthorized");
 

@@ -18,10 +18,7 @@ export default async function ClientsServicePage(
 ) {
   const clientsPromise = props.searchParams.then((p) =>
     getClientsForCutListDal(
-      String(
-        (Array.isArray(p.date) ? p.date[0] : p.date) ??
-          new Date().toLocaleDateString("en-CA"),
-      ),
+      String((Array.isArray(p.date) ? p.date[0] : p.date) ?? ""),
       String((Array.isArray(p.search) ? p.search[0] : p.search) ?? ""),
       String((Array.isArray(p.userId) ? p.userId[0] : p.userId) ?? ""),
       String((Array.isArray(p.clientId) ? p.clientId[0] : p.clientId) ?? ""),
