@@ -33,7 +33,15 @@ export function ServiceListContent({
   membersPromise,
   currentUserIdPromise,
 }: ServiceListContentProps) {
+<<<<<<< Updated upstream
   const { mutate: updateRouteOrder } = useUpdateRouteOrder(); 
+=======
+  const { mutate: updateRouteOrder } = useUpdateRouteOrder();
+<<<<<<< Updated upstream
+  const { mutate: completeJob, isPending: isCompleting } = useCompleteJob();
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
   const [viewingImage, setViewingImage] = useState<SiteMap | null>(null);
 
@@ -208,9 +216,22 @@ export function ServiceListContent({
                         isAdmin={isAdmin}
                         item={item}
                         index={index}
+<<<<<<< Updated upstream
                         date={date}
                         currentUserId={currentUserId}
                         onCompleteOptimistic={(params) => dispatch({ type: "complete", ...params })}
+=======
+<<<<<<< Updated upstream
+                        isCompleting={isCompleting}
+                        onMarkComplete={setCompletingAddressId}
+=======
+                        date={date}
+                        currentUserId={currentUserId}
+                        onCompleteOptimistic={(params) =>
+                          dispatch({ type: "complete", ...params })
+                        }
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
                         onViewPhoto={setViewingImage}
                       />
                     </div>

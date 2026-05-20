@@ -78,7 +78,7 @@ async function getCachedBlobPath(
   } else if (type === "photo") {
     const completionPhoto = await getCompletionPhotoWithOrgDb(id, orgId);
     if (completionPhoto?.blob_path) blobPath = completionPhoto.blob_path;
-  } 
+  }
 
   return blobPath;
 }

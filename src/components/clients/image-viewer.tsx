@@ -22,8 +22,18 @@ export function ImageViewer({
   const handleDownload = async () => {
     if (!viewingImage) return;
     try {
+<<<<<<< Updated upstream
       const type =
+<<<<<<< Updated upstream
         viewingImage.name?.startsWith("Completion") ? "photo" : "sitemap";
+=======
+        viewingImage.name === "Completion Photo" ? "photo" : "sitemap";
+=======
+      const type = viewingImage.name?.startsWith("Completion")
+        ? "photo"
+        : "sitemap";
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
       const response = await fetch(
         `/api/image-view/${viewingImage.id}?type=${type}`,
       );
