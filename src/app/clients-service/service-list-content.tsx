@@ -2,7 +2,15 @@
 
 import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { parseISO } from "date-fns";
-import { Suspense, startTransition, use, useOptimistic, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  startTransition,
+  use,
+  useEffect,
+  useOptimistic,
+  useState,
+} from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
 import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
@@ -34,22 +42,31 @@ export function ServiceListContent({
   currentUserIdPromise,
 }: ServiceListContentProps) {
   const { mutate: updateRouteOrder } = useUpdateRouteOrder();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [viewingImage, setViewingImage] = useState<SiteMap | null>(null);
 
   const currentUserId = use(currentUserIdPromise);
   const isAdmin = use(isAdminPromise);
-  let defaultDate = use(datePromise);
+  const dateParam = use(datePromise);
   const initialClients = use(clientsPromise);
   const initialSearch = use(searchPromise);
   const initialClientId = use(clientIdPromise);
   const currentFilterUserId = use(userIdPromise);
   const members = use(membersPromise);
 
-  if (defaultDate === null)
-    defaultDate = new Date().toLocaleDateString("en-CA");
+  const defaultDate = dateParam ?? new Date().toLocaleDateString("en-CA");
 
-  const [date, setDate] = useState<Date>(parseISO(defaultDate));
+  useEffect(() => {
+    if (!searchParams.get("date")) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("date", defaultDate);
+      router.replace(`?${params.toString()}`, { scroll: false });
+    }
+  }, [defaultDate, router, searchParams]);
+
+  const [date, setDate] = useState<Date>(() => parseISO(defaultDate));
 
   // Flatten clients into CutListItems for the UI list
   const flatCuts = initialClients.flatMap((client) =>
