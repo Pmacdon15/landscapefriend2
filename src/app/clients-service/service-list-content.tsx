@@ -56,17 +56,13 @@ export function ServiceListContent({
   const currentFilterUserId = use(userIdPromise);
   const members = use(membersPromise);
 
-  const defaultDate = dateParam ?? new Date().toLocaleDateString("en-CA");
-
   useEffect(() => {
-    if (!searchParams.get("date")) {
+    if (dateParam === null) {
       const params = new URLSearchParams(searchParams.toString());
-      params.set("date", defaultDate);
+      params.set("date", dateParam ?? new Date().toLocaleDateString("en-CA"));
       router.replace(`?${params.toString()}`, { scroll: false });
     }
-  }, [defaultDate, router, searchParams]);
-
-  const [date, setDate] = useState<Date>(() => parseISO(defaultDate));
+  }, [router, searchParams, dateParam]);
 
   // Flatten clients into CutListItems for the UI list
   const flatCuts = initialClients.flatMap((client) =>
@@ -133,10 +129,9 @@ export function ServiceListContent({
     },
   );
 
-  const parsedDefaultDate = parseISO(defaultDate);
-  if (date.getTime() !== parsedDefaultDate.getTime()) {
-    setDate(parsedDefaultDate);
-  }
+  const parsedDefaultDate = parseISO(
+    dateParam ?? new Date().toLocaleDateString("en-CA"),
+  );  
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -183,7 +178,7 @@ export function ServiceListContent({
   return (
     <div className="space-y-6">
       <ServiceHeader
-        date={date}
+        date={parsedDefaultDate}
         isAdmin={isAdmin}
         members={members}
         currentFilterUserId={currentFilterUserId}
@@ -199,7 +194,7 @@ export function ServiceListContent({
               items={optimisticState.cuts}
               optimisticValue={optimisticState.searchValue}
               setOptimistic={dispatch}
-              date={date}
+              date={parsedDefaultDate}
               userId={currentFilterUserId}
             />
           </Suspense>
@@ -225,7 +220,7 @@ export function ServiceListContent({
                         isAdmin={isAdmin}
                         item={item}
                         index={index}
-                        date={date}
+                        date={parsedDefaultDate}
                         currentUserId={currentUserId}
                         onCompleteOptimistic={(params) =>
                           dispatch({ type: "complete", ...params })
@@ -241,7 +236,7 @@ export function ServiceListContent({
           </DragDropContext>
         ) : (
           <ServiceEmptyState
-            date={date}
+            date={parsedDefaultDate}
             currentFilterUserId={currentFilterUserId}
           />
         )}
