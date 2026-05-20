@@ -1,8 +1,13 @@
-import { CalendarDays, Leaf, Users } from "lucide-react";
+import { Leaf, Users } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
+import ServicePageLink from "@/components/links/service-page-link";
 import { buttonVariants } from "@/components/ui/button";
 
-export default function Home() {
+export default function Home(props: PageProps<"/">) {
+  const datePromise = props.searchParams.then((p) =>
+    String(Array.isArray(p.date) ? p.date[0] : (p.date ?? "")),
+  );
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 min-h-[calc(100vh-4rem)]">
       <div className="max-w-3xl text-center space-y-8">
@@ -38,18 +43,9 @@ export default function Home() {
             <Users className="mr-2 h-5 w-5" />
             Manage Clients
           </Link>
-          <Link
-            href="/clients-service"
-            className={buttonVariants({
-              variant: "outline",
-              size: "lg",
-              className:
-                "h-14 px-8 text-lg rounded-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-900 transition-all",
-            })}
-          >
-            <CalendarDays className="mr-2 h-5 w-5" />
-            Service Routes
-          </Link>
+          <Suspense>
+            <ServicePageLink datePromise={datePromise} />
+          </Suspense>
         </div>
       </div>
     </div>

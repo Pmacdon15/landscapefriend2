@@ -17,9 +17,9 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { use } from "react";
-import { useSearchParams } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
@@ -43,8 +43,7 @@ export function NavBar({
 
   const defaultDate = new Date().toLocaleDateString("en-CA");
 
-  const date =
-    dateParam === null ? defaultDate : dateParam;
+  const date = dateParam === null ? defaultDate : dateParam;
 
   // clone current params
   const params = new URLSearchParams(searchParams.toString());
@@ -99,7 +98,7 @@ export function NavBar({
       <div className="relative z-10 flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
         <div className="flex items-center gap-6">
           <Link
-            href="/"
+            href={buildHref("/")}
             className="font-bold text-xl tracking-tight text-green-900 dark:text-green-50"
           >
             Landscape Friend
