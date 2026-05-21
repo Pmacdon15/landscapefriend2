@@ -962,3 +962,34 @@ export async function getClientsForInfoDb(
 
   return result;
 }
+
+export async function getExpiredCompletionPhotosDb(): Promise<
+  { id: string; blob_path: string; org_id: string }[]
+> {
+  const result = await sql`
+    SELECT cp.id, cp.blob_path, cj.org_id FROM completion_photos cp
+    JOIN completed_jobs cj ON cp.completed_job_id = cj.id
+    WHERE cp.created_at < NOW() - INTERVAL '2 months'
+  `;
+  return result as unknown as {
+    id: string;
+    blob_path: string;
+    org_id: string;
+  }[];
+}
+
+export async function getActiveCompletionPhotoUrlsDb(): Promise<string[]> {
+  const result = await sql`
+    SELECT blob_path FROM completion_photos
+    WHERE created_at >= NOW() - INTERVAL '2 months'
+  `;
+  return result.map((r) => (r as { blob_path: string }).blob_path);
+}
+
+export async function deleteCompletionPhotosDb(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await sql`
+    DELETE FROM completion_photos
+    WHERE id = ANY(${ids})
+  `;
+}
