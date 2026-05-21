@@ -76,6 +76,7 @@ export default async function HistoryPage(props: PageProps<"/admin/history">) {
           <HistorySearchBar
             clientPromise={clientPromise}
             searchPromise={searchPromise}
+            membersPromise={membersPromise}
           />
         </Suspense>
 

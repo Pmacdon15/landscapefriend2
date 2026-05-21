@@ -31,7 +31,10 @@ export function ClientSchedulesCard({
     client.addresses?.filter((a) => a.status !== "deleted") || [];
 
   return (
-    <Card className="border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md shadow-lg rounded-xl overflow-hidden transition-all duration-300">
+    <Card
+      id="schedules-section"
+      className="border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md shadow-lg rounded-xl overflow-hidden transition-all duration-300"
+    >
       <CardHeader className="bg-slate-50/50 dark:bg-slate-900/20 border-b border-slate-100 dark:border-slate-900 px-6 py-4">
         <CardTitle className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
           <Calendar className="h-5 w-5 text-primary" />
