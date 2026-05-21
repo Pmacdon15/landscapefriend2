@@ -17,8 +17,8 @@ export async function StatsSection() {
         <BarChart3 className="h-5 w-5 text-green-600 dark:text-green-400" />
         Lifetime Stats
       </h2>
-      <div className="grid gap-6">
-        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden group hover:border-green-200 dark:hover:border-green-800/50 transition-colors">
+      <div className="grid gap-4 sm:gap-6">
+        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden group hover:border-green-200 dark:hover:border-green-800/50 transition-colors relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-green-500" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
             <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
@@ -36,7 +36,7 @@ export async function StatsSection() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden group hover:border-green-200 dark:hover:border-green-800/50 transition-colors">
+        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden group hover:border-green-200 dark:hover:border-green-800/50 transition-colors relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-green-500" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
             <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
@@ -63,7 +63,7 @@ export async function StatsSection() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden group hover:border-green-200 dark:hover:border-green-800/50 transition-colors">
+        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden group hover:border-green-200 dark:hover:border-green-800/50 transition-colors relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-green-500" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
             <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
