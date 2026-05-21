@@ -1,12 +1,22 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { getPastServicesListDal } from "@/dal/admin";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForInfoDal } from "@/dal/clients";
-import { HistoryContainer } from "./history-container";
-import { HistorySkeleton, StatsSkeleton } from "./history-skeletons";
-import { MonthlySection } from "./monthly-section";
+import { HistoryContainer } from "../../../components/history/history-container";
+import {
+  HistorySkeleton,
+  StatsSkeleton,
+} from "../../../components/history/history-skeletons";
+import { MonthlySection } from "../../../components/history/monthly-section";
 import { StatsSection } from "./stats-section";
+
+export const metadata: Metadata = {
+  title: "Service History",
+  description:
+    "View and analyze historical landscaping service data, team performance, and lifetime statistics.",
+};
 
 export default async function HistoryPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

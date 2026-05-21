@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForCutListDal } from "@/dal/clients";
-import { ServiceListContent } from "./service-list-content";
+import { ServiceListContent } from "../../components/clients/service-list-content";
 
 export const metadata: Metadata = {
   title: "Daily Service Routes",
