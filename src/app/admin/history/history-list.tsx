@@ -54,7 +54,7 @@ export function HistoryList({ history }: HistoryListProps) {
               history.map((job) => (
                 <TableRow
                   key={job.id}
-                  className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors border-slate-50 dark:border-slate-900"
+                  className="hover:bg-green-50/30 dark:hover:bg-green-900/5 transition-colors border-slate-50 dark:border-slate-900/50"
                 >
                   <TableCell className="pl-6 py-4">
                     <div className="flex flex-col">

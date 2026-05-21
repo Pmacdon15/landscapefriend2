@@ -117,7 +117,7 @@ export function HistorySearchBar({
           defaultHistory: defaultHistory?.data,
         });
       }
-      router.push(`?${params.toString()}#history-section`);
+      router.push(`?${params.toString()}`);
     });
     setIsFocused(false);
   };
@@ -135,14 +135,14 @@ export function HistorySearchBar({
         type: "select-client",
         client,
       });
-      router.push(`?${params.toString()}#history-section`);
+      router.push(`?${params.toString()}`);
     });
     setIsFocused(false);
   };
 
   return (
-    <div className="relative w-full max-w-xl z-40 mx-auto" ref={containerRef}>
-      <div className="relative flex items-center shadow-sm rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md transition-all duration-300 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent">
+    <div className="relative w-full max-w-md z-40" ref={containerRef}>
+      <div className="relative flex items-center shadow-sm rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent">
         <Search className="absolute left-4 h-4 w-4 text-muted-foreground" />
         <input
           type="text"

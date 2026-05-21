@@ -8,7 +8,6 @@ import {
   useOptimistic,
 } from "react";
 import PaginationButtons from "@/components/pagination-buttons";
-import { Card, CardContent } from "@/components/ui/card";
 import type { PastServiceItem } from "@/dal/admin";
 import type { Client } from "@/types/types";
 import { ClientSchedulesCard } from "./client-schedules-card";
@@ -66,7 +65,9 @@ export function HistoryContainer({
             ...state,
             searchValue: action.client.name,
             client: action.client,
-            history: history.filter((item) => item.client_id === action.client.id),
+            history: history.filter(
+              (item) => item.client_id === action.client.id,
+            ),
           };
         }
         case "clear-search": {
@@ -100,34 +101,36 @@ export function HistoryContainer({
   }, [search, client, dispatch]);
 
   return (
-    <div className="space-y-12">
-      <div className="space-y-6">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <HistorySearchBar
           setOptimistic={dispatch}
           optimisticValue={optimisticState.searchValue}
           members={members}
         />
-
-        {optimisticState.client && (
-          <ClientSchedulesCard
-            clientPromise={Promise.resolve(optimisticState.client)}
-            membersPromise={Promise.resolve(members)}
-          />
-        )}
       </div>
 
-      <div className="space-y-4" id="history-section">
-        <h2 className="text-xl font-bold">Service History</h2>
-        <Card>
-          <CardContent className="p-0">
-            <HistoryList history={optimisticState.history} />
-          </CardContent>
-        </Card>
+      {optimisticState.client && (
+        <ClientSchedulesCard
+          clientPromise={Promise.resolve(optimisticState.client)}
+          membersPromise={Promise.resolve(members)}
+        />
+      )}
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            Service History
+          </h2>
+          <span className="text-sm text-slate-500 font-medium">
+            {history.length} records found
+          </span>
+        </div>
+        <HistoryList history={optimisticState.history} />
         <Suspense>
           <PaginationButtons
             pagePromise={pagePromise}
             totalPagesPromise={Promise.resolve(totalPages)}
-            hash="history-section"
           />
         </Suspense>
       </div>

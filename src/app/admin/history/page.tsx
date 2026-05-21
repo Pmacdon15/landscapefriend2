@@ -51,18 +51,11 @@ export default async function HistoryPage(props: {
   const membersPromise = getOrganizationMembersDal();
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-12 space-y-12">
+    <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
       <PageHeader
         title="History"
-        description="View historical service data, performance statistics, and upcoming schedules for the month."
+        description="Search through historical service data and view performance statistics."
       />
-
-      <Suspense fallback={<StatsSkeleton />}>
-        <div className="space-y-12">
-          <MonthlySection />
-          <StatsSection />
-        </div>
-      </Suspense>
 
       <Suspense fallback={<HistorySkeleton />}>
         <HistoryContainer
@@ -73,6 +66,21 @@ export default async function HistoryPage(props: {
           membersPromise={membersPromise}
         />
       </Suspense>
+
+      <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Suspense fallback={<StatsSkeleton />}>
+              <MonthlySection />
+            </Suspense>
+          </div>
+          <div>
+            <Suspense fallback={<StatsSkeleton />}>
+              <StatsSection />
+            </Suspense>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
