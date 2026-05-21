@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
             console.error("User created event without email address");
             break;
           }
-          handleUserCreatedDal(userId, userName, userEmail);
+          await handleUserCreatedDal(userId, userName, userEmail);
           break;
         }
 
