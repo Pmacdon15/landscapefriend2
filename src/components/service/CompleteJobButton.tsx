@@ -35,13 +35,16 @@ export function CompleteJobButton({
     // Close camera immediately for snappier feel
     setIsCameraOpen(false);
 
-    let fileToUpload: File | Blob = file;
-    if (fileToUpload.size > 1024 * 1024) {
+    let fileToUpload: File = file;
+    if (file.size > 1024 * 1024) {
       try {
-        fileToUpload = await imageCompression(file, {
+        const compressedBlob = await imageCompression(file, {
           maxSizeMB: 0.9,
           maxWidthOrHeight: 1920,
           useWebWorker: true,
+        });
+        fileToUpload = new File([compressedBlob], file.name, {
+          type: compressedBlob.type,
         });
       } catch (error) {
         console.error("Compression error:", error);
