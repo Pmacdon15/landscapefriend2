@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import PaginationButtons from "@/components/pagination-buttons";
 import { Card, CardContent } from "@/components/ui/card";
 import type { PastServiceItem } from "@/dal/admin";
@@ -20,11 +21,13 @@ export async function HistorySection({
           <HistoryList history={history} />
         </CardContent>
       </Card>
-      <PaginationButtons
-        pagePromise={pagePromise}
-        totalPagesPromise={Promise.resolve(totalPages)}
-        hash="history-section"
-      />
+      <Suspense>
+        <PaginationButtons
+          pagePromise={pagePromise}
+          totalPagesPromise={Promise.resolve(totalPages)}
+          hash="history-section"
+        />
+      </Suspense>
     </div>
   );
 }

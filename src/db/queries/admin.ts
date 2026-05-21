@@ -87,9 +87,17 @@ export async function getPastServicesListDb(
   orgId: string,
   limit = 50,
   offset = 0,
+  clientId?: string,
+  search?: string,
 ) {
   "use cache";
-  cacheTag(`past-services-list-${orgId}`, `job-history-${orgId}`);
+  cacheTag(
+    `past-services-list-${orgId}`,
+    `job-history-${orgId}`,
+    `past-services-list-${orgId}-${clientId || "none"}-${search || "none"}-${limit}-${offset}`,
+  );
+
+  const searchPattern = search ? `%${search}%` : null;
 
   const result = await sql`
     SELECT 
@@ -110,6 +118,21 @@ export async function getPastServicesListDb(
     LEFT JOIN users u_comp ON cj.completed_by = u_comp.user_id
     LEFT JOIN users u_ass ON cj.assigned_to = u_ass.user_id
     WHERE cj.org_id = ${orgId}
+      AND (
+        ${!clientId}::boolean OR c.id = ${clientId || null}
+      )
+      AND (
+        ${!search}::boolean OR (
+          c.name ILIKE ${searchPattern} OR
+          a.street ILIKE ${searchPattern} OR
+          a.city ILIKE ${searchPattern} OR
+          u_comp.full_name ILIKE ${searchPattern} OR
+          u_ass.full_name ILIKE ${searchPattern} OR
+          cj.service_type ILIKE ${searchPattern} OR
+          to_char(cj.completed_at, 'YYYY-MM-DD') ILIKE ${searchPattern} OR
+          to_char(cj.scheduled_date, 'YYYY-MM-DD') ILIKE ${searchPattern}
+        )
+      )
     ORDER BY cj.completed_at DESC
     LIMIT ${limit} OFFSET ${offset}
   `;

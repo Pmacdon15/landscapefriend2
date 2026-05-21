@@ -73,12 +73,12 @@ CREATE TABLE IF NOT EXISTS completed_jobs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     address_id UUID NOT NULL REFERENCES addresses(id) ON DELETE CASCADE,
     org_id TEXT NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
-    service_type TEXT NOT NULL, -- 'grass', 'snow'
-    assigned_to TEXT, -- Clerk user_id
-    completed_by TEXT, -- Clerk user_id
+    service_type TEXT NOT NULL,
+    assigned_to TEXT REFERENCES users(user_id) ON DELETE SET NULL,
+    completed_by TEXT REFERENCES users(user_id) ON DELETE SET NULL,
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    scheduled_date DATE, -- The date the job was scheduled for
-    captured_at TIMESTAMP WITH TIME ZONE, -- The exact time completion was recorded on client
+    scheduled_date DATE,
+    captured_at TIMESTAMP WITH TIME ZONE,
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

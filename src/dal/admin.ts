@@ -79,6 +79,8 @@ export async function getPastServicesStatsDal(): Promise<PastServicesStats> {
 
 export async function getPastServicesListDal(
   page = 1,
+  clientId?: string,
+  search?: string,
 ): Promise<{ data: PastServiceItem[]; totalPages: number }> {
   const { orgId, orgRole } = await auth.protect();
   if (!orgId || orgRole !== "org:admin") throw new Error("Unauthorized");
@@ -87,7 +89,13 @@ export async function getPastServicesListDal(
     const pageSize = 25;
     const offset = (page - 1) * pageSize;
 
-    const list = await getPastServicesListDb(orgId, pageSize, offset);
+    const list = await getPastServicesListDb(
+      orgId,
+      pageSize,
+      offset,
+      clientId,
+      search,
+    );
     const totalCount =
       list.length > 0
         ? Number((list[0] as { total_count: number }).total_count)

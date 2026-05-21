@@ -22,7 +22,7 @@ export async function getOrganizationMembersDal(): Promise<
       const publicData = m.publicUserData;
       const firstName = publicData?.firstName || "";
       const lastName = publicData?.lastName || "";
-      const identifier = publicData?.identifier || "Unknown Member";
+      const identifier = publicData?.identifier
 
       const fullName = `${firstName} ${lastName}`.trim();
 
