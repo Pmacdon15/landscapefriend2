@@ -87,7 +87,7 @@ export async function getPastServicesListDal(
   if (!orgId || orgRole !== "org:admin") throw new Error("Unauthorized");
 
   try {
-    const pageSize = 25;
+    const pageSize = 10;
     const offset = (page - 1) * pageSize;
 
     const list = await getPastServicesListDb(
