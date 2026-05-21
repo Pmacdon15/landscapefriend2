@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   TrendingUp,
 } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -95,7 +96,12 @@ export async function MonthlySection() {
                     className="border-slate-50 dark:border-slate-900/50 hover:bg-green-50/30 dark:hover:bg-green-900/5 transition-colors"
                   >
                     <TableCell className="font-bold pl-6 py-5 text-slate-700 dark:text-slate-200">
-                      {u.name}
+                      <Link
+                        href={`?search=${encodeURIComponent(u.name)}`}
+                        className="hover:text-primary transition-colors underline decoration-slate-200 dark:decoration-slate-800 underline-offset-4 hover:decoration-primary"
+                      >
+                        {u.name}
+                      </Link>
                     </TableCell>
                     <TableCell className="text-center py-5">
                       <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-base">

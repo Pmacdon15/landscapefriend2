@@ -47,22 +47,20 @@ export function ServiceHeader({
 
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
-      const params = new URLSearchParams(searchParams);
+      const params = new URLSearchParams(searchParams.toString());
       params.set("date", format(newDate, "yyyy-MM-dd"));
-      params.delete("clientId"); // Clear precise ID on date change
       router.push(`/clients-service?${params.toString()}`);
     }
   };
 
   const handleUserChange = (val: string | null) => {
     if (!val) return;
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams.toString());
     if (val === currentUserId) {
       params.delete("userId");
     } else {
       params.set("userId", val);
     }
-    params.delete("clientId"); // Clear precise ID on user change
     router.push(`/clients-service?${params.toString()}`);
   };
 

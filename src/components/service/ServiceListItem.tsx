@@ -8,13 +8,15 @@ import {
   MapPin,
   Snowflake,
 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn, getGoogleMapsUrl } from "@/lib/utils";
-import type { CutListItem } from "@/types/types";
+import type { CutListItem, OptimisticServiceAction } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
 import { CompleteJobButton } from "./CompleteJobButton";
+import { startTransition } from "react";
 
 interface ServiceListItemProps {
   item: CutListItem;
@@ -30,6 +32,8 @@ interface ServiceListItemProps {
     serviceType: "grass" | "snow";
     scheduledDate: Date;
   }) => void;
+  setOptimistic?: (action: OptimisticServiceAction) => void;
+  allCuts?: CutListItem[];
 }
 
 export function ServiceListItem({
@@ -40,9 +44,29 @@ export function ServiceListItem({
   date,
   currentUserId,
   onCompleteOptimistic,
+  setOptimistic,
+  allCuts,
 }: ServiceListItemProps) {
   const { client, address } = item;
   const isSnow = address.schedule?.frequency === "daily";
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handleClientClick = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("search");
+    params.set("clientId", client.id);
+    startTransition(() => {
+      if (setOptimistic && allCuts) {
+        setOptimistic({
+          type: "select-client",
+          value: client.name,
+          cuts: allCuts.filter((c) => c.client.id === client.id),
+        });
+      }
+      router.push(`?${params.toString()}`);
+    });
+  };
 
   return (
     <Draggable draggableId={address.id} index={index}>
@@ -71,9 +95,13 @@ export function ServiceListItem({
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div className="space-y-2">
                       <div className="flex flex-col">
-                        <span className="text-lg font-bold text-slate-900 dark:text-white">
+                        <button
+                          type="button"
+                          onClick={handleClientClick}
+                          className="text-lg font-bold text-slate-900 dark:text-white hover:text-primary transition-colors text-left w-fit"
+                        >
                           {client.name}
-                        </span>
+                        </button>
                         <span
                           className={cn(
                             "text-sm font-medium capitalize flex items-center gap-1.5",

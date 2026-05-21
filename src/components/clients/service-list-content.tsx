@@ -226,6 +226,8 @@ export function ServiceListContent({
                           dispatch({ type: "complete", ...params })
                         }
                         onViewPhoto={setViewingImage}
+                        setOptimistic={dispatch}
+                        allCuts={flatCuts}
                       />
                     </div>
                   ))}

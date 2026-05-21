@@ -23,8 +23,7 @@ export function ClientCardHeader({
   client,
   members,
   setOptimistic,
-  clientIdPromise,
-  searchPromise,
+  clientIdPromise, 
   isLastClient,
 }: ClientCardHeaderProps) {
   const router = useRouter();
@@ -33,13 +32,29 @@ export function ClientCardHeader({
   const { mutate: deleteClient } = useDeleteClient();
 
   const currentClientId = use(clientIdPromise);
-  const _currentSearch = use(searchPromise);
   const queryClient = useQueryClient();
+
+  const handleClientClick = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("search");
+    params.set("clientId", client.id);
+    params.set("page", "1");
+    startTransition(() => {
+      setOptimistic({ type: "select-client", client });
+      router.push(`?${params.toString()}`);
+    });
+  };
 
   return (
     <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
       <CardTitle className="text-xl font-bold flex items-center justify-between">
-        <span>{client.name}</span>
+        <button
+          type="button"
+          onClick={handleClientClick}
+          className="hover:text-primary transition-colors text-left"
+        >
+          {client.name}
+        </button>
         <div className="flex items-center gap-2">
           <EditClientModal
             client={client}

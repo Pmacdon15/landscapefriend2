@@ -9,7 +9,8 @@ import {
   MapPin,
   User,
 } from "lucide-react";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, startTransition } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
 import { LocalDateDisplay } from "@/components/history/local-date-display";
 import { LocalDateOnlyDisplay } from "@/components/history/local-date-only-display";
@@ -23,14 +24,60 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { PastServiceItem } from "@/dal/admin";
+import type { Client } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
 
 interface HistoryListProps {
   history: PastServiceItem[];
+  setOptimistic?: (
+    action:
+      | { type: "update-search"; value: string }
+      | { type: "select-client"; client: Client }
+      | { type: "clear-search"; defaultHistory?: PastServiceItem[] },
+  ) => void;
 }
 
-export function HistoryList({ history }: HistoryListProps) {
+export function HistoryList({ history, setOptimistic }: HistoryListProps) {
   const [viewingImage, setViewingImage] = useState<SiteMap | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handleClientClick = (job: PastServiceItem) => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("search");
+    params.set("clientId", job.client_id);
+    params.set("page", "1");
+    startTransition(() => {
+      if (setOptimistic) {
+        setOptimistic({
+          type: "select-client",
+          client: {
+            id: job.client_id,
+            name: job.client_name,
+            org_id: "", // ID-based filter sufficient
+            created_at: null,
+            email: null,
+            phone: null,
+            addresses: [],
+          },
+        });
+      }
+      router.push(`?${params.toString()}`);
+    });
+  };
+
+  const handleUserClick = (userName: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("clientId");
+    params.set("search", userName);
+    params.set("page", "1");
+    startTransition(() => {
+      if (setOptimistic) {
+        setOptimistic({ type: "update-search", value: userName });
+      }
+      router.push(`?${params.toString()}`);
+    });
+  };
 
   return (
     <>
@@ -58,9 +105,13 @@ export function HistoryList({ history }: HistoryListProps) {
                 >
                   <TableCell className="pl-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900 dark:text-white">
+                      <button
+                        type="button"
+                        onClick={() => handleClientClick(job)}
+                        className="font-bold text-slate-900 dark:text-white hover:text-primary transition-colors text-left w-fit"
+                      >
                         {job.client_name}
-                      </span>
+                      </button>
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${job.street}, ${job.city}`)}`}
                         target="_blank"
@@ -81,14 +132,22 @@ export function HistoryList({ history }: HistoryListProps) {
                         <User className="h-4 w-4" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => handleUserClick(job.completed_by_name || "Unknown")}
+                          className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-primary transition-colors text-left w-fit"
+                        >
                           {job.completed_by_name || "Unknown"}
-                        </span>
+                        </button>
                         {job.assigned_to_name &&
                           job.assigned_to_name !== job.completed_by_name && (
-                            <span className="text-[10px] text-slate-400 italic">
+                            <button
+                              type="button"
+                              onClick={() => handleUserClick(job.assigned_to_name!)}
+                              className="text-[10px] text-slate-400 italic hover:text-primary transition-colors text-left w-fit"
+                            >
                               Assigned to: {job.assigned_to_name}
-                            </span>
+                            </button>
                           )}
                       </div>
                     </div>

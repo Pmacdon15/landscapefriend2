@@ -4,6 +4,7 @@ import {
   Image as ImageIcon,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPastServicesStatsDal } from "@/dal/admin";
 
@@ -77,9 +78,12 @@ export async function StatsSection() {
                   key={u.user_id || u.user_name}
                   className="flex items-center justify-between border-b border-slate-50 dark:border-slate-900/50 pb-1.5 last:border-0"
                 >
-                  <span className="text-xs font-bold truncate max-w-[120px] text-slate-600 dark:text-slate-400">
+                  <Link
+                    href={`?search=${encodeURIComponent(u.user_name || "Unknown")}`}
+                    className="text-xs font-bold truncate max-w-[120px] text-slate-600 dark:text-slate-400 hover:text-primary transition-colors underline decoration-slate-200 dark:decoration-slate-800 underline-offset-4 hover:decoration-primary"
+                  >
                     {u.user_name || "Unknown"}
-                  </span>
+                  </Link>
                   <span className="text-sm font-extrabold text-slate-900 dark:text-white">
                     {u.count}
                   </span>

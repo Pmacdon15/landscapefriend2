@@ -126,7 +126,10 @@ export function HistoryContainer({
             {history.length} records found
           </span>
         </div>
-        <HistoryList history={optimisticState.history} />
+        <HistoryList
+          history={optimisticState.history}
+          setOptimistic={dispatch}
+        />
         <Suspense>
           <PaginationButtons
             pagePromise={pagePromise}
