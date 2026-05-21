@@ -103,6 +103,7 @@ export async function getPastServicesListDb(
     SELECT 
       cj.*,
       c.name as client_name,
+      c.id as client_id,
       a.street,
       a.city,
       u_comp.full_name as completed_by_name,

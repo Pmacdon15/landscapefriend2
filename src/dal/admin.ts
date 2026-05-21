@@ -37,6 +37,7 @@ export interface PastServicesStats {
 
 export interface PastServiceItem extends CompletedJobRow {
   client_name: string;
+  client_id: string;
   street: string;
   city: string;
   completed_by_name: string | null;

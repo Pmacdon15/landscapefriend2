@@ -4,30 +4,31 @@ import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, User2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, use, useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import type { PastServiceItem } from "@/dal/admin";
 import type { Client } from "@/types/types";
 
 interface HistorySearchBarProps {
-  clientPromise: Promise<Client | null>;
-  searchPromise: Promise<string>;
-  membersPromise: Promise<{ id: string; name: string }[]>;
+  setOptimistic: (
+    action:
+      | { type: "update-search"; value: string }
+      | { type: "select-client"; client: Client }
+      | { type: "clear-search"; defaultHistory?: PastServiceItem[] },
+  ) => void;
+  optimisticValue: string;
+  members: { id: string; name: string }[];
 }
 
 export function HistorySearchBar({
-  clientPromise,
-  searchPromise,
-  membersPromise,
+  setOptimistic,
+  optimisticValue,
+  members,
 }: HistorySearchBarProps) {
-  const client = use(clientPromise);
-  const search = use(searchPromise);
-  const members = use(membersPromise);
-  const initialSearchValue = client ? client.name : search;
-
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [inputValue, setInputValue] = useState(initialSearchValue);
+  const [inputValue, setInputValue] = useState(optimisticValue);
   const [isFocused, setIsFocused] = useState(false);
   const [debouncedValue] = useDebouncedValue(inputValue, { wait: 300 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,6 +46,24 @@ export function HistorySearchBar({
     enabled: debouncedValue.length > 0,
   });
 
+  const { data: defaultData } = useQuery<{ clients: Client[] }>({
+    queryKey: ["client-search-history", ""],
+    queryFn: async () => {
+      const res = await fetch(`/api/clients/search?q=`);
+      if (!res.ok) throw new Error("Network response was not ok");
+      return res.json();
+    },
+  });
+
+  const { data: defaultHistory } = useQuery<{ data: PastServiceItem[] }>({
+    queryKey: ["history-base"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/history");
+      if (!res.ok) throw new Error("Network response was not ok");
+      return res.json();
+    },
+  });
+
   const clients = data?.clients || [];
 
   // Filter crew members locally
@@ -55,12 +74,12 @@ export function HistorySearchBar({
         )
       : [];
 
-  // Update input if initialSearchValue changes from page loads
+  // Update input if optimisticValue changes from page loads
   useEffect(() => {
     if (!isFocused) {
-      setInputValue(initialSearchValue);
+      setInputValue(optimisticValue);
     }
-  }, [initialSearchValue, isFocused]);
+  }, [optimisticValue, isFocused]);
 
   // Click outside listener to close autocomplete list
   useEffect(() => {
@@ -90,6 +109,14 @@ export function HistorySearchBar({
     }
 
     startTransition(() => {
+      if (query) {
+        setOptimistic({ type: "update-search", value: query });
+      } else {
+        setOptimistic({
+          type: "clear-search",
+          defaultHistory: defaultHistory?.data,
+        });
+      }
       router.push(`?${params.toString()}#history-section`);
     });
     setIsFocused(false);
@@ -104,7 +131,11 @@ export function HistorySearchBar({
     params.set("page", "1");
 
     startTransition(() => {
-      router.push(`?${params.toString()}#schedules-section`);
+      setOptimistic({
+        type: "select-client",
+        client,
+      });
+      router.push(`?${params.toString()}#history-section`);
     });
     setIsFocused(false);
   };
