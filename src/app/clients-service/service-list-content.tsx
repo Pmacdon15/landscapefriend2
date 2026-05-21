@@ -131,7 +131,7 @@ export function ServiceListContent({
 
   const parsedDefaultDate = parseISO(
     dateParam ?? new Date().toLocaleDateString("en-CA"),
-  );  
+  );
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;

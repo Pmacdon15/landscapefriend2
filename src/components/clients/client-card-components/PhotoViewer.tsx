@@ -24,7 +24,12 @@ export function PhotoViewer({ viewingSiteMap, onClose }: PhotoViewerProps) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${viewingSiteMap.name || "photo"}.png`;
+
+      const contentType = response.headers.get("Content-Type");
+      const ext = contentType ? contentType.split("/")[1] : "png";
+      const cleanExt = ext === "jpeg" ? "jpg" : ext;
+      a.download = `${viewingSiteMap.name || "photo"}.${cleanExt}`;
+
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

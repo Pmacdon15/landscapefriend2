@@ -31,7 +31,11 @@ export function CameraCapture({
     async function startCamera() {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" }, // Prefer back camera
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
         currentStream = mediaStream;
@@ -83,16 +87,16 @@ export function CameraCapture({
       (blob) => {
         if (blob) {
           const now = new Date();
-          const file = new File([blob], `capture-${now.getTime()}.png`, {
-            type: "image/png",
+          const file = new File([blob], `capture-${now.getTime()}.jpg`, {
+            type: "image/jpeg",
           });
           setCapturedFile(file);
           setCapturedAt(now);
           setPreviewUrl(URL.createObjectURL(blob));
         }
       },
-      "image/png",
-      0.9,
+      "image/jpeg",
+      0.85,
     );
   };
 

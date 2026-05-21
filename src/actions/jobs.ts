@@ -26,7 +26,8 @@ export async function completeJobAction(formData: FormData) {
   if (photoFile && photoFile.size > 0) {
     try {
       const timestamp = Date.now();
-      const fileName = `completion-${addressId}-${timestamp}.png`;
+      const ext = photoFile.name.split(".").pop() || "png";
+      const fileName = `completion-${addressId}-${timestamp}.${ext}`;
       const blob = await put(fileName, photoFile, {
         access: "private",
       });
