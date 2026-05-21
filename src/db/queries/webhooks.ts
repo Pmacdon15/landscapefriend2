@@ -10,8 +10,7 @@ export async function upsertUserDb(
     VALUES (${userId}, ${fullName}, ${email})
     ON CONFLICT (user_id) DO UPDATE SET 
       full_name = EXCLUDED.full_name,
-      email = EXCLUDED.email,
-      updated_at = CURRENT_TIMESTAMP
+      email = EXCLUDED.email     
     RETURNING *
   `;
   return result[0];
