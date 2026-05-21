@@ -54,8 +54,7 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
           client: {
             id: job.client_id,
             name: job.client_name,
-            org_id: "", // ID-based filter sufficient
-            created_at: null,
+            org_id: "",             
             email: null,
             phone: null,
             addresses: [],
