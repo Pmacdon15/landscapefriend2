@@ -30,16 +30,23 @@ async function ChartWrapper({
 export default async function StatsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const monthlyStatsPromise = props.searchParams.then((params) => {
+  const datePromise = props.searchParams.then((params) => {
+    const d = params.date;
+    const dateVal = Array.isArray(d) ? d[0] : d;
+    if (dateVal) {
+      return dateVal;
+    }
     const m = params.month;
     const monthVal = Array.isArray(m) ? m[0] : m;
-    return getMonthlyStatsDal(monthVal || undefined);
+    if (monthVal) {
+      return `${monthVal}-01`;
+    }
+    return null;
   });
 
-  const monthPromise = props.searchParams.then((params) => {
-    const m = params.month;
-    const monthVal = Array.isArray(m) ? m[0] : m;
-    return monthVal || null;
+  const monthlyStatsPromise = datePromise.then((dateVal) => {
+    const monthVal = dateVal ? dateVal.slice(0, 7) : undefined;
+    return getMonthlyStatsDal(monthVal || undefined);
   });
 
   const lifetimeStatsPromise = getPastServicesStatsDal();
@@ -52,7 +59,7 @@ export default async function StatsPage(props: {
           description="Analyze historical landscaping service data, team performance metrics, and lifetime progress indicators."
         />
         <Suspense>
-          <MonthSelector monthPromise={monthPromise} />
+          <MonthSelector datePromise={datePromise} />
         </Suspense>
       </div>
 

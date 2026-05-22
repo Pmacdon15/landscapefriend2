@@ -6,27 +6,28 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { use, useEffect } from "react";
 
 export function MonthSelector({
-  monthPromise,
+  datePromise,
 }: {
-  monthPromise: Promise<string | null>;
+  datePromise: Promise<string | null>;
 }) {
-  const currentMonth = use(monthPromise);
+  const currentDate = use(datePromise);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Redirect to set default month param if missing
+  // Redirect to set default date param if missing
   useEffect(() => {
-    if (!currentMonth) {
-      const defaultMonth = new Date().toLocaleDateString("en-CA").slice(0, 7);
+    if (!currentDate) {
+      const defaultDate = new Date().toLocaleDateString("en-CA");
       const params = new URLSearchParams(searchParams.toString());
-      params.set("month", defaultMonth);
+      params.set("date", defaultDate);
+      params.delete("month");
       router.replace(`${pathname}?${params.toString()}`);
     }
-  }, [currentMonth, pathname, router, searchParams]);
+  }, [currentDate, pathname, router, searchParams]);
 
-  // Parse currentMonth (format YYYY-MM). Use toLocaleDateString("en-CA") fallback when not set.
-  const date = currentMonth ?? new Date().toLocaleDateString("en-CA");
+  // Parse currentDate (format YYYY-MM-DD or YYYY-MM). Use toLocaleDateString("en-CA") fallback when not set.
+  const date = currentDate ?? new Date().toLocaleDateString("en-CA");
 
   // Parse string safely into a local Date object to work correctly with date-fns
   const parsedParts = date.split("-").map(Number);
@@ -38,7 +39,8 @@ export function MonthSelector({
 
   const handleMonthChange = (newDate: Date) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("month", format(newDate, "yyyy-MM"));
+    params.set("date", format(newDate, "yyyy-MM-01"));
+    params.delete("month");
     router.push(`${pathname}?${params.toString()}`);
   };
 

@@ -67,10 +67,8 @@ export function NavBar({
     params.set("date", date);
   }
 
-  // ensure month exists
-  if (!params.get("month")) {
-    params.set("month", date.slice(0, 7));
-  }
+  // remove month parameter to avoid sync issues, consolidate on date parameter
+  params.delete("month");
 
   const buildHref = (path: string) => {
     const query = params.toString();
