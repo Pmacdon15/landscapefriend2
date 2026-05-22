@@ -9,6 +9,7 @@ import {
   Snowflake,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { startTransition } from "react";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +17,6 @@ import { cn, getGoogleMapsUrl } from "@/lib/utils";
 import type { CutListItem, OptimisticServiceAction } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
 import { CompleteJobButton } from "./CompleteJobButton";
-import { startTransition } from "react";
 
 interface ServiceListItemProps {
   item: CutListItem;

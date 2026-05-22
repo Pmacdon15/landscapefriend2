@@ -13,10 +13,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getMonthlyStatsDal } from "@/dal/admin";
+import type { MonthlyStats } from "@/dal/admin";
 
-export async function MonthlySection() {
-  const data = await getMonthlyStatsDal();
+export async function MonthlySection({
+  dataPromise,
+}: {
+  dataPromise: Promise<MonthlyStats>;
+}) {
+  const data = await dataPromise;
 
   const totalScheduled = data.userStats.reduce(
     (acc, curr) => acc + curr.scheduled,
@@ -31,7 +35,7 @@ export async function MonthlySection() {
       </h2>
 
       <div className="grid gap-4 sm:gap-6 sm:grid-cols-2">
-        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden group hover:border-green-200 dark:hover:border-green-800/50 transition-colors relative">
+        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-xs border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden group hover:border-green-200 dark:hover:border-green-800/50 transition-colors relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
           <CardHeader className="pb-2 pt-6">
             <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wider">
@@ -49,7 +53,7 @@ export async function MonthlySection() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden group hover:border-amber-200 dark:hover:border-amber-800/50 transition-colors relative">
+        <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-xs border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden group hover:border-amber-200 dark:hover:border-amber-800/50 transition-colors relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
           <CardHeader className="pb-2 pt-6">
             <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wider">
@@ -68,7 +72,7 @@ export async function MonthlySection() {
         </Card>
       </div>
 
-      <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      <Card className="bg-white/50 dark:bg-slate-950/50 backdrop-blur-xs border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <CardHeader className="pt-6 border-b border-slate-100 dark:border-slate-900/50 bg-slate-50/30 dark:bg-slate-900/10">
           <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider">
             Team Member Breakdown
@@ -79,26 +83,37 @@ export async function MonthlySection() {
           <div className="grid divide-y divide-slate-50 dark:divide-slate-900 sm:hidden">
             {data.userStats.map((u) => {
               const total = u.completed + u.scheduled;
-              const percent = total > 0 ? Math.round((u.completed / total) * 100) : 0;
+              const percent =
+                total > 0 ? Math.round((u.completed / total) * 100) : 0;
               return (
                 <div key={u.id} className="p-4 space-y-3">
                   <div className="flex justify-between items-center">
                     <Link
-                      href={`?search=${encodeURIComponent(u.name)}`}
+                      href={`/admin/history?search=${encodeURIComponent(u.name)}`}
                       className="font-bold text-slate-700 dark:text-slate-200 underline decoration-slate-200 underline-offset-4"
                     >
                       {u.name}
                     </Link>
-                    <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">{percent}%</span>
+                    <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                      {percent}%
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-emerald-50/50 dark:bg-emerald-950/10 rounded-lg p-2 border border-emerald-100/50 dark:border-emerald-900/20">
-                      <span className="text-[10px] font-bold text-emerald-600/70 uppercase block">Done</span>
-                      <span className="text-lg font-black text-emerald-600">{u.completed}</span>
+                      <span className="text-[10px] font-bold text-emerald-600/70 uppercase block">
+                        Done
+                      </span>
+                      <span className="text-lg font-black text-emerald-600">
+                        {u.completed}
+                      </span>
                     </div>
                     <div className="bg-amber-50/50 dark:bg-amber-950/10 rounded-lg p-2 border border-amber-100/50 dark:border-amber-900/20">
-                      <span className="text-[10px] font-bold text-amber-600/70 uppercase block">Left</span>
-                      <span className="text-lg font-black text-amber-600">{u.scheduled}</span>
+                      <span className="text-[10px] font-bold text-amber-600/70 uppercase block">
+                        Left
+                      </span>
+                      <span className="text-lg font-black text-amber-600">
+                        {u.scheduled}
+                      </span>
                     </div>
                   </div>
                   <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -117,10 +132,18 @@ export async function MonthlySection() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
-                  <TableHead className="pl-6 h-12 font-bold text-xs uppercase tracking-wider text-nowrap">Team Member</TableHead>
-                  <TableHead className="text-center h-12 font-bold text-xs uppercase tracking-wider text-nowrap">Completed</TableHead>
-                  <TableHead className="text-center h-12 font-bold text-xs uppercase tracking-wider text-nowrap">Remaining</TableHead>
-                  <TableHead className="text-right pr-6 h-12 font-bold text-xs uppercase tracking-wider text-nowrap">Progress</TableHead>
+                  <TableHead className="pl-6 h-12 font-bold text-xs uppercase tracking-wider text-nowrap">
+                    Team Member
+                  </TableHead>
+                  <TableHead className="text-center h-12 font-bold text-xs uppercase tracking-wider text-nowrap">
+                    Completed
+                  </TableHead>
+                  <TableHead className="text-center h-12 font-bold text-xs uppercase tracking-wider text-nowrap">
+                    Remaining
+                  </TableHead>
+                  <TableHead className="text-right pr-6 h-12 font-bold text-xs uppercase tracking-wider text-nowrap">
+                    Progress
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -136,7 +159,7 @@ export async function MonthlySection() {
                     >
                       <TableCell className="font-bold pl-6 py-5 text-slate-700 dark:text-slate-200">
                         <Link
-                          href={`?search=${encodeURIComponent(u.name)}`}
+                          href={`/admin/history?search=${encodeURIComponent(u.name)}`}
                           className="hover:text-primary transition-colors underline decoration-slate-200 dark:decoration-slate-800 underline-offset-4 hover:decoration-primary"
                         >
                           {u.name}

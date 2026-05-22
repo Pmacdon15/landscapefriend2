@@ -2,12 +2,10 @@
 
 import { useSearchParams } from "next/navigation";
 import { startTransition, use, useEffect, useOptimistic } from "react";
-
-import { HistoryList } from "./history-list";
 import PaginationButtons from "@/components/pagination-buttons";
 import { Card, CardContent } from "@/components/ui/card";
-import { PastServiceItem } from "@/dal/admin";
-
+import type { PastServiceItem } from "@/dal/admin";
+import { HistoryList } from "./history-list";
 
 function getFilteredHistory(
   items: PastServiceItem[],

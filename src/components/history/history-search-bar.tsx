@@ -46,15 +46,6 @@ export function HistorySearchBar({
     enabled: debouncedValue.length > 0,
   });
 
-  const { data: defaultData } = useQuery<{ clients: Client[] }>({
-    queryKey: ["client-search-history", ""],
-    queryFn: async () => {
-      const res = await fetch(`/api/clients/search?q=`);
-      if (!res.ok) throw new Error("Network response was not ok");
-      return res.json();
-    },
-  });
-
   const { data: defaultHistory } = useQuery<{ data: PastServiceItem[] }>({
     queryKey: ["history-base"],
     queryFn: async () => {

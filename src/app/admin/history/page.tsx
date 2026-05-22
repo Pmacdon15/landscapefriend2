@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -5,12 +6,7 @@ import { getPastServicesListDal } from "@/dal/admin";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForInfoDal } from "@/dal/clients";
 import { HistoryContainer } from "../../../components/history/history-container";
-import {
-  HistorySkeleton,
-  StatsSkeleton,
-} from "../../../components/history/history-skeletons";
-import { MonthlySection } from "../../../components/history/monthly-section";
-import { StatsSection } from "./stats-section";
+import { HistorySkeleton } from "../../../components/history/history-skeletons";
 
 export const metadata: Metadata = {
   title: "Service History",
@@ -21,6 +17,12 @@ export const metadata: Metadata = {
 export default async function HistoryPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const authData = await auth.protect();
+  const isAdmin =
+    authData.orgRole === "org:admin" || authData.has({ role: "org:admin" });
+  if (!authData.orgId || !isAdmin || !authData.has({ feature: "history" })) {
+    throw new Error("Unauthorized");
+  }
   const pagePromise = props.searchParams.then((params) =>
     Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
   );
@@ -64,7 +66,7 @@ export default async function HistoryPage(props: {
     <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
       <PageHeader
         title="History"
-        description="Search through historical service data and view performance statistics."
+        description="Search through historical service data."
       />
 
       <Suspense fallback={<HistorySkeleton />}>
@@ -76,21 +78,6 @@ export default async function HistoryPage(props: {
           membersPromise={membersPromise}
         />
       </Suspense>
-
-      <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <Suspense fallback={<StatsSkeleton />}>
-              <MonthlySection />
-            </Suspense>
-          </div>
-          <div>
-            <Suspense fallback={<StatsSkeleton />}>
-              <StatsSection />
-            </Suspense>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

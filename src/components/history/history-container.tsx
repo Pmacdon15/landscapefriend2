@@ -11,8 +11,8 @@ import PaginationButtons from "@/components/pagination-buttons";
 import type { PastServiceItem } from "@/dal/admin";
 import type { Client } from "@/types/types";
 import { ClientSchedulesCard } from "../clients/client-schedules-card";
-import { HistorySearchBar } from "./history-search-bar";
 import { HistoryList } from "./history-list";
+import { HistorySearchBar } from "./history-search-bar";
 
 interface HistoryContainerProps {
   historyPromise: Promise<{ data: PastServiceItem[]; totalPages: number }>;

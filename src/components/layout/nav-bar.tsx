@@ -10,6 +10,7 @@ import {
   useAuth,
 } from "@clerk/nextjs";
 import {
+  BarChart3,
   CheckCircle2,
   LayoutDashboard,
   LogOut,
@@ -20,6 +21,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { use } from "react";
+
 import { buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
@@ -29,13 +31,25 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+type NavLink = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+
+  permissions?: {
+    roles?: string[];
+    features?: string[];
+  };
+};
+
 export function NavBar({
   datePromise,
 }: {
   datePromise: Promise<string | null>;
 }) {
   const [open, setOpen] = React.useState(false);
-  const { has, isLoaded } = useAuth();
+
+  const { has, isLoaded, orgRole } = useAuth();
 
   const searchParams = useSearchParams();
 
@@ -43,34 +57,57 @@ export function NavBar({
 
   const defaultDate = new Date().toLocaleDateString("en-CA");
 
-  const date = dateParam === null ? defaultDate : dateParam;
+  const date = dateParam ?? defaultDate;
 
-  // clone current params
+  // clone current search params
   const params = new URLSearchParams(searchParams.toString());
 
-  // ensure date exists, otherwise inject today's date (en-CA format)
+  // ensure date exists
   if (!params.get("date")) {
     params.set("date", date);
   }
 
+  // ensure month exists
+  if (!params.get("month")) {
+    params.set("month", date.slice(0, 7));
+  }
+
   const buildHref = (path: string) => {
     const query = params.toString();
+
     return query ? `${path}?${query}` : path;
   };
 
-  const navLinks = [
+  const navLinks: NavLink[] = [
     {
       href: buildHref("/client-info-list"),
       label: "Manage Clients",
       icon: Users,
-      roles: ["org:admin"],
+      permissions: {
+        roles: ["org:admin"],
+      },
     },
+
+    {
+      href: buildHref("/admin/stats"),
+      label: "Stats",
+      icon: BarChart3,
+      permissions: {
+        roles: ["org:admin"],
+        features: ["stats"],
+      },
+    },
+
     {
       href: buildHref("/admin/history"),
       label: "History",
       icon: CheckCircle2,
-      roles: ["org:admin"],
+      permissions: {
+        roles: ["org:admin"],
+        features: ["history"],
+      },
     },
+
     {
       href: buildHref("/clients-service"),
       label: "Service List",
@@ -78,11 +115,24 @@ export function NavBar({
     },
   ];
 
-  const visibleLinks = isLoaded
-    ? navLinks.filter(
-        (link) => !link.roles || link.roles.some((role) => has({ role })),
-      )
-    : [];
+  const hasPermission = (link: NavLink) => {
+    if (!link.permissions) {
+      return true;
+    }
+
+    const { roles = [], features = [] } = link.permissions;
+
+    const hasAllRoles = roles.every(
+      (role) => has({ role }) || orgRole === role,
+    );
+
+    // user must have ALL features
+    const hasAllFeatures = features.every((feature) => has({ feature }));
+
+    return hasAllRoles && hasAllFeatures;
+  };
+
+  const visibleLinks = isLoaded ? navLinks.filter(hasPermission) : [];
 
   return (
     <nav className="border-b border-green-200/50 dark:border-green-800/50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 w-full overflow-hidden">
@@ -96,6 +146,7 @@ export function NavBar({
       />
 
       <div className="relative z-10 flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
+        {/* LEFT SIDE */}
         <div className="flex items-center gap-6">
           <Link
             href={buildHref("/")}
@@ -120,6 +171,7 @@ export function NavBar({
           </Show>
         </div>
 
+        {/* RIGHT SIDE */}
         <div className="flex items-center gap-1">
           <Show when="signed-in">
             <div className="flex items-center md:gap-4">
@@ -160,6 +212,7 @@ export function NavBar({
             </div>
           </Show>
 
+          {/* MOBILE MENU */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               className={buttonVariants({
