@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
           const userId = data.id;
           const userName =
             `${data.first_name || ""} ${data.last_name || ""}`.trim() ||
-            data.username || data.email_addresses[0]?.email_address;
-           
+            data.username ||
+            data.email_addresses[0]?.email_address;
+
           const userEmail = data.email_addresses[0]?.email_address;
           if (!userEmail) {
             console.error("User created event without email address");

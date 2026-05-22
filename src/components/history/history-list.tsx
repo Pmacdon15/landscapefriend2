@@ -10,7 +10,7 @@ import {
   User,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, startTransition } from "react";
+import { startTransition, useState } from "react";
 import { ImageViewer } from "@/components/clients/image-viewer";
 import { LocalDateDisplay } from "@/components/history/local-date-display";
 import { LocalDateOnlyDisplay } from "@/components/history/local-date-only-display";
@@ -85,7 +85,9 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
           <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
             <CheckCircle2 className="h-6 w-6 text-slate-300 dark:text-slate-700" />
           </div>
-          <p className="text-sm font-medium text-slate-500">No service history found.</p>
+          <p className="text-sm font-medium text-slate-500">
+            No service history found.
+          </p>
         </div>
       </div>
     );
@@ -115,7 +117,9 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
                   className="flex items-center gap-1 text-xs text-slate-500 mt-1"
                 >
                   <MapPin className="h-3 w-3 shrink-0" />
-                  <span className="truncate max-w-[200px] underline decoration-slate-200">{job.street}</span>
+                  <span className="truncate max-w-[200px] underline decoration-slate-200">
+                    {job.street}
+                  </span>
                 </a>
               </div>
               <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase">
@@ -125,10 +129,14 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
 
             <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-50 dark:border-slate-900">
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed By</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Completed By
+                </span>
                 <button
                   type="button"
-                  onClick={() => handleUserClick(job.completed_by_name || "Unknown")}
+                  onClick={() =>
+                    handleUserClick(job.completed_by_name || "Unknown")
+                  }
                   className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-primary"
                 >
                   <User className="h-3 w-3" />
@@ -136,7 +144,9 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
                 </button>
               </div>
               <div className="space-y-1 text-right">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Finished</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Finished
+                </span>
                 <div className="flex items-center justify-end gap-1.5 text-xs text-slate-900 dark:text-slate-200 font-bold">
                   <Clock className="h-3 w-3 text-emerald-500" />
                   <LocalDateDisplay date={job.completed_at} />
@@ -174,11 +184,15 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/50 dark:bg-slate-900/20 hover:bg-transparent">
-              <TableHead className="font-bold h-12 pl-6">Client & Address</TableHead>
+              <TableHead className="font-bold h-12 pl-6">
+                Client & Address
+              </TableHead>
               <TableHead className="font-bold h-12">Completed By</TableHead>
               <TableHead className="font-bold h-12">Service Info</TableHead>
               <TableHead className="font-bold h-12">Service</TableHead>
-              <TableHead className="text-right font-bold h-12 pr-6">Photo</TableHead>
+              <TableHead className="text-right font-bold h-12 pr-6">
+                Photo
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -218,20 +232,25 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
                     <div className="flex flex-col">
                       <button
                         type="button"
-                        onClick={() => handleUserClick(job.completed_by_name || "Unknown")}
+                        onClick={() =>
+                          handleUserClick(job.completed_by_name || "Unknown")
+                        }
                         className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-primary transition-colors text-left w-fit"
                       >
                         {job.completed_by_name || "Unknown"}
                       </button>
-                      {job.assigned_to_name && job.assigned_to_name !== job.completed_by_name && (
-                        <button
-                          type="button"
-                          onClick={() => handleUserClick(job.assigned_to_name!)}
-                          className="text-[10px] text-slate-400 italic hover:text-primary transition-colors text-left w-fit"
-                        >
-                          Assigned to: {job.assigned_to_name}
-                        </button>
-                      )}
+                      {job.assigned_to_name &&
+                        job.assigned_to_name !== job.completed_by_name && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUserClick(job.assigned_to_name || "")
+                            }
+                            className="text-[10px] text-slate-400 italic hover:text-primary transition-colors text-left w-fit"
+                          >
+                            Assigned to: {job.assigned_to_name}
+                          </button>
+                        )}
                     </div>
                   </div>
                 </TableCell>
@@ -279,7 +298,9 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
                       <span className="text-xs font-bold">View</span>
                     </Button>
                   ) : (
-                    <span className="text-[11px] text-slate-400 italic pr-2">No photo</span>
+                    <span className="text-[11px] text-slate-400 italic pr-2">
+                      No photo
+                    </span>
                   )}
                 </TableCell>
               </TableRow>

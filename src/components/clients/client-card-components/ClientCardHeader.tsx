@@ -23,7 +23,7 @@ export function ClientCardHeader({
   client,
   members,
   setOptimistic,
-  clientIdPromise, 
+  clientIdPromise,
   isLastClient,
 }: ClientCardHeaderProps) {
   const router = useRouter();

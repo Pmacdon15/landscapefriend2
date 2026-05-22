@@ -61,8 +61,11 @@ export interface MonthlyStats {
 }
 
 export async function getPastServicesStatsDal(): Promise<PastServicesStats> {
-  const { orgId, orgRole } = await auth.protect();
-  if (!orgId || orgRole !== "org:admin") throw new Error("Unauthorized");
+  const { orgId, orgRole, has } = await auth.protect();
+  const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
+  if (!orgId || !isAdmin || !has({ feature: "stats" })) {
+    throw new Error("Unauthorized");
+  }
 
   try {
     const stats = await getPastServicesStatsDb(orgId);
@@ -83,8 +86,11 @@ export async function getPastServicesListDal(
   clientId?: string,
   search?: string,
 ): Promise<{ data: PastServiceItem[]; totalPages: number }> {
-  const { orgId, orgRole } = await auth.protect();
-  if (!orgId || orgRole !== "org:admin") throw new Error("Unauthorized");
+  const { orgId, orgRole, has } = await auth.protect();
+  const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
+  if (!orgId || !isAdmin || !has({ feature: "history" })) {
+    throw new Error("Unauthorized");
+  }
 
   try {
     const pageSize = 10;
@@ -114,14 +120,26 @@ export async function getPastServicesListDal(
   }
 }
 
-export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
-  const { orgId, orgRole } = await auth.protect();
-  if (!orgId || orgRole !== "org:admin") throw new Error("Unauthorized");
+export async function getMonthlyStatsDal(
+  monthParam?: string,
+): Promise<MonthlyStats> {
+  const { orgId, orgRole, has } = await auth.protect();
+  const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
+  if (!orgId || !isAdmin || !has({ feature: "stats" })) {
+    throw new Error("Unauthorized");
+  }
 
-  const now = new Date();
+  let now = new Date();
+  if (monthParam) {
+    const [year, month] = monthParam.split("-").map(Number);
+    if (!Number.isNaN(year) && !Number.isNaN(month)) {
+      now = new Date(year, month - 1, 1);
+    }
+  }
+
   const start = startOfMonth(now);
   const end = endOfMonth(now);
-  const today = startOfDay(now);
+  const today = startOfDay(new Date());
 
   try {
     const { completedJobs, schedules, assignments } =
@@ -173,7 +191,8 @@ export async function getMonthlyStatsDal(): Promise<MonthlyStats> {
       });
     });
 
-    for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
+    const loopStart = isAfter(start, today) ? start : today;
+    for (let d = new Date(loopStart); d <= end; d.setDate(d.getDate() + 1)) {
       const isFuture = isAfter(d, today);
       const isToday = d.getTime() === today.getTime();
 
