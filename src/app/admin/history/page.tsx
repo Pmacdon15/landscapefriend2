@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -17,12 +16,6 @@ export const metadata: Metadata = {
 export default async function HistoryPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const authData = await auth.protect();
-  const isAdmin =
-    authData.orgRole === "org:admin" || authData.has({ role: "org:admin" });
-  if (!authData.orgId || !isAdmin || !authData.has({ feature: "history" })) {
-    throw new Error("Unauthorized");
-  }
   const pagePromise = props.searchParams.then((params) =>
     Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
   );

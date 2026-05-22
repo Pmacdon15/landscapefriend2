@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { StatsSkeleton } from "@/components/history/history-skeletons";
@@ -31,12 +30,6 @@ async function ChartWrapper({
 export default async function StatsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const authData = await auth.protect();
-  const isAdmin =
-    authData.orgRole === "org:admin" || authData.has({ role: "org:admin" });
-  if (!authData.orgId || !isAdmin || !authData.has({ feature: "stats" })) {
-    throw new Error("Unauthorized");
-  }
   const monthlyStatsPromise = props.searchParams.then((params) => {
     const m = params.month;
     const monthVal = Array.isArray(m) ? m[0] : m;
