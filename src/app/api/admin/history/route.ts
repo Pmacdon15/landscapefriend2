@@ -1,13 +1,14 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getPastServicesListDal } from "@/dal/admin";
 
 export async function GET(request: Request) {
-  try {
-    // const { orgId, orgRole } = await auth.protect();
-    // if (!orgId || orgRole !== "org:admin") {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
+  const { orgId, orgRole } = await auth.protect();
+  if (!orgId || orgRole !== "org:admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  try {
     const { searchParams } = new URL(request.url);
     const page = Number(searchParams.get("page") || "1");
     const clientId = searchParams.get("clientId") || undefined;

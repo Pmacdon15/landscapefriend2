@@ -17,6 +17,7 @@ import type {
   CompletedJobRow,
   ScheduleRow,
 } from "@/types/types";
+import { connection } from "next/server";
 
 export interface PastServicesStats {
   totalCuts: number;
@@ -61,6 +62,7 @@ export interface MonthlyStats {
 }
 
 export async function getPastServicesStatsDal(): Promise<PastServicesStats> {
+  await connection();
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
   if (!orgId || !isAdmin || !has({ feature: "stats" })) {
@@ -86,6 +88,7 @@ export async function getPastServicesListDal(
   clientId?: string,
   search?: string,
 ): Promise<{ data: PastServiceItem[]; totalPages: number }> {
+  await connection();
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
   if (!orgId || !isAdmin || !has({ feature: "history" })) {
@@ -123,6 +126,7 @@ export async function getPastServicesListDal(
 export async function getMonthlyStatsDal(
   monthParam?: string,
 ): Promise<MonthlyStats> {
+  await connection();
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
   if (!orgId || !isAdmin || !has({ feature: "stats" })) {

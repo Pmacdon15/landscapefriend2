@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { Download, X } from "lucide-react";
+import { Download, X, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -19,6 +20,15 @@ export function ImageViewer({
   onClose,
   isAdmin,
 }: ImageViewerProps) {
+  const [isLoading, setIsLoading] = useState(true);
+  const currentId = viewingImage?.id || null;
+  const lastIdRef = useRef<string | null>(null);
+
+  if (currentId !== lastIdRef.current) {
+    lastIdRef.current = currentId;
+    setIsLoading(true);
+  }
+
   const _handleDownload = async () => {
     if (!viewingImage) return;
     try {
@@ -93,13 +103,27 @@ export function ImageViewer({
         {viewingImage && (
           <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8 pt-16">
             {viewingImage.blob_path ? (
-              <Image
-                src={`/api/image-view/${viewingImage.id}?type=${viewingImage.name?.startsWith("Completion") ? "photo" : "sitemap"}`}
-                alt={viewingImage.name || "Viewing photo"}
-                fill
-                unoptimized
-                className="object-contain shadow-2xl transition-all duration-300"
-              />
+              <>
+                {isLoading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    <p className="text-xs text-slate-400 font-semibold tracking-wider animate-pulse">
+                      LOADING PHOTO...
+                    </p>
+                  </div>
+                )}
+                <Image
+                  key={viewingImage.id}
+                  src={`/api/image-view/${viewingImage.id}?type=${viewingImage.name?.startsWith("Completion") ? "photo" : "sitemap"}`}
+                  alt={viewingImage.name || "Viewing photo"}
+                  fill
+                  unoptimized
+                  onLoad={() => setIsLoading(false)}
+                  className={`object-contain shadow-2xl transition-all duration-500 ease-in-out ${
+                    isLoading ? "opacity-0 scale-95" : "opacity-100 scale-100"
+                  }`}
+                />
+              </>
             ) : viewingImage.map_data && isAdmin ? (
               <div className="w-full max-w-5xl aspect-12/8 bg-white rounded-lg overflow-hidden shadow-2xl">
                 <SiteMapEditor

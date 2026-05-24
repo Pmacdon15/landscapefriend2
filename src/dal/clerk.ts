@@ -12,12 +12,11 @@ export async function getOrganizationMembersDal(): Promise<
     return [];
   }
 
+  const client = await clerkClient();
+  const members = await client.organizations.getOrganizationMembershipList({
+    organizationId: orgId,
+  });
   try {
-    const client = await clerkClient();
-    const members = await client.organizations.getOrganizationMembershipList({
-      organizationId: orgId,
-    });
-
     return members.data.map((m) => {
       const publicData = m.publicUserData;
       const firstName = publicData?.firstName || "";
@@ -32,15 +31,15 @@ export async function getOrganizationMembersDal(): Promise<
       };
     });
   } catch (error) {
-    const isAborted =
-      error instanceof Error && error.message?.includes("aborted");
-    if (isAborted) {
-      console.warn(
-        "Clerk request was aborted (possibly due to navigation or revalidation)",
-      );
-    } else {
-      console.error("Failed to fetch organization members from Clerk:", error);
-    }
+    // const isAborted =
+    //   error instanceof Error && error.message?.includes("aborted");
+    // if (isAborted) {
+    //   console.warn(
+    //     "Clerk request was aborted (possibly due to navigation or revalidation)",
+    //   );
+    // } else {
+    console.error("Failed to fetch organization members from Clerk:", error);
+    // }
 
     return [];
   }
