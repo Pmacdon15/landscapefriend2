@@ -64,13 +64,32 @@ export function ServiceListContent({
     }
   }, [router, searchParams, dateParam]);
 
-  // Flatten clients into CutListItems for the UI list
-  const flatCuts = initialClients.flatMap((client) =>
-    (client.addresses ?? []).map((address) => ({
-      client: { id: client.id, name: client.name },
-      address,
-    })),
-  );
+  // Flatten clients into CutListItems for the UI list (separated recurring and one-time tasks)
+  const targetDate = parseISO(dateParam ?? new Date().toLocaleDateString("en-CA"));
+  const flatCuts: CutListItem[] = [];
+  
+  for (const client of initialClients) {
+    for (const address of client.addresses ?? []) {
+      const hasRecurringDue = !!address.is_recurring_due;
+
+      if (hasRecurringDue) {
+        flatCuts.push({
+          client: { id: client.id, name: client.name },
+          address,
+        });
+      }
+
+      if (address.one_time_services) {
+        for (const ots of address.one_time_services) {
+          flatCuts.push({
+            client: { id: client.id, name: client.name },
+            address,
+            otsId: ots.id,
+          });
+        }
+      }
+    }
+  }
 
   const getInitialSearchValue = () => {
     if (initialClientId) {
@@ -93,28 +112,49 @@ export function ServiceListContent({
             ...state,
             cuts: state.cuts.map((item) => {
               if (item.address.id === action.addressId) {
-                return {
-                  ...item,
-                  address: {
-                    ...item.address,
-                    completed_job: {
-                      id: "pending",
-                      address_id: action.addressId,
-                      org_id: "",
-                      service_type: action.serviceType as "grass" | "snow",
-                      assigned_to:
-                        item.address.assignment?.user_id ||
-                        item.address.assigned_to ||
-                        null,
-                      completed_by: action.currentUserId,
-                      completed_at: action.timestamp,
-                      scheduled_date: action.scheduledDate,
-                      notes: null,
-                      created_at: new Date(),
-                      updated_at: new Date(),
-                    },
-                  },
-                } as CutListItem;
+                const pendingJob = {
+                  id: "pending",
+                  address_id: action.addressId,
+                  org_id: "",
+                  service_type: action.serviceType,
+                  assigned_to:
+                    item.address.assignment?.user_id ||
+                    item.address.assigned_to ||
+                    null,
+                  completed_by: action.currentUserId,
+                  completed_at: action.timestamp,
+                  scheduled_date: action.scheduledDate,
+                  notes: null,
+                  one_time_service_id: action.oneTimeServiceId || null,
+                  created_at: new Date(),
+                  updated_at: new Date(),
+                };
+
+                if (action.oneTimeServiceId) {
+                  if (item.otsId === action.oneTimeServiceId) {
+                    return {
+                      ...item,
+                      address: {
+                        ...item.address,
+                        one_time_services: item.address.one_time_services?.map((ots) =>
+                          ots.id === action.oneTimeServiceId
+                            ? { ...ots, completed_job_id: "pending", completed_job: pendingJob }
+                            : ots
+                        ) || [],
+                      },
+                    } as CutListItem;
+                  }
+                } else {
+                  if (!item.otsId) {
+                    return {
+                      ...item,
+                      address: {
+                        ...item.address,
+                        completed_job: pendingJob,
+                      },
+                    } as CutListItem;
+                  }
+                }
               }
               return item;
             }),
@@ -165,14 +205,16 @@ export function ServiceListContent({
     });
   };
 
-  const totalServices = optimisticState.cuts.filter(
-    (item) => item.address.schedule?.frequency !== "daily",
-  ).length;
-  const completedServices = optimisticState.cuts.filter(
-    (item) =>
-      !!item.address.completed_job &&
-      item.address.schedule?.frequency !== "daily",
-  ).length;
+  const isCardCompleted = (item: CutListItem) => {
+    if (item.otsId) {
+      const ots = item.address.one_time_services?.find((o) => o.id === item.otsId);
+      return !!ots?.completed_job;
+    }
+    return !!item.address.completed_job;
+  };
+
+  const totalServices = optimisticState.cuts.length;
+  const completedServices = optimisticState.cuts.filter(isCardCompleted).length;
   const remainingServices = totalServices - completedServices;
 
   return (
@@ -213,8 +255,8 @@ export function ServiceListContent({
                 >
                   {optimisticState.cuts.map((item, index) => (
                     <div
-                      key={item.address.id}
-                      id={`address-${item.address.id}`}
+                      key={item.otsId ? `ots-${item.otsId}` : `recurring-${item.address.id}`}
+                      id={item.otsId ? `address-ots-${item.otsId}` : `address-recurring-${item.address.id}`}
                     >
                       <ServiceListItem
                         isAdmin={isAdmin}
@@ -222,6 +264,7 @@ export function ServiceListContent({
                         index={index}
                         date={parsedDefaultDate}
                         currentUserId={currentUserId}
+                        members={members}
                         onCompleteOptimistic={(params) =>
                           dispatch({ type: "complete", ...params })
                         }

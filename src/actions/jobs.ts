@@ -9,13 +9,14 @@ import { completeJobDal } from "@/dal/service";
 export async function completeJobAction(formData: FormData) {
   const { orgId } = await auth.protect();
   const addressId = formData.get("addressId") as string;
-  const serviceType = formData.get("serviceType") as "grass" | "snow";
+  const serviceType = formData.get("serviceType") as string;
   const assignedTo = formData.get("assignedTo") as string | null;
   const notes = formData.get("notes") as string | null;
   const photoFile = formData.get("photoFile") as File | null;
   const capturedAtRaw = formData.get("capturedAt") as string | null;
   const completedAtRaw = formData.get("completedAt") as string | null;
   const scheduledDateRaw = formData.get("scheduledDate") as string | null;
+  const oneTimeServiceId = formData.get("oneTimeServiceId") as string | null;
 
   const capturedAt = capturedAtRaw ? new Date(capturedAtRaw) : null;
   const completedAt = completedAtRaw ? new Date(completedAtRaw) : null;
@@ -46,6 +47,7 @@ export async function completeJobAction(formData: FormData) {
     capturedAt,
     completedAt,
     scheduledDate,
+    oneTimeServiceId,
   );
 
   return result.match(

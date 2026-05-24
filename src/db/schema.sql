@@ -53,10 +53,27 @@ CREATE TABLE IF NOT EXISTS schedules (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- One-Time Services
+CREATE TABLE IF NOT EXISTS one_time_services (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    address_id UUID NOT NULL REFERENCES addresses(id) ON DELETE CASCADE,
+    org_id TEXT NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    service_type TEXT NOT NULL, -- 'grass', 'snow', 'other'
+    service_date DATE NOT NULL,
+    notes TEXT,
+    assigned_member_ids TEXT[] DEFAULT '{}',
+    completed_job_id UUID, -- linked to completed_jobs
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_clients_org_id ON clients(org_id);
 CREATE INDEX IF NOT EXISTS idx_addresses_client_id ON addresses(client_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_address_id ON schedules(address_id);
+CREATE INDEX IF NOT EXISTS idx_one_time_services_address_id ON one_time_services(address_id);
+CREATE INDEX IF NOT EXISTS idx_one_time_services_org_date ON one_time_services(org_id, service_date);
 
 -- Route Orders
 CREATE TABLE IF NOT EXISTS route_orders (
@@ -81,6 +98,7 @@ CREATE TABLE IF NOT EXISTS completed_jobs (
     scheduled_date DATE,
     captured_at TIMESTAMP WITH TIME ZONE,
     notes TEXT,
+    one_time_service_id UUID REFERENCES one_time_services(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
