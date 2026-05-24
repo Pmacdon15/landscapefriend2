@@ -159,7 +159,9 @@ export default function ClientInfoContainer({
                 const currentList = address.one_time_services || [];
                 return {
                   ...address,
-                  one_time_services: currentList.filter((s) => s.id !== action.serviceId),
+                  one_time_services: currentList.filter(
+                    (s) => s.id !== action.serviceId,
+                  ),
                 };
               }),
             })),

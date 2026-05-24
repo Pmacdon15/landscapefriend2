@@ -2,7 +2,6 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +32,7 @@ import type {
 export function AddClientModal({
   members,
   setOptimistic,
-}: AddClientModalProps) { 
+}: AddClientModalProps) {
   const [open, setOpen] = useState(false);
   const { mutate: createClient, isPending } = useCreateClient();
 

@@ -7,6 +7,7 @@ import {
   startOfDay,
   startOfMonth,
 } from "date-fns";
+import { connection } from "next/server";
 import {
   getMonthlyStatsRawDb,
   getPastServicesListDb,
@@ -17,7 +18,6 @@ import type {
   CompletedJobRow,
   ScheduleRow,
 } from "@/types/types";
-import { connection } from "next/server";
 
 export interface PastServicesStats {
   totalCuts: number;

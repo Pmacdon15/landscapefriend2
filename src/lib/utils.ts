@@ -132,4 +132,3 @@ const toBase64 = (str: string) =>
 
 export const getShimmerDataURL = (w: number, h: number) =>
   `data:image/svg+xml;base64,${toBase64(shimmer(w, h))}`;
-

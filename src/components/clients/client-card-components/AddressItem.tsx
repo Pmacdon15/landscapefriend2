@@ -5,8 +5,8 @@ import { CalendarDays, FileImage, MapPin, User } from "lucide-react";
 import { startTransition, useState } from "react";
 import { toast } from "sonner";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
-import { ScheduleForm } from "@/components/schedules/schedule-form";
 import { OneTimeForm } from "@/components/schedules/one-time-form";
+import { ScheduleForm } from "@/components/schedules/schedule-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Popover,
@@ -197,7 +197,9 @@ export function AddressItem({
                 <ScheduleForm
                   addressId={address.id}
                   initialFrequency={address.schedule?.frequency}
-                  initialDate={toLocalMidnight(address.schedule?.first_cut_date)}
+                  initialDate={toLocalMidnight(
+                    address.schedule?.first_cut_date,
+                  )}
                   initialNotes={address.schedule?.notes}
                   setOptimistic={setOptimistic}
                   onSuccess={() => setIsSchedulePopoverOpen(false)}
@@ -223,16 +225,22 @@ export function AddressItem({
               className={buttonVariants({
                 variant: "outline",
                 size: "sm",
-                className: "h-7 text-xs border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/20",
+                className:
+                  "h-7 text-xs border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/20",
               })}
             >
               <CalendarDays className="h-3 w-3 mr-1.5" />
-              One-Offs {address.one_time_services && address.one_time_services.length > 0 && `(${address.one_time_services.length})`}
+              One-Offs{" "}
+              {address.one_time_services &&
+                address.one_time_services.length > 0 &&
+                `(${address.one_time_services.length})`}
             </PopoverTrigger>
             <PopoverContent className="w-80" align="end">
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium leading-none">One-Time Services</h4>
+                  <h4 className="font-medium leading-none">
+                    One-Time Services
+                  </h4>
                   <p className="text-sm text-muted-foreground mt-1">
                     Schedule custom one-off services for this property.
                   </p>

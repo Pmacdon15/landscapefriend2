@@ -2,15 +2,15 @@
 
 import { Draggable } from "@hello-pangea/dnd";
 import {
+  CalendarDays,
   CheckCircle2,
   GripVertical,
   Info,
   MapPin,
   Snowflake,
-  CalendarDays,
+  Sprout,
   User,
   Wrench,
-  Sprout,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition } from "react";
@@ -64,16 +64,23 @@ export function ServiceListItem({
     ? address.one_time_services?.find((o) => o.id === item.otsId)
     : null;
   const isOts = !!ots;
-  
+
   const otsCompletedJob = ots?.completed_job;
-  const recurringCompletedJob = address.completed_job && !address.completed_job.one_time_service_id ? address.completed_job : null;
+  const recurringCompletedJob =
+    address.completed_job && !address.completed_job.one_time_service_id
+      ? address.completed_job
+      : null;
 
   // Unified visual details for a single task card
-  const title = isOts ? ots.name : (isSnow ? "Snow Clearing" : `${address.schedule?.frequency} Lawn Cut`);
-  const serviceType = isOts ? ots.service_type : (isSnow ? "snow" : "grass");
+  const title = isOts
+    ? ots.name
+    : isSnow
+      ? "Snow Clearing"
+      : `${address.schedule?.frequency} Lawn Cut`;
+  const serviceType = isOts ? ots.service_type : isSnow ? "snow" : "grass";
   const notes = isOts ? ots.notes : address.schedule?.notes;
   const completedJobToUse = isOts ? otsCompletedJob : recurringCompletedJob;
-  
+
   const isGrassType = serviceType === "grass";
   const isSnowType = serviceType === "snow";
 
@@ -93,7 +100,9 @@ export function ServiceListItem({
     });
   };
 
-  const draggableId = item.otsId ? `ots-${item.otsId}` : `recurring-${address.id}`;
+  const draggableId = item.otsId
+    ? `ots-${item.otsId}`
+    : `recurring-${address.id}`;
 
   return (
     <Draggable draggableId={draggableId} index={index}>
@@ -129,32 +138,49 @@ export function ServiceListItem({
                         >
                           {client.name}
                         </button>
-                        
+
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                          <span className={cn(
-                            "inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded border w-fit",
-                            isOts 
-                              ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300 border-violet-200 dark:border-violet-800"
-                              : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                          )}>
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded border w-fit",
+                              isOts
+                                ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300 border-violet-200 dark:border-violet-800"
+                                : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700",
+                            )}
+                          >
                             <CalendarDays className="h-3.5 w-3.5" />
                             {isOts ? `One-Time: ${title}` : title}
                           </span>
 
-                          <span className={cn(
-                            "inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border w-fit",
-                            isGrassType && "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50",
-                            isSnowType && "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/50",
-                            serviceType === "spring-fall-cleanup" && "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/50",
-                            serviceType === "trimming" && "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border-violet-200 dark:border-violet-800",
-                            serviceType === "other" && "bg-slate-50 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400 border-slate-200 dark:border-slate-800"
-                          )}>
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border w-fit",
+                              isGrassType &&
+                                "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50",
+                              isSnowType &&
+                                "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/50",
+                              serviceType === "spring-fall-cleanup" &&
+                                "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/50",
+                              serviceType === "trimming" &&
+                                "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border-violet-200 dark:border-violet-800",
+                              serviceType === "other" &&
+                                "bg-slate-50 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400 border-slate-200 dark:border-slate-800",
+                            )}
+                          >
                             {isGrassType && <Sprout className="h-3 w-3" />}
                             {isSnowType && <Snowflake className="h-3 w-3" />}
-                            {serviceType === "spring-fall-cleanup" && <Sprout className="h-3 w-3" />}
-                            {serviceType === "trimming" && <Wrench className="h-3 w-3" />}
-                            {serviceType === "other" && <Wrench className="h-3 w-3" />}
-                            {serviceType === "spring-fall-cleanup" ? "Spring/Fall Clean Up" : serviceType}
+                            {serviceType === "spring-fall-cleanup" && (
+                              <Sprout className="h-3 w-3" />
+                            )}
+                            {serviceType === "trimming" && (
+                              <Wrench className="h-3 w-3" />
+                            )}
+                            {serviceType === "other" && (
+                              <Wrench className="h-3 w-3" />
+                            )}
+                            {serviceType === "spring-fall-cleanup"
+                              ? "Spring/Fall Clean Up"
+                              : serviceType}
                           </span>
                         </div>
                       </div>
@@ -174,39 +200,48 @@ export function ServiceListItem({
                       </a>
 
                       {/* Render Crew/Assignees */}
-                      {isOts ? (
-                        ots.assigned_member_ids && ots.assigned_member_ids.length > 0 && (
-                          <div className="flex flex-wrap items-center gap-1.5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-fit">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
-                              <User className="h-3.5 w-3.5 text-violet-500" /> Crew:
-                            </span>
-                            <div className="flex flex-wrap gap-1">
-                              {ots.assigned_member_ids.map((memberId) => {
-                                const memberName = members.find((m) => m.id === memberId)?.name || "Unknown Worker";
-                                return (
-                                  <span
-                                    key={memberId}
-                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border border-violet-100 dark:border-violet-900/50"
-                                  >
-                                    {memberName}
-                                  </span>
-                                );
-                              })}
+                      {isOts
+                        ? ots.assigned_member_ids &&
+                          ots.assigned_member_ids.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-fit">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
+                                <User className="h-3.5 w-3.5 text-violet-500" />{" "}
+                                Crew:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {ots.assigned_member_ids.map((memberId) => {
+                                  const memberName =
+                                    members.find((m) => m.id === memberId)
+                                      ?.name || "Unknown Worker";
+                                  return (
+                                    <span
+                                      key={memberId}
+                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border border-violet-100 dark:border-violet-900/50"
+                                    >
+                                      {memberName}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        )
-                      ) : (
-                        (address.assignment?.user_id || address.assigned_to) && (
-                          <div className="flex flex-wrap items-center gap-1.5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-fit">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
-                              <User className="h-3.5 w-3.5 text-primary" /> Assignee:
-                            </span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                              {members.find((m) => m.id === (address.assignment?.user_id || address.assigned_to))?.name || "Assigned"}
-                            </span>
-                          </div>
-                        )
-                      )}
+                          )
+                        : (address.assignment?.user_id ||
+                            address.assigned_to) && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-fit">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
+                                <User className="h-3.5 w-3.5 text-primary" />{" "}
+                                Assignee:
+                              </span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                {members.find(
+                                  (m) =>
+                                    m.id ===
+                                    (address.assignment?.user_id ||
+                                      address.assigned_to),
+                                )?.name || "Assigned"}
+                              </span>
+                            </div>
+                          )}
                     </div>
 
                     {/* Render Notes */}

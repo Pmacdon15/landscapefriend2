@@ -9,7 +9,6 @@ export async function checkOrgMemberLimit(
   try {
     const client = await clerkClient();
 
-    
     const [membersPage, org] = await Promise.all([
       client.organizations.getOrganizationMembershipList({
         organizationId: orgId,
@@ -23,9 +22,9 @@ export async function checkOrgMemberLimit(
       orgId,
       orgName: org.name,
       maxAllowedMemberships: org.maxAllowedMemberships,
-      publicMetadata: org.publicMetadata, 
+      publicMetadata: org.publicMetadata,
       membersReturnedOnThisPage: membersPage.data?.length ?? 0,
-      totalCountFromClerkMetadata: membersPage.totalCount, 
+      totalCountFromClerkMetadata: membersPage.totalCount,
     });
 
     // Fallback to metadata total count if available, otherwise use page length

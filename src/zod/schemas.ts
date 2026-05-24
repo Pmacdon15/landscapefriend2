@@ -37,7 +37,10 @@ export const CompletedJobSchema = z.object({
   id: z.uuid(),
   address_id: z.uuid(),
   org_id: z.string(),
-  service_type: z.enum(["grass", "snow", "other"] as unknown as [string, ...string[]]),
+  service_type: z.enum(["grass", "snow", "other"] as unknown as [
+    string,
+    ...string[],
+  ]),
   assigned_to: z.string().nullable().optional(),
   completed_by: z.string().nullable().optional(),
   completed_at: z.date(),

@@ -65,20 +65,31 @@ export function ServiceListContent({
   }, [router, searchParams, dateParam]);
 
   // Flatten clients into CutListItems for the UI list (separated recurring and one-time tasks, filtered by assignee if not showing all)
-  const targetDate = parseISO(dateParam ?? new Date().toLocaleDateString("en-CA"));
+  const _targetDate = parseISO(
+    dateParam ?? new Date().toLocaleDateString("en-CA"),
+  );
   const flatCuts: CutListItem[] = [];
 
-  const isFilterAll = isAdmin ? (currentFilterUserId === "all" || !currentFilterUserId) : false;
-  const activeFilterUserId = isFilterAll ? null : (isAdmin ? currentFilterUserId : currentUserId);
-  
+  const isFilterAll = isAdmin
+    ? currentFilterUserId === "all" || !currentFilterUserId
+    : false;
+  const activeFilterUserId = isFilterAll
+    ? null
+    : isAdmin
+      ? currentFilterUserId
+      : currentUserId;
+
   for (const client of initialClients) {
     for (const address of client.addresses ?? []) {
       const hasRecurringDue = !!address.is_recurring_due;
 
       if (hasRecurringDue) {
-        const recurringAssignee = address.assignment?.user_id || address.assigned_to || null;
-        const isUserAssigned = isFilterAll || (activeFilterUserId && recurringAssignee === activeFilterUserId);
-        
+        const recurringAssignee =
+          address.assignment?.user_id || address.assigned_to || null;
+        const isUserAssigned =
+          isFilterAll ||
+          (activeFilterUserId && recurringAssignee === activeFilterUserId);
+
         if (isUserAssigned) {
           flatCuts.push({
             client: { id: client.id, name: client.name },
@@ -89,8 +100,11 @@ export function ServiceListContent({
 
       if (address.one_time_services) {
         for (const ots of address.one_time_services) {
-          const isUserInCrew = isFilterAll || (activeFilterUserId && ots.assigned_member_ids?.includes(activeFilterUserId));
-          
+          const isUserInCrew =
+            isFilterAll ||
+            (activeFilterUserId &&
+              ots.assigned_member_ids?.includes(activeFilterUserId));
+
           if (isUserInCrew) {
             flatCuts.push({
               client: { id: client.id, name: client.name },
@@ -148,11 +162,16 @@ export function ServiceListContent({
                       ...item,
                       address: {
                         ...item.address,
-                        one_time_services: item.address.one_time_services?.map((ots) =>
-                          ots.id === action.oneTimeServiceId
-                            ? { ...ots, completed_job_id: "pending", completed_job: pendingJob }
-                            : ots
-                        ) || [],
+                        one_time_services:
+                          item.address.one_time_services?.map((ots) =>
+                            ots.id === action.oneTimeServiceId
+                              ? {
+                                  ...ots,
+                                  completed_job_id: "pending",
+                                  completed_job: pendingJob,
+                                }
+                              : ots,
+                          ) || [],
                       },
                     } as CutListItem;
                   }
@@ -219,7 +238,9 @@ export function ServiceListContent({
 
   const isCardCompleted = (item: CutListItem) => {
     if (item.otsId) {
-      const ots = item.address.one_time_services?.find((o) => o.id === item.otsId);
+      const ots = item.address.one_time_services?.find(
+        (o) => o.id === item.otsId,
+      );
       return !!ots?.completed_job;
     }
     return !!item.address.completed_job;
@@ -267,8 +288,16 @@ export function ServiceListContent({
                 >
                   {optimisticState.cuts.map((item, index) => (
                     <div
-                      key={item.otsId ? `ots-${item.otsId}` : `recurring-${item.address.id}`}
-                      id={item.otsId ? `address-ots-${item.otsId}` : `address-recurring-${item.address.id}`}
+                      key={
+                        item.otsId
+                          ? `ots-${item.otsId}`
+                          : `recurring-${item.address.id}`
+                      }
+                      id={
+                        item.otsId
+                          ? `address-ots-${item.otsId}`
+                          : `address-recurring-${item.address.id}`
+                      }
                     >
                       <ServiceListItem
                         isAdmin={isAdmin}

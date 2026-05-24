@@ -27,26 +27,39 @@ export async function rebalanceClientsForOrg(orgId: string): Promise<{
 
     // Fetch members, organization details, and billing subscription in parallel!
     const [members, org, subscription] = await Promise.all([
-      client.organizations.getOrganizationMembershipList({ organizationId: orgId }),
+      client.organizations.getOrganizationMembershipList({
+        organizationId: orgId,
+      }),
       client.organizations.getOrganization({ organizationId: orgId }),
-      client.billing.getOrganizationBillingSubscription(orgId).catch(() => null),
+      client.billing
+        .getOrganizationBillingSubscription(orgId)
+        .catch(() => null),
     ]);
 
     // Check if the organization has exceeded its member limit
     const currentMembers = members.data.length;
     const maxMembers = org.maxAllowedMemberships;
 
-    if (maxMembers !== undefined && maxMembers !== null && currentMembers > maxMembers) {
+    if (
+      maxMembers !== undefined &&
+      maxMembers !== null &&
+      currentMembers > maxMembers
+    ) {
       console.log(
         `[Rebalance] Org ${orgId} has exceeded membership limit. Allowed: ${maxMembers}, Current: ${currentMembers}. Disabling all clients and schedules.`,
       );
       limit = 0; // Exceeded member limit, disable all schedules by setting limit to 0
     } else {
       // Check organization features / public metadata for limits
-      const metadata = org.publicMetadata as { features?: string[] } | undefined;
+      const metadata = org.publicMetadata as
+        | { features?: string[] }
+        | undefined;
       const features = metadata?.features || [];
 
-      if (features.includes("200-clients") || features.includes("200_clients")) {
+      if (
+        features.includes("200-clients") ||
+        features.includes("200_clients")
+      ) {
         limit = 200;
       } else if (
         features.includes("100-clients") ||
@@ -105,7 +118,7 @@ export async function rebalanceClientsForOrg(orgId: string): Promise<{
       await sql`
         UPDATE clients
         SET status = CASE 
-          WHEN id = ANY(${toActive.length > 0 ? toActive : ['00000000-0000-0000-0000-000000000000']}) THEN 'active'
+          WHEN id = ANY(${toActive.length > 0 ? toActive : ["00000000-0000-0000-0000-000000000000"]}) THEN 'active'
           ELSE 'disabled'
         END,
         updated_at = CURRENT_TIMESTAMP

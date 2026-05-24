@@ -3,8 +3,8 @@ import type {
   Assignment,
   Client,
   CompletedJob,
-  Schedule,
   OneTimeService,
+  Schedule,
 } from "@/zod/schemas";
 
 export interface ClientRow {
@@ -143,7 +143,14 @@ export type OptimisticServiceAction =
   | { type: "optimistic-filter"; cuts: CutListItem[] }
   | { type: "select-client"; value: string; cuts: CutListItem[] };
 
-export type { Client, Address, Schedule, CompletedJob, Assignment, OneTimeService };
+export type {
+  Client,
+  Address,
+  Schedule,
+  CompletedJob,
+  Assignment,
+  OneTimeService,
+};
 
 export interface ClientCardProps {
   client: Client;

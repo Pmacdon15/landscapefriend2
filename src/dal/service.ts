@@ -1,18 +1,18 @@
 import { auth } from "@clerk/nextjs/server";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
-
+import { checkOrgMemberLimit } from "@/db/queries/clerk";
 import {
   deleteAssignmentDb,
+  deleteOneTimeServiceDb,
   deleteScheduleDb,
   insertCompletedJobDb,
   insertCompletionPhotoDb,
+  insertOneTimeServiceDb,
   updateAddressAssigneeDb,
   updateRouteOrderDb,
   upsertAssignmentDb,
   upsertScheduleDb,
-  insertOneTimeServiceDb,
-  deleteOneTimeServiceDb,
 } from "@/db/queries/clients";
 import type {
   AddressRow,
@@ -20,9 +20,8 @@ import type {
   CompletedJob,
   RouteOrderRow,
 } from "@/types/types";
-import type { ScheduleWithOrgSchema, OneTimeService } from "@/zod/schemas";
+import type { OneTimeService, ScheduleWithOrgSchema } from "@/zod/schemas";
 import { sql } from "../db/client";
-import { checkOrgMemberLimit } from "@/db/queries/clerk";
 
 export async function updateRouteOrderDal(
   addressId: string,
@@ -62,7 +61,7 @@ export async function upsertScheduleDal(
 
     if (!orgId) return errAsync({ reason: "Unauthorized" });
 
-        const memberLimitCheck = await checkOrgMemberLimit(orgId);
+    const memberLimitCheck = await checkOrgMemberLimit(orgId);
     if (memberLimitCheck.isErr()) {
       return errAsync({ reason: memberLimitCheck.error.reason });
     }
@@ -327,8 +326,7 @@ export async function insertOneTimeServiceDal(
       return errAsync({ reason: "Invalid address ID" });
 
     const parsedName = z.string().min(1).safeParse(name);
-    if (!parsedName.success)
-      return errAsync({ reason: "Invalid name" });
+    if (!parsedName.success) return errAsync({ reason: "Invalid name" });
 
     const parsedServiceType = z.string().min(1).safeParse(serviceType);
     if (!parsedServiceType.success)
@@ -340,8 +338,13 @@ export async function insertOneTimeServiceDal(
     const parsedNotes = z.string().nullable().optional().safeParse(notes);
     if (!parsedNotes.success) return errAsync({ reason: "Invalid notes" });
 
-    const parsedAssignedMembers = z.array(z.string()).nullable().optional().safeParse(assignedMemberIds);
-    if (!parsedAssignedMembers.success) return errAsync({ reason: "Invalid assigned members" });
+    const parsedAssignedMembers = z
+      .array(z.string())
+      .nullable()
+      .optional()
+      .safeParse(assignedMemberIds);
+    if (!parsedAssignedMembers.success)
+      return errAsync({ reason: "Invalid assigned members" });
 
     return ResultAsync.fromPromise(
       insertOneTimeServiceDb(
@@ -374,7 +377,10 @@ export async function deleteOneTimeServiceDal(
       return errAsync({ reason: "Invalid service ID" });
 
     return ResultAsync.fromPromise(
-      deleteOneTimeServiceDb(parsedServiceId.data, orgId) as Promise<OneTimeService>,
+      deleteOneTimeServiceDb(
+        parsedServiceId.data,
+        orgId,
+      ) as Promise<OneTimeService>,
       () => ({ reason: "Failed to delete one-time service" }),
     );
   } catch (error) {

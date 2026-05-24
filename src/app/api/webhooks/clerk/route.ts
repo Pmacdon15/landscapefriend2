@@ -40,10 +40,9 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        case "subscriptionItem.active":{
-        
-          const data = evt.data 
-          const orgId = data.id 
+        case "subscriptionItem.active": {
+          const data = evt.data;
+          const orgId = data.id;
           const status = data.status;
 
           console.log(

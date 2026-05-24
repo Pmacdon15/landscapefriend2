@@ -201,9 +201,21 @@ export function ServiceHistoryChart({ data }: { data: ChartDataPoint[] }) {
                   <circle
                     cx={p.x}
                     cy={p.y}
-                    r="7"
-                    className="fill-green-500 stroke-white dark:stroke-slate-950 stroke-2 animate-ping"
-                  />
+                    className="fill-green-500 stroke-white dark:stroke-slate-950 stroke-2"
+                  >
+                    <animate
+                      attributeName="r"
+                      values="6;22"
+                      dur="1.2s"
+                      repeatCount="indefinite"
+                    />
+                    <animate
+                      attributeName="opacity"
+                      values="0.8;0"
+                      dur="1.2s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
                 )}
                 {/* Regular Dot */}
                 <circle
