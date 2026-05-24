@@ -85,6 +85,7 @@ export function AddClientModal({
       const optimisticClient: Client = {
         id: "temp-client-id",
         org_id: "temp-org-id",
+        status: "active",
         name: value.name,
         email: value.email || null,
         phone: value.phone || null,

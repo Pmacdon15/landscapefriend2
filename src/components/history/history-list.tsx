@@ -52,6 +52,7 @@ export function HistoryList({ history, setOptimistic }: HistoryListProps) {
         setOptimistic({
           type: "select-client",
           client: {
+            status: "active",
             id: job.client_id,
             name: job.client_name,
             org_id: "",

@@ -12,6 +12,7 @@ export interface ClientRow {
   name: string;
   email: string | null;
   phone: string | null;
+  status: string;
   created_at: Date;
   updated_at: Date;
 }

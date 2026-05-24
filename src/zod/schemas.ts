@@ -91,6 +91,7 @@ export const ClientSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.email().nullable().optional(),
   phone: z.string().nullable().optional(),
+  status: z.enum(["active", "disabled"]).default("active"),
   addresses: z.array(AddressSchema).optional(),
   created_at: z.date().optional(),
   updated_at: z.date().optional(),

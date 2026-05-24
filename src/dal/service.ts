@@ -18,6 +18,7 @@ import type {
   RouteOrderRow,
 } from "@/types/types";
 import type { ScheduleWithOrgSchema } from "@/zod/schemas";
+import { sql } from "../db/client";
 
 export async function updateRouteOrderDal(
   addressId: string,
@@ -71,6 +72,28 @@ export async function upsertScheduleDal(
     const parsedNotes = z.string().nullable().optional().safeParse(notes);
     if (!parsedNotes.success) return errAsync({ reason: "Invalid notes" });
 
+    // Verify parent client is active (not disabled)
+    try {
+      const [clientStatus] = (await sql`
+        SELECT c.status FROM addresses a
+        JOIN clients c ON a.client_id = c.id
+        WHERE a.id = ${parsedAddressId.data} AND c.org_id = ${orgId}
+      `) as unknown as { status: string }[];
+
+      if (clientStatus?.status === "disabled") {
+        return errAsync({
+          reason:
+            "This client is disabled due to plan limits. Please upgrade your plan.",
+        });
+      }
+    } catch (err) {
+      console.error(
+        "Failed to verify client status in upsertScheduleDal:",
+        err,
+      );
+      return errAsync({ reason: "Failed to verify client status." });
+    }
+
     return ResultAsync.fromPromise(
       upsertScheduleDb(
         parsedAddressId.data,
@@ -98,6 +121,28 @@ export async function deleteScheduleDal(
     const parsedAddressId = z.uuid().safeParse(addressId);
     if (!parsedAddressId.success)
       return errAsync({ reason: "Invalid address ID" });
+
+    // Verify parent client is active (not disabled)
+    try {
+      const [clientStatus] = (await sql`
+        SELECT c.status FROM addresses a
+        JOIN clients c ON a.client_id = c.id
+        WHERE a.id = ${parsedAddressId.data} AND c.org_id = ${orgId}
+      `) as unknown as { status: string }[];
+
+      if (clientStatus?.status === "disabled") {
+        return errAsync({
+          reason:
+            "This client is disabled due to plan limits. Please upgrade your plan.",
+        });
+      }
+    } catch (err) {
+      console.error(
+        "Failed to verify client status in deleteScheduleDal:",
+        err,
+      );
+      return errAsync({ reason: "Failed to verify client status." });
+    }
 
     return ResultAsync.fromPromise(
       deleteScheduleDb(parsedAddressId.data).then((row) => {
