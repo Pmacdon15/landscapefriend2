@@ -165,7 +165,7 @@ export function AddressItem({
           onOpenChange={(isOpen) => {
             if (isOpen && clientStatus === "disabled") {
               toast.error(
-                "This client is disabled due to plan limits. Please upgrade your plan to manage schedules."
+                "This client is disabled due to plan limits. Please upgrade your plan to manage schedules.",
               );
               return;
             }

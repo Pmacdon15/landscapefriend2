@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
-import { sql } from "../db/client";
 import {
   deleteAssignmentDb,
   deleteScheduleDb,
@@ -19,6 +18,7 @@ import type {
   RouteOrderRow,
 } from "@/types/types";
 import type { ScheduleWithOrgSchema } from "@/zod/schemas";
+import { sql } from "../db/client";
 
 export async function updateRouteOrderDal(
   addressId: string,
@@ -82,11 +82,15 @@ export async function upsertScheduleDal(
 
       if (clientStatus?.status === "disabled") {
         return errAsync({
-          reason: "This client is disabled due to plan limits. Please upgrade your plan.",
+          reason:
+            "This client is disabled due to plan limits. Please upgrade your plan.",
         });
       }
     } catch (err) {
-      console.error("Failed to verify client status in upsertScheduleDal:", err);
+      console.error(
+        "Failed to verify client status in upsertScheduleDal:",
+        err,
+      );
       return errAsync({ reason: "Failed to verify client status." });
     }
 
@@ -128,11 +132,15 @@ export async function deleteScheduleDal(
 
       if (clientStatus?.status === "disabled") {
         return errAsync({
-          reason: "This client is disabled due to plan limits. Please upgrade your plan.",
+          reason:
+            "This client is disabled due to plan limits. Please upgrade your plan.",
         });
       }
     } catch (err) {
-      console.error("Failed to verify client status in deleteScheduleDal:", err);
+      console.error(
+        "Failed to verify client status in deleteScheduleDal:",
+        err,
+      );
       return errAsync({ reason: "Failed to verify client status." });
     }
 

@@ -4,7 +4,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Trash } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useState } from "react";
-import { toast } from "sonner";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { Button } from "@/components/ui/button";
 import { CardHeader, CardTitle } from "@/components/ui/card";

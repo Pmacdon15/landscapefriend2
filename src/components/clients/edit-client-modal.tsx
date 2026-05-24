@@ -1,8 +1,8 @@
 "use client";
-import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
 import { Edit2, Loader2, Plus, Trash2 } from "lucide-react";
 import { startTransition, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -129,7 +129,7 @@ export function EditClientModal({
       onOpenChange={(isOpen) => {
         if (isOpen && client.status === "disabled") {
           toast.error(
-            "This client is disabled due to plan limits. Please upgrade your plan to edit."
+            "This client is disabled due to plan limits. Please upgrade your plan to edit.",
           );
           return;
         }

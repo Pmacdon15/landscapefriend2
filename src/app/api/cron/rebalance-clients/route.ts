@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { sql } from "@/db/client";
 import { rebalanceClientsForOrg } from "@/dal/rebalance";
+import { sql } from "@/db/client";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
-  
+
   // Protect cron endpoint in production environment
   if (
     process.env.NODE_ENV === "production" &&
@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
       SELECT org_id, name FROM organizations
     `) as unknown as { org_id: string; name: string }[];
 
-    console.log(`[Cron Rebalance] Starting rebalance for ${orgs.length} organizations.`);
+    console.log(
+      `[Cron Rebalance] Starting rebalance for ${orgs.length} organizations.`,
+    );
 
     const results = [];
 
