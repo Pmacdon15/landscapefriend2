@@ -3,6 +3,7 @@
 import { isValid } from "date-fns";
 import { CalendarDays, FileImage, MapPin, User } from "lucide-react";
 import { startTransition, useState } from "react";
+import { toast } from "sonner";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { ScheduleForm } from "@/components/schedules/schedule-form";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -34,6 +35,7 @@ interface AddressItemProps {
   setOptimistic: (action: OptimisticAction) => void;
   onViewPhoto: (siteMap: SiteMap) => void;
   isAdmin: boolean;
+  clientStatus?: string;
 }
 
 export function AddressItem({
@@ -42,6 +44,7 @@ export function AddressItem({
   setOptimistic,
   onViewPhoto,
   isAdmin,
+  clientStatus,
 }: AddressItemProps) {
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
@@ -92,6 +95,7 @@ export function AddressItem({
       <div className="flex items-center gap-2 pl-6 text-xs text-slate-500">
         <User className="h-3 w-3" />
         <Select
+          disabled={clientStatus === "disabled"}
           value={address.assigned_to || "unassigned"}
           onValueChange={(val) => {
             const userId = val === "unassigned" ? null : val;
@@ -158,7 +162,15 @@ export function AddressItem({
 
         <Popover
           open={isSchedulePopoverOpen}
-          onOpenChange={setIsSchedulePopoverOpen}
+          onOpenChange={(isOpen) => {
+            if (isOpen && clientStatus === "disabled") {
+              toast.error(
+                "This client is disabled due to plan limits. Please upgrade your plan to manage schedules."
+              );
+              return;
+            }
+            setIsSchedulePopoverOpen(isOpen);
+          }}
         >
           <PopoverTrigger
             className={buttonVariants({

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Trash } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, use, useState } from "react";
+import { toast } from "sonner";
 import { EditClientModal } from "@/components/clients/edit-client-modal";
 import { Button } from "@/components/ui/button";
 import { CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,13 +49,20 @@ export function ClientCardHeader({
   return (
     <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
       <CardTitle className="text-xl font-bold flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handleClientClick}
-          className="hover:text-primary transition-colors text-left"
-        >
-          {client.name}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handleClientClick}
+            className="hover:text-primary transition-colors text-left"
+          >
+            {client.name}
+          </button>
+          {client.status === "disabled" && (
+            <span className="text-xs bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 px-2 py-0.5 rounded-full font-semibold">
+              Disabled
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <EditClientModal
             client={client}

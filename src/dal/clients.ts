@@ -7,7 +7,9 @@ import {
   type CreateClientInput,
   CreateClientInputSchema,
 } from "@/zod/schemas";
+import { sql } from "../db/client";
 import {
+  checkClientLimit,
   deleteAddressDb,
   deleteClientDb,
   getClientsForCutListDb,
@@ -101,7 +103,7 @@ export async function getClientsForCutListDal(
 export async function createClientDal(
   data: CreateClientInput,
 ): Promise<Result<Client, { reason: string }>> {
-  const { orgId, orgRole } = await auth.protect();
+  const { orgId, orgRole, has } = await auth.protect();
 
   if (!orgId || orgRole !== "org:admin")
     return errAsync({ reason: "Unauthorized" });
@@ -110,6 +112,18 @@ export async function createClientDal(
   if (!result.success) return errAsync({ reason: result.error.message });
 
   const { name, email, phone, addresses } = result.data;
+
+  let limit = 3;
+  if (has({ feature: "200_clients" })) {
+    limit = 200;
+  } else if (has({ feature: "100_clients" })) {
+    limit = 100;
+  }
+
+  const limitCheck = await checkClientLimit(orgId, limit);
+  if (limitCheck.isErr()) {
+    return errAsync({ reason: limitCheck.error.reason });
+  }
 
   // Wrap the entire DB transaction logic
   return ResultAsync.fromPromise(
@@ -172,6 +186,24 @@ export async function updateClientDal(
 
   const { name, email, phone, addresses } = result.data;
   const parsedClientId = clientIdResult.data;
+
+  // Prevent updates to disabled clients
+  try {
+    const [existingClient] = (await sql`
+      SELECT status FROM clients
+      WHERE id = ${parsedClientId} AND org_id = ${orgId}
+    `) as unknown as { status: string }[];
+
+    if (existingClient?.status === "disabled") {
+      return errAsync({
+        reason:
+          "This client is disabled due to plan limits. Please upgrade your plan to edit.",
+      });
+    }
+  } catch (error) {
+    console.error("Failed to verify client status in updateClientDal:", error);
+    return errAsync({ reason: "Failed to verify client status." });
+  }
 
   return ResultAsync.fromPromise(
     (async () => {

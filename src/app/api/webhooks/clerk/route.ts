@@ -1,5 +1,6 @@
 import { verifyWebhook, type WebhookEvent } from "@clerk/nextjs/webhooks";
 import type { NextRequest } from "next/server";
+import { rebalanceClientsForOrg } from "@/dal/rebalance";
 import {
   handleOrganizationCreatedDal,
   handleUserCreatedDal,
@@ -36,6 +37,21 @@ export async function POST(req: NextRequest) {
           const orgId = evt.data.id;
           const orgName = evt.data.name;
           await handleOrganizationCreatedDal(orgId, orgName);
+          break;
+        }
+
+        case "subscriptionItem.active": {
+          const data = evt.data as any;
+          const orgId = data.organization_id;
+          const status = data.status;
+
+          console.log(
+            `[Clerk Webhook] Received subscription event ${evt.type} for org ${orgId}. Status: ${status}`,
+          );
+
+          if (orgId && status === "active") {
+            await rebalanceClientsForOrg(orgId);
+          }
           break;
         }
 

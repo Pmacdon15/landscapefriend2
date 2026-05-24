@@ -1,3 +1,4 @@
+import { errAsync, ok, type Result } from "neverthrow";
 import { cacheTag } from "next/cache";
 import type {
   AddressRow,
@@ -134,7 +135,7 @@ export async function getSchedulesDb(orgId: string): Promise<ScheduleRow[]> {
     SELECT s.* FROM schedules s
     JOIN addresses a ON s.address_id = a.id
     JOIN clients c ON a.client_id = c.id
-    WHERE c.org_id = ${orgId} AND a.status != 'deleted'
+    WHERE c.org_id = ${orgId} AND a.status != 'deleted' AND c.status = 'active'
   `;
   return result as unknown as ScheduleRow[];
 }
@@ -503,6 +504,7 @@ export async function searchClientsDb(
       fc.name,
       fc.email,
       fc.phone,
+      fc.status,
       0 as total_count, -- Not needed for this non-paginated search
       COALESCE(
         (
@@ -658,6 +660,7 @@ export async function getClientsForCutListDb(
       LEFT JOIN assignments ass ON a.id = ass.address_id AND ass.scheduled_date = ${date}::date
       WHERE c.org_id = ${orgId} 
         AND a.status = 'active'
+        AND c.status = 'active'
         AND s.first_cut_date <= ${date}::date
         AND (
           s.frequency = 'daily' OR
@@ -687,6 +690,7 @@ export async function getClientsForCutListDb(
       c.name,
       c.email,
       c.phone,
+      c.status,
       COALESCE(
         (
           SELECT jsonb_agg(addr_data ORDER BY addr_data.sort_order ASC)
@@ -862,6 +866,7 @@ export async function getClientsForInfoDb(
       pc.name,
       pc.email,
       pc.phone,
+      pc.status,
       (SELECT count FROM total_count)::int as total_count,
       COALESCE(
         (
@@ -992,4 +997,26 @@ export async function deleteCompletionPhotosDb(ids: string[]): Promise<void> {
     DELETE FROM completion_photos
     WHERE id = ANY(${ids})
   `;
+}
+
+export async function checkClientLimit(
+  orgId: string,
+  limit: number,
+): Promise<Result<void, { reason: string }>> {
+  try {
+    const [{ count }] = (await sql`
+      SELECT COUNT(*)::int as count FROM clients
+      WHERE org_id = ${orgId} AND status = 'active'
+    `) as unknown as { count: number }[];
+
+    if (count >= limit) {
+      return errAsync({
+        reason: `You have reached your plan limit of ${limit} active clients. Please upgrade your plan.`,
+      });
+    }
+    return ok(undefined);
+  } catch (error) {
+    console.error("Failed to check client limit:", error);
+    return errAsync({ reason: "Failed to verify plan limit." });
+  }
 }

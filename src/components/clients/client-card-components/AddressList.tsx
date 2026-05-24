@@ -8,6 +8,7 @@ interface AddressListProps {
   setOptimistic: (action: OptimisticAction) => void;
   onViewPhoto: (siteMap: SiteMap) => void;
   isAdmin: boolean;
+  clientStatus?: string;
 }
 
 export function AddressList({
@@ -16,6 +17,7 @@ export function AddressList({
   setOptimistic,
   onViewPhoto,
   isAdmin,
+  clientStatus,
 }: AddressListProps) {
   if (addresses.length === 0) return null;
 
@@ -32,6 +34,7 @@ export function AddressList({
           members={members}
           setOptimistic={setOptimistic}
           onViewPhoto={onViewPhoto}
+          clientStatus={clientStatus}
         />
       ))}
     </div>

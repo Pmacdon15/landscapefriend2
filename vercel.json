@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/cleanup-photos",
       "schedule": "0 4 1 * *"
+    },
+    {
+      "path": "/api/cron/rebalance-clients",
+      "schedule": "0 4 * * *"
     }
   ]
 }

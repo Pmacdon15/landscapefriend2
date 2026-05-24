@@ -39,6 +39,7 @@ export function ClientCard({
           members={members}
           setOptimistic={setOptimistic}
           onViewPhoto={setViewingSiteMap}
+          clientStatus={client.status}
         />
       </CardContent>
 
