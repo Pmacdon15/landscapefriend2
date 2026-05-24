@@ -13,12 +13,15 @@ interface CompleteJobButtonProps {
   address: Address;
   date: Date;
   currentUserId: string | null;
+  oneTimeServiceId?: string;
+  customServiceType?: string;
   onCompleteOptimistic: (params: {
     addressId: string;
     timestamp: Date;
     currentUserId: string;
-    serviceType: "grass" | "snow";
+    serviceType: string;
     scheduledDate: Date;
+    oneTimeServiceId?: string;
   }) => void;
 }
 
@@ -26,6 +29,8 @@ export function CompleteJobButton({
   address,
   date,
   currentUserId,
+  oneTimeServiceId,
+  customServiceType,
   onCompleteOptimistic,
 }: CompleteJobButtonProps) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -52,7 +57,7 @@ export function CompleteJobButton({
     }
 
     const isSnow = address.schedule?.frequency === "daily";
-    const serviceType = isSnow ? "snow" : "grass";
+    const serviceType = customServiceType || (isSnow ? "snow" : "grass");
 
     startTransition(() => {
       onCompleteOptimistic({
@@ -61,6 +66,7 @@ export function CompleteJobButton({
         currentUserId: currentUserId ?? "",
         serviceType,
         scheduledDate: date,
+        oneTimeServiceId,
       });
 
       completeJob({
@@ -71,6 +77,7 @@ export function CompleteJobButton({
         capturedAt: timestamp,
         completedAt: timestamp,
         scheduledDate: date,
+        oneTimeServiceId,
       });
     });
   };

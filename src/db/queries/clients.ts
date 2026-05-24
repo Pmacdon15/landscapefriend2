@@ -10,6 +10,7 @@ import type {
   RouteOrderRow,
   ScheduleRow,
   SiteMapRow,
+  OneTimeServiceRow,
 } from "@/types/types";
 import type {
   ScheduleWithOrgSchema,
@@ -158,17 +159,23 @@ export async function upsertScheduleDb(
   frequency: string,
   firstCutDate: string,
   notes?: string | null,
+  serviceName?: string | null,
+  serviceType?: string | null,
+  assignedMemberIds?: string[] | null,
 ): Promise<ScheduleWithOrgSchema> {
   const results = (await sql`
     WITH upserted_schedule AS (
-      INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date, notes)
-      VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate}, ${notes || null})
+      INSERT INTO schedules (address_id, day_of_week, frequency, first_cut_date, notes, service_name, service_type, assigned_member_ids)
+      VALUES (${addressId}, EXTRACT(DOW FROM ${firstCutDate}::DATE), ${frequency}, ${firstCutDate}, ${notes || null}, ${serviceName || null}, ${serviceType || null}, ${assignedMemberIds || null})
       ON CONFLICT (address_id)
       DO UPDATE SET
         day_of_week = EXCLUDED.day_of_week,
         frequency = EXCLUDED.frequency,
         first_cut_date = EXCLUDED.first_cut_date,
         notes = EXCLUDED.notes,
+        service_name = EXCLUDED.service_name,
+        service_type = EXCLUDED.service_type,
+        assigned_member_ids = EXCLUDED.assigned_member_ids,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *
     ),
@@ -275,19 +282,29 @@ export async function updateAddressAssigneeDb(
 export async function insertCompletedJobDb(
   addressId: string,
   orgId: string,
-  serviceType: "grass" | "snow",
+  serviceType: string,
   completedBy?: string | null,
   assignedTo?: string | null,
   completedAt: Date = new Date(),
   capturedAt: Date | null = null,
   notes?: string | null,
   scheduledDate: Date | null = null,
+  oneTimeServiceId?: string | null,
 ): Promise<CompletedJobRow> {
   const result = await sql`
-    INSERT INTO completed_jobs (address_id, org_id, service_type, completed_by, assigned_to, completed_at, captured_at, notes, scheduled_date)
-    VALUES (${addressId}, ${orgId}, ${serviceType}, ${completedBy || null}, ${assignedTo || null}, ${completedAt}, ${capturedAt}, ${notes || null}, ${scheduledDate})
+    INSERT INTO completed_jobs (address_id, org_id, service_type, completed_by, assigned_to, completed_at, captured_at, notes, scheduled_date, one_time_service_id)
+    VALUES (${addressId}, ${orgId}, ${serviceType}, ${completedBy || null}, ${assignedTo || null}, ${completedAt}, ${capturedAt}, ${notes || null}, ${scheduledDate}, ${oneTimeServiceId || null})
     RETURNING *
   `;
+
+  if (oneTimeServiceId) {
+    await sql`
+      UPDATE one_time_services
+      SET completed_job_id = ${result[0].id}
+      WHERE id = ${oneTimeServiceId}
+    `;
+  }
+
   return result[0] as unknown as CompletedJobRow;
 }
 
@@ -548,6 +565,26 @@ export async function searchClientsDb(
                 (
                   SELECT jsonb_agg(
                     jsonb_build_object(
+                      'id', ots.id,
+                      'address_id', ots.address_id,
+                      'org_id', ots.org_id,
+                      'name', ots.name,
+                      'service_type', ots.service_type,
+                      'service_date', to_char(ots.service_date, 'YYYY-MM-DD'),
+                      'notes', ots.notes,
+                      'assigned_member_ids', ots.assigned_member_ids,
+                      'completed_job_id', ots.completed_job_id
+                    ) ORDER BY ots.service_date ASC
+                  )
+                  FROM one_time_services ots
+                  WHERE ots.address_id = a.id
+                ),
+                '[]'::jsonb
+              ) as one_time_services,
+              COALESCE(
+                (
+                  SELECT jsonb_agg(
+                    jsonb_build_object(
                       'id', sm.id,
                       'address_id', sm.address_id,
                       'name', sm.name,
@@ -652,21 +689,81 @@ export async function getClientsForCutListDb(
         ro.sort_order,
         ass.user_id as assignment_user_id,
         ass.id as assignment_id,
-        ass.scheduled_date as assignment_date
+        ass.scheduled_date as assignment_date,
+        COALESCE(ots.one_time_services_list, '[]'::jsonb) as active_one_times,
+        (
+          s.id IS NOT NULL AND s.first_cut_date <= ${date}::date AND (
+            s.frequency = 'daily' OR
+            (s.frequency = 'weekly' AND ((${date}::date - s.first_cut_date) % 7) = 0) OR
+            (s.frequency = 'bi-weekly' AND ((${date}::date - s.first_cut_date) % 14) = 0) OR
+            (s.frequency = 'monthly' AND EXTRACT(DAY FROM s.first_cut_date) = EXTRACT(DAY FROM ${date}::date))
+          )
+        )::boolean as is_recurring_due
       FROM addresses a
-      JOIN schedules s ON a.id = s.address_id
       JOIN clients c ON a.client_id = c.id
+      LEFT JOIN schedules s ON a.id = s.address_id
       LEFT JOIN route_orders ro ON a.id = ro.address_id
       LEFT JOIN assignments ass ON a.id = ass.address_id AND ass.scheduled_date = ${date}::date
+      LEFT JOIN LATERAL (
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'id', o.id,
+            'address_id', o.address_id,
+            'org_id', o.org_id,
+            'name', o.name,
+            'service_type', o.service_type,
+            'service_date', to_char(o.service_date, 'YYYY-MM-DD'),
+            'notes', o.notes,
+            'assigned_member_ids', o.assigned_member_ids,
+            'completed_job_id', o.completed_job_id,
+            'completed_job', (
+              SELECT jsonb_build_object(
+                'id', cj.id,
+                'address_id', cj.address_id,
+                'org_id', cj.org_id,
+                'service_type', cj.service_type,
+                'assigned_to', cj.assigned_to,
+                'completed_by', cj.completed_by,
+                'completed_at', to_char(cj.completed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                'notes', cj.notes,
+                'photos', COALESCE(
+                  (
+                    SELECT jsonb_agg(
+                      jsonb_build_object(
+                        'id', cp.id,
+                        'completed_job_id', cp.completed_job_id,
+                        'blob_path', cp.blob_path,
+                        'created_at', to_char(cp.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                      ) ORDER BY cp.created_at DESC
+                    )
+                    FROM completion_photos cp
+                    WHERE cp.completed_job_id = cj.id
+                  ),
+                  '[]'::jsonb
+                )
+              )
+              FROM completed_jobs cj
+              WHERE cj.id = o.completed_job_id
+            )
+          )
+        ) as one_time_services_list
+        FROM one_time_services o
+        WHERE o.address_id = a.id AND o.service_date = ${date}::date
+      ) ots ON true
       WHERE c.org_id = ${orgId} 
         AND a.status = 'active'
         AND c.status = 'active'
-        AND s.first_cut_date <= ${date}::date
         AND (
-          s.frequency = 'daily' OR
-          (s.frequency = 'weekly' AND ((${date}::date - s.first_cut_date) % 7) = 0) OR
-          (s.frequency = 'bi-weekly' AND ((${date}::date - s.first_cut_date) % 14) = 0) OR
-          (s.frequency = 'monthly' AND EXTRACT(DAY FROM s.first_cut_date) = EXTRACT(DAY FROM ${date}::date))
+          -- Recurring schedule is due on this date
+          (s.id IS NOT NULL AND s.first_cut_date <= ${date}::date AND (
+            s.frequency = 'daily' OR
+            (s.frequency = 'weekly' AND ((${date}::date - s.first_cut_date) % 7) = 0) OR
+            (s.frequency = 'bi-weekly' AND ((${date}::date - s.first_cut_date) % 14) = 0) OR
+            (s.frequency = 'monthly' AND EXTRACT(DAY FROM s.first_cut_date) = EXTRACT(DAY FROM ${date}::date))
+          ))
+          OR
+          -- OR has a one-off/one-time service scheduled for this date
+          ots.one_time_services_list IS NOT NULL
         )
         AND (
           ${!clientId}::boolean OR c.id = ${clientId || null}
@@ -682,7 +779,11 @@ export async function getClientsForCutListDb(
       SELECT * FROM scheduled_addresses
       WHERE 
         ${showAll}::boolean OR 
-        COALESCE(assignment_user_id, assigned_to) = ${targetUserId || null}
+        COALESCE(assignment_user_id, assigned_to) = ${targetUserId || null} OR
+        EXISTS (
+          SELECT 1 FROM jsonb_to_recordset(active_one_times) AS x(assigned_member_ids text[])
+          WHERE ${targetUserId || null} = ANY(x.assigned_member_ids)
+        )
     )
     SELECT 
       c.id,
@@ -704,6 +805,7 @@ export async function getClientsForCutListDb(
               fa.zip,
               fa.status,
               fa.assigned_to,
+              fa.is_recurring_due,
               COALESCE(fa.sort_order, 0)::float as sort_order,
               (
                 SELECT jsonb_build_object(
@@ -714,14 +816,19 @@ export async function getClientsForCutListDb(
                 )
                 WHERE fa.assignment_id IS NOT NULL
               ) as assignment,
-              jsonb_build_object(
-                'id', s.id,
-                'address_id', s.address_id,
-                'frequency', s.frequency,
-                'day_of_week', s.day_of_week,
-                'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
-                'notes', s.notes
+              (
+                SELECT jsonb_build_object(
+                  'id', s.id,
+                  'address_id', s.address_id,
+                  'frequency', s.frequency,
+                  'day_of_week', s.day_of_week,
+                  'first_cut_date', to_char(s.first_cut_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'notes', s.notes
+                )
+                FROM schedules s
+                WHERE s.address_id = fa.id
               ) as schedule,
+              fa.active_one_times as one_time_services,
               COALESCE(
                 (
                   SELECT jsonb_agg(
@@ -772,7 +879,7 @@ export async function getClientsForCutListDb(
                 LIMIT 1
               ) as completed_job
             FROM filtered_addresses fa
-            JOIN schedules s ON fa.id = s.address_id
+            LEFT JOIN schedules s ON fa.id = s.address_id
             WHERE fa.client_id = c.id
           ) addr_data
         ),
@@ -910,6 +1017,26 @@ export async function getClientsForInfoDb(
                 (
                   SELECT jsonb_agg(
                     jsonb_build_object(
+                      'id', ots.id,
+                      'address_id', ots.address_id,
+                      'org_id', ots.org_id,
+                      'name', ots.name,
+                      'service_type', ots.service_type,
+                      'service_date', to_char(ots.service_date, 'YYYY-MM-DD'),
+                      'notes', ots.notes,
+                      'assigned_member_ids', ots.assigned_member_ids,
+                      'completed_job_id', ots.completed_job_id
+                    ) ORDER BY ots.service_date ASC
+                  )
+                  FROM one_time_services ots
+                  WHERE ots.address_id = a.id
+                ),
+                '[]'::jsonb
+              ) as one_time_services,
+              COALESCE(
+                (
+                  SELECT jsonb_agg(
+                    jsonb_build_object(
                       'id', sm.id,
                       'address_id', sm.address_id,
                       'name', sm.name,
@@ -1019,4 +1146,33 @@ export async function checkClientLimit(
     console.error("Failed to check client limit:", error);
     return errAsync({ reason: "Failed to verify plan limit." });
   }
+}
+
+export async function insertOneTimeServiceDb(
+  addressId: string,
+  orgId: string,
+  name: string,
+  serviceType: string,
+  serviceDate: string,
+  notes?: string | null,
+  assignedMemberIds?: string[] | null,
+): Promise<OneTimeServiceRow> {
+  const result = await sql`
+    INSERT INTO one_time_services (address_id, org_id, name, service_type, service_date, notes, assigned_member_ids)
+    VALUES (${addressId}, ${orgId}, ${name}, ${serviceType}, ${serviceDate}, ${notes || null}, ${assignedMemberIds || null})
+    RETURNING *
+  `;
+  return result[0] as unknown as OneTimeServiceRow;
+}
+
+export async function deleteOneTimeServiceDb(
+  serviceId: string,
+  orgId: string,
+): Promise<OneTimeServiceRow> {
+  const [row] = (await sql`
+    DELETE FROM one_time_services
+    WHERE id = ${serviceId} AND org_id = ${orgId}
+    RETURNING *
+  `) as unknown as OneTimeServiceRow[];
+  return row;
 }

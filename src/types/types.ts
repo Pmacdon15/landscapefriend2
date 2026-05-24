@@ -4,6 +4,7 @@ import type {
   Client,
   CompletedJob,
   Schedule,
+  OneTimeService,
 } from "@/zod/schemas";
 
 export interface ClientRow {
@@ -39,6 +40,20 @@ export interface ScheduleRow {
   first_cut_date: Date;
   next_cut_date?: Date;
   notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface OneTimeServiceRow {
+  id: string;
+  address_id: string;
+  org_id: string;
+  name: string;
+  service_type: string;
+  service_date: string;
+  notes: string | null;
+  assigned_member_ids: string[] | null;
+  completed_job_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -109,7 +124,9 @@ export type OptimisticAction =
   | { type: "edit-client"; client: Client }
   | { type: "delete-client"; clientId: string; defaultClients?: Client[] }
   | { type: "optimistic-search"; clients: Client[] }
-  | { type: "select-client"; client: Client };
+  | { type: "select-client"; client: Client }
+  | { type: "add-one-time-service"; addressId: string; service: OneTimeService }
+  | { type: "delete-one-time-service"; addressId: string; serviceId: string };
 
 export type OptimisticServiceAction =
   | { type: "reorder"; cuts: CutListItem[] }
@@ -120,12 +137,13 @@ export type OptimisticServiceAction =
       currentUserId: string;
       serviceType: string;
       scheduledDate: Date;
+      oneTimeServiceId?: string;
     }
   | { type: "update-search"; value: string }
   | { type: "optimistic-filter"; cuts: CutListItem[] }
   | { type: "select-client"; value: string; cuts: CutListItem[] };
 
-export type { Client, Address, Schedule, CompletedJob, Assignment };
+export type { Client, Address, Schedule, CompletedJob, Assignment, OneTimeService };
 
 export interface ClientCardProps {
   client: Client;
@@ -157,6 +175,7 @@ export interface CutListItem {
     name: string;
   };
   address: Address;
+  otsId?: string;
 }
 
 export interface DbClientResult extends Client {

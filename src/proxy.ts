@@ -11,9 +11,8 @@ const isPublicRoute = createRouteMatcher([
 const isAdminRoute = createRouteMatcher([
   "/client-info-list(.*)",
   "/admin(.*)",
-  "/clients-service(.*)",
   "/stats(.*)",
-  "history(.*)"
+  "history(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

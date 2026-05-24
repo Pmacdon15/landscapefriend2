@@ -134,6 +134,36 @@ export default function ClientInfoContainer({
             }),
           };
         }
+        case "add-one-time-service":
+          return {
+            ...state,
+            clients: state.clients.map((client) => ({
+              ...client,
+              addresses: client.addresses?.map((address) => {
+                if (address.id !== action.addressId) return address;
+                const currentList = address.one_time_services || [];
+                return {
+                  ...address,
+                  one_time_services: [...currentList, action.service],
+                };
+              }),
+            })),
+          };
+        case "delete-one-time-service":
+          return {
+            ...state,
+            clients: state.clients.map((client) => ({
+              ...client,
+              addresses: client.addresses?.map((address) => {
+                if (address.id !== action.addressId) return address;
+                const currentList = address.one_time_services || [];
+                return {
+                  ...address,
+                  one_time_services: currentList.filter((s) => s.id !== action.serviceId),
+                };
+              }),
+            })),
+          };
         default:
           return state;
       }

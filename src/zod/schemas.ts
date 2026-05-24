@@ -37,13 +37,29 @@ export const CompletedJobSchema = z.object({
   id: z.uuid(),
   address_id: z.uuid(),
   org_id: z.string(),
-  service_type: z.enum(["grass", "snow"]),
+  service_type: z.enum(["grass", "snow", "other"] as unknown as [string, ...string[]]),
   assigned_to: z.string().nullable().optional(),
   completed_by: z.string().nullable().optional(),
   completed_at: z.date(),
   notes: z.string().nullable().optional(),
   photos: z.array(CompletionPhotoSchema).optional(),
+  one_time_service_id: z.string().uuid().nullable().optional(),
   created_at: z.date().optional(),
+});
+
+export const OneTimeServiceSchema = z.object({
+  id: z.uuid(),
+  address_id: z.uuid(),
+  org_id: z.string(),
+  name: z.string(),
+  service_type: z.string(),
+  service_date: z.string(),
+  notes: z.string().nullable().optional(),
+  assigned_member_ids: z.array(z.string()).nullable().optional(),
+  completed_job_id: z.uuid().nullable().optional(),
+  completed_job: CompletedJobSchema.optional().nullable(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
 });
 
 export const SiteMapSchema = z.object({
@@ -71,6 +87,8 @@ export const AddressSchema = z.object({
   assignment: AssignmentSchema.optional().nullable(),
   completed_job: CompletedJobSchema.optional().nullable(),
   site_maps: z.array(SiteMapSchema).optional(),
+  one_time_services: z.array(OneTimeServiceSchema).optional().nullable(),
+  is_recurring_due: z.boolean().optional().nullable(),
   created_at: z.date().optional(),
   updated_at: z.date().optional(),
 });
@@ -113,6 +131,7 @@ export type Schedule = z.infer<typeof ScheduleSchema>;
 export type CompletedJob = z.infer<typeof CompletedJobSchema>;
 export type SiteMap = z.infer<typeof SiteMapSchema>;
 export type Assignment = z.infer<typeof AssignmentSchema>;
+export type OneTimeService = z.infer<typeof OneTimeServiceSchema>;
 export type CreateClientInput = z.infer<typeof CreateClientInputSchema>;
 
 export const ScheduleWithOrg = ScheduleSchema.extend({

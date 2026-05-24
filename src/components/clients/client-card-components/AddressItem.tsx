@@ -6,6 +6,7 @@ import { startTransition, useState } from "react";
 import { toast } from "sonner";
 import { SiteMapContainer } from "@/components/clients/site-maps/site-map-container";
 import { ScheduleForm } from "@/components/schedules/schedule-form";
+import { OneTimeForm } from "@/components/schedules/one-time-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Popover,
@@ -47,6 +48,7 @@ export function AddressItem({
   clientStatus,
 }: AddressItemProps) {
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
+  const [isOneTimePopoverOpen, setIsOneTimePopoverOpen] = useState(false);
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
 
   return (
@@ -160,47 +162,92 @@ export function AddressItem({
           )}
         </div>
 
-        <Popover
-          open={isSchedulePopoverOpen}
-          onOpenChange={(isOpen) => {
-            if (isOpen && clientStatus === "disabled") {
-              toast.error(
-                "This client is disabled due to plan limits. Please upgrade your plan to manage schedules.",
-              );
-              return;
-            }
-            setIsSchedulePopoverOpen(isOpen);
-          }}
-        >
-          <PopoverTrigger
-            className={buttonVariants({
-              variant: "outline",
-              size: "sm",
-              className: "h-7 text-xs",
-            })}
+        <div className="flex gap-2">
+          {/* Recurring Schedule Popover */}
+          <Popover
+            open={isSchedulePopoverOpen}
+            onOpenChange={(isOpen) => {
+              if (isOpen && clientStatus === "disabled") {
+                toast.error(
+                  "This client is disabled due to plan limits. Please upgrade your plan to manage schedules.",
+                );
+                return;
+              }
+              setIsSchedulePopoverOpen(isOpen);
+            }}
           >
-            <CalendarDays className="h-3 w-3 mr-1.5" />
-            {address.schedule ? "Edit" : "Schedule"}
-          </PopoverTrigger>
-          <PopoverContent className="w-80" align="end">
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium leading-none">Manage Schedule</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Set the cut frequency for {address.street}
-                </p>
+            <PopoverTrigger
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "h-7 text-xs",
+              })}
+            >
+              <CalendarDays className="h-3 w-3 mr-1.5" />
+              {address.schedule ? "Edit" : "Schedule"}
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium leading-none">Manage Schedule</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Set the cut frequency for {address.street}
+                  </p>
+                </div>
+                <ScheduleForm
+                  addressId={address.id}
+                  initialFrequency={address.schedule?.frequency}
+                  initialDate={toLocalMidnight(address.schedule?.first_cut_date)}
+                  initialNotes={address.schedule?.notes}
+                  setOptimistic={setOptimistic}
+                  onSuccess={() => setIsSchedulePopoverOpen(false)}
+                />
               </div>
-              <ScheduleForm
-                addressId={address.id}
-                initialFrequency={address.schedule?.frequency}
-                initialDate={toLocalMidnight(address.schedule?.first_cut_date)}
-                initialNotes={address.schedule?.notes}
-                setOptimistic={setOptimistic}
-                onSuccess={() => setIsSchedulePopoverOpen(false)}
-              />
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+
+          {/* One-Off Services Popover */}
+          <Popover
+            open={isOneTimePopoverOpen}
+            onOpenChange={(isOpen) => {
+              if (isOpen && clientStatus === "disabled") {
+                toast.error(
+                  "This client is disabled due to plan limits. Please upgrade your plan to manage schedules.",
+                );
+                return;
+              }
+              setIsOneTimePopoverOpen(isOpen);
+            }}
+          >
+            <PopoverTrigger
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "h-7 text-xs border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/20",
+              })}
+            >
+              <CalendarDays className="h-3 w-3 mr-1.5" />
+              One-Offs {address.one_time_services && address.one_time_services.length > 0 && `(${address.one_time_services.length})`}
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium leading-none">One-Time Services</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Schedule custom one-off services for this property.
+                  </p>
+                </div>
+                <OneTimeForm
+                  addressId={address.id}
+                  members={members}
+                  oneTimeServices={address.one_time_services}
+                  setOptimistic={setOptimistic}
+                  onSuccess={() => setIsOneTimePopoverOpen(false)}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
     </div>
   );
