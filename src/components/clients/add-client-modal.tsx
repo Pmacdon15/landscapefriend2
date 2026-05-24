@@ -23,27 +23,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateClient } from "@/mutations/clients";
-import type { Address, Client, OptimisticAction } from "@/types/types";
-
-interface AddClientModalProps {
-  members: { id: string; name: string }[];
-  setOptimistic: (action: OptimisticAction) => void;
-}
-
-interface AddressFormValue {
-  key: string;
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-  assigned_to: string;
-}
+import type {
+  AddClientModalProps,
+  Address,
+  AddressFormValue,
+  Client,
+} from "@/types/types";
 
 export function AddClientModal({
   members,
   setOptimistic,
-}: AddClientModalProps) {
-  const _router = useRouter();
+}: AddClientModalProps) { 
   const [open, setOpen] = useState(false);
   const { mutate: createClient, isPending } = useCreateClient();
 

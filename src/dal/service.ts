@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
+
 import {
   deleteAssignmentDb,
   deleteScheduleDb,
@@ -19,6 +20,7 @@ import type {
 } from "@/types/types";
 import type { ScheduleWithOrgSchema } from "@/zod/schemas";
 import { sql } from "../db/client";
+import { checkOrgMemberLimit } from "@/db/queries/clerk";
 
 export async function updateRouteOrderDal(
   addressId: string,
@@ -57,6 +59,11 @@ export async function upsertScheduleDal(
     const { orgId } = await auth.protect();
 
     if (!orgId) return errAsync({ reason: "Unauthorized" });
+
+        const memberLimitCheck = await checkOrgMemberLimit(orgId);
+    if (memberLimitCheck.isErr()) {
+      return errAsync({ reason: memberLimitCheck.error.reason });
+    }
 
     const parsedAddressId = z.uuid().safeParse(addressId);
     if (!parsedAddressId.success)

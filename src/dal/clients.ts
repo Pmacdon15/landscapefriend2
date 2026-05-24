@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
+import { checkOrgMemberLimit } from "@/db/queries/clerk";
 import type { Address, Client, ClientRow } from "@/types/types";
 import {
   type AddressInputSchema,
@@ -80,6 +81,15 @@ export async function getClientsForCutListDal(
     const { orgId, userId, orgRole } = await auth.protect();
     if (!orgId || !userId) throw new Error("Unauthorized");
 
+    // Check organization member limit!
+    const memberLimitCheck = await checkOrgMemberLimit(orgId);
+    if (memberLimitCheck.isErr()) {
+      console.warn(
+        `[getClientsForCutListDal] Org ${orgId} has exceeded its member limit: ${memberLimitCheck.error.reason}`,
+      );
+      return []; // Return empty array to disable pulling up clients on schedule
+    }
+
     const isAdmin = orgRole === "org:admin";
     const targetUserId = isAdmin && userIdOverride ? userIdOverride : userId;
     const showAll = isAdmin && userIdOverride === "all";
@@ -120,12 +130,19 @@ export async function createClientDal(
     limit = 100;
   }
 
-  const limitCheck = await checkClientLimit(orgId, limit);
+  const [limitCheck, orgMembershipCheck] = await Promise.all([
+    checkClientLimit(orgId, limit),
+    checkOrgMemberLimit(orgId),
+  ]);
+
+  if (orgMembershipCheck.isErr()) {
+    return errAsync({ reason: orgMembershipCheck.error.reason });
+  }
+
   if (limitCheck.isErr()) {
     return errAsync({ reason: limitCheck.error.reason });
   }
 
-  // Wrap the entire DB transaction logic
   return ResultAsync.fromPromise(
     (async () => {
       const client = await insertClientDb(

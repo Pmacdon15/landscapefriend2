@@ -40,16 +40,17 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        case "subscriptionItem.active": {
-          const data = evt.data;
-          const orgId = data.id;
+        case "subscriptionItem.active":{
+        
+          const data = evt.data 
+          const orgId = data.id 
           const status = data.status;
 
           console.log(
             `[Clerk Webhook] Received subscription event ${evt.type} for org ${orgId}. Status: ${status}`,
           );
 
-          if (orgId && status === "active") {
+          if (orgId) {
             await rebalanceClientsForOrg(orgId);
           }
           break;

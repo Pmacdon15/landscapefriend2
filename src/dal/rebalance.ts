@@ -24,54 +24,56 @@ export async function rebalanceClientsForOrg(orgId: string): Promise<{
 
   try {
     const client = await clerkClient();
-    const org = await client.organizations.getOrganization({
-      organizationId: orgId,
-    });
 
-    // Check organization features / public metadata for limits
-    const metadata = org.publicMetadata as { features?: string[] } | undefined;
-    const features = metadata?.features || [];
+    // Fetch members, organization details, and billing subscription in parallel!
+    const [members, org, subscription] = await Promise.all([
+      client.organizations.getOrganizationMembershipList({ organizationId: orgId }),
+      client.organizations.getOrganization({ organizationId: orgId }),
+      client.billing.getOrganizationBillingSubscription(orgId).catch(() => null),
+    ]);
 
-    if (features.includes("200-clients") || features.includes("200_clients")) {
-      limit = 200;
-    } else if (
-      features.includes("100-clients") ||
-      features.includes("100_clients")
-    ) {
-      limit = 100;
-    }
-  } catch (error) {
-    console.error(
-      `[Rebalance] Failed to fetch Clerk metadata details for org ${orgId}:`,
-      error,
-    );
-  }
+    // Check if the organization has exceeded its member limit
+    const currentMembers = members.data.length;
+    const maxMembers = org.maxAllowedMemberships;
 
-  // Also query Clerk's Billing Subscription API as a robust check
-  try {
-    const client = await clerkClient();
+    if (maxMembers !== undefined && maxMembers !== null && currentMembers > maxMembers) {
+      console.log(
+        `[Rebalance] Org ${orgId} has exceeded membership limit. Allowed: ${maxMembers}, Current: ${currentMembers}. Disabling all clients and schedules.`,
+      );
+      limit = 0; // Exceeded member limit, disable all schedules by setting limit to 0
+    } else {
+      // Check organization features / public metadata for limits
+      const metadata = org.publicMetadata as { features?: string[] } | undefined;
+      const features = metadata?.features || [];
 
-    const subscription =
-      await client.billing.getOrganizationBillingSubscription(orgId);
-
-    if (subscription) {
-      const subscriptionStr = JSON.stringify(subscription).toLowerCase();
-      if (
-        subscriptionStr.includes("200-clients") ||
-        subscriptionStr.includes("200_clients")
-      ) {
+      if (features.includes("200-clients") || features.includes("200_clients")) {
         limit = 200;
       } else if (
-        subscriptionStr.includes("100-clients") ||
-        subscriptionStr.includes("100_clients")
+        features.includes("100-clients") ||
+        features.includes("100_clients")
       ) {
         limit = 100;
       }
+
+      if (subscription) {
+        const subscriptionStr = JSON.stringify(subscription).toLowerCase();
+        if (
+          subscriptionStr.includes("200-clients") ||
+          subscriptionStr.includes("200_clients")
+        ) {
+          limit = 200;
+        } else if (
+          subscriptionStr.includes("100-clients") ||
+          subscriptionStr.includes("100_clients")
+        ) {
+          limit = 100;
+        }
+      }
     }
-  } catch (billingError) {
-    console.log(
-      `[Rebalance] Clerk billing subscription check bypassed or not found for org ${orgId}:`,
-      billingError,
+  } catch (error) {
+    console.error(
+      `[Rebalance] Failed to fetch Clerk details or check member limit for org ${orgId}:`,
+      error,
     );
   }
 
@@ -97,20 +99,17 @@ export async function rebalanceClientsForOrg(orgId: string): Promise<{
       }
     });
 
-    // Perform database updates
-    if (toActive.length > 0) {
+    // Perform database updates in a single atomic conditional transactional statement
+    const allIds = [...toActive, ...toDisabled];
+    if (allIds.length > 0) {
       await sql`
         UPDATE clients
-        SET status = 'active', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ANY(${toActive})
-      `;
-    }
-
-    if (toDisabled.length > 0) {
-      await sql`
-        UPDATE clients
-        SET status = 'disabled', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ANY(${toDisabled})
+        SET status = CASE 
+          WHEN id = ANY(${toActive.length > 0 ? toActive : ['00000000-0000-0000-0000-000000000000']}) THEN 'active'
+          ELSE 'disabled'
+        END,
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = ANY(${allIds})
       `;
     }
 
