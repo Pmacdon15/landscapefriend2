@@ -1,6 +1,7 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { useState, useRef } from "react";
+import { Download, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -12,6 +13,15 @@ interface PhotoViewerProps {
 }
 
 export function PhotoViewer({ viewingSiteMap, onClose }: PhotoViewerProps) {
+  const [isLoading, setIsLoading] = useState(true);
+  const currentId = viewingSiteMap?.id || null;
+  const lastIdRef = useRef<string | null>(null);
+
+  if (currentId !== lastIdRef.current) {
+    lastIdRef.current = currentId;
+    setIsLoading(true);
+  }
+
   const handleDownload = async () => {
     if (!viewingSiteMap) return;
     try {
@@ -56,13 +66,27 @@ export function PhotoViewer({ viewingSiteMap, onClose }: PhotoViewerProps) {
         {viewingSiteMap && (
           <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8">
             {viewingSiteMap.blob_path && (
-              <Image
-                src={`/api/image-view/${viewingSiteMap.id}?type=${viewingSiteMap.name === "Completion Photo" ? "photo" : "sitemap"}`}
-                alt="Viewing existing sitemap or completion photo"
-                fill
-                unoptimized
-                className="object-contain shadow-2xl rounded-sm transition-all duration-300"
-              />
+              <>
+                {isLoading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    <p className="text-xs text-slate-400 font-semibold tracking-wider animate-pulse">
+                      LOADING PROOF...
+                    </p>
+                  </div>
+                )}
+                <Image
+                  key={viewingSiteMap.id}
+                  src={`/api/image-view/${viewingSiteMap.id}?type=${viewingSiteMap.name === "Completion Photo" ? "photo" : "sitemap"}`}
+                  alt="Viewing existing sitemap or completion photo"
+                  fill
+                  unoptimized
+                  onLoad={() => setIsLoading(false)}
+                  className={`object-contain shadow-2xl rounded-sm transition-all duration-500 ease-in-out ${
+                    isLoading ? "opacity-0 scale-95" : "opacity-100 scale-100"
+                  }`}
+                />
+              </>
             )}
           </div>
         )}
