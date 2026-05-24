@@ -45,7 +45,6 @@ export function OneTimeForm({
 
   const form = useForm({
     defaultValues: {
-      name: "",
       serviceType: "other",
       serviceDate: new Date(),
       notes: "",
@@ -55,11 +54,21 @@ export function OneTimeForm({
       startTransition(async () => {
         const dateStr = format(value.serviceDate, "yyyy-MM-dd");
 
+        // Map serviceType to display name for the database name column
+        const typeNames: Record<string, string> = {
+          grass: "Grass / Lawn Care",
+          snow: "Snow Removal",
+          "spring-fall-cleanup": "Spring / Fall Clean Up",
+          trimming: "Trimming",
+          other: "Other / General",
+        };
+        const nameVal = typeNames[value.serviceType] || "General Service";
+
         const optimisticService: OneTimeService = {
           id: "optimistic-" + Math.random().toString(),
           address_id: addressId,
           org_id: "",
-          name: value.name,
+          name: nameVal,
           service_type: value.serviceType,
           service_date: dateStr,
           notes: value.notes || null,
@@ -78,7 +87,7 @@ export function OneTimeForm({
         try {
           await insertService({
             addressId,
-            name: value.name,
+            name: nameVal,
             serviceType: value.serviceType,
             serviceDate: dateStr,
             notes: value.notes,
@@ -132,15 +141,19 @@ export function OneTimeForm({
                       {service.name}
                     </span>
                     <span className={cn(
-                      "inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-semibold border",
+                      "inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-semibold border capitalize",
                       service.service_type === "grass" && "bg-emerald-50 text-emerald-700 border-emerald-100",
                       service.service_type === "snow" && "bg-blue-50 text-blue-700 border-blue-100",
-                      service.service_type === "other" && "bg-amber-50 text-amber-700 border-amber-100",
+                      service.service_type === "spring-fall-cleanup" && "bg-amber-50 text-amber-700 border-amber-100",
+                      service.service_type === "trimming" && "bg-violet-50 text-violet-700 border-violet-100",
+                      service.service_type === "other" && "bg-slate-50 text-slate-700 border-slate-100",
                     )}>
                       {service.service_type === "grass" && <Sprout className="h-2.5 w-2.5" />}
                       {service.service_type === "snow" && <Snowflake className="h-2.5 w-2.5" />}
+                      {service.service_type === "spring-fall-cleanup" && <Sprout className="h-2.5 w-2.5" />}
+                      {service.service_type === "trimming" && <Wrench className="h-2.5 w-2.5" />}
                       {service.service_type === "other" && <Wrench className="h-2.5 w-2.5" />}
-                      {service.service_type}
+                      {service.service_type === "spring-fall-cleanup" ? "spring/fall clean up" : service.service_type}
                     </span>
                   </div>
                   <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
@@ -194,22 +207,7 @@ export function OneTimeForm({
           }}
           className="space-y-4"
         >
-          <form.Field name="name">
-            {(field) => (
-              <div className="space-y-1">
-                <Label htmlFor="one-off-name" className="text-xs">Service Name</Label>
-                <input
-                  id="one-off-name"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  placeholder="e.g. Fall Cleanup, Shrub Pruning"
-                  required
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs ring-offset-background file:border-0 file:bg-transparent file:text-xs file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-            )}
-          </form.Field>
+
 
           <form.Field name="serviceType">
             {(field) => (
@@ -225,6 +223,8 @@ export function OneTimeForm({
                   <SelectContent>
                     <SelectItem value="grass">Grass / Lawn Care</SelectItem>
                     <SelectItem value="snow">Snow Removal</SelectItem>
+                    <SelectItem value="spring-fall-cleanup">Spring / Fall Clean Up</SelectItem>
+                    <SelectItem value="trimming">Trimming</SelectItem>
                     <SelectItem value="other">Other / General</SelectItem>
                   </SelectContent>
                 </Select>

@@ -145,12 +145,16 @@ export function ServiceListItem({
                             "inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border w-fit",
                             isGrassType && "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50",
                             isSnowType && "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/50",
-                            !isGrassType && !isSnowType && "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/50"
+                            serviceType === "spring-fall-cleanup" && "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/50",
+                            serviceType === "trimming" && "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border-violet-200 dark:border-violet-800",
+                            serviceType === "other" && "bg-slate-50 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400 border-slate-200 dark:border-slate-800"
                           )}>
                             {isGrassType && <Sprout className="h-3 w-3" />}
                             {isSnowType && <Snowflake className="h-3 w-3" />}
-                            {!isGrassType && !isSnowType && <Wrench className="h-3 w-3" />}
-                            {serviceType}
+                            {serviceType === "spring-fall-cleanup" && <Sprout className="h-3 w-3" />}
+                            {serviceType === "trimming" && <Wrench className="h-3 w-3" />}
+                            {serviceType === "other" && <Wrench className="h-3 w-3" />}
+                            {serviceType === "spring-fall-cleanup" ? "Spring/Fall Clean Up" : serviceType}
                           </span>
                         </div>
                       </div>

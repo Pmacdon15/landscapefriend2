@@ -64,28 +64,40 @@ export function ServiceListContent({
     }
   }, [router, searchParams, dateParam]);
 
-  // Flatten clients into CutListItems for the UI list (separated recurring and one-time tasks)
+  // Flatten clients into CutListItems for the UI list (separated recurring and one-time tasks, filtered by assignee if not showing all)
   const targetDate = parseISO(dateParam ?? new Date().toLocaleDateString("en-CA"));
   const flatCuts: CutListItem[] = [];
+
+  const isFilterAll = isAdmin ? (currentFilterUserId === "all" || !currentFilterUserId) : false;
+  const activeFilterUserId = isFilterAll ? null : (isAdmin ? currentFilterUserId : currentUserId);
   
   for (const client of initialClients) {
     for (const address of client.addresses ?? []) {
       const hasRecurringDue = !!address.is_recurring_due;
 
       if (hasRecurringDue) {
-        flatCuts.push({
-          client: { id: client.id, name: client.name },
-          address,
-        });
+        const recurringAssignee = address.assignment?.user_id || address.assigned_to || null;
+        const isUserAssigned = isFilterAll || (activeFilterUserId && recurringAssignee === activeFilterUserId);
+        
+        if (isUserAssigned) {
+          flatCuts.push({
+            client: { id: client.id, name: client.name },
+            address,
+          });
+        }
       }
 
       if (address.one_time_services) {
         for (const ots of address.one_time_services) {
-          flatCuts.push({
-            client: { id: client.id, name: client.name },
-            address,
-            otsId: ots.id,
-          });
+          const isUserInCrew = isFilterAll || (activeFilterUserId && ots.assigned_member_ids?.includes(activeFilterUserId));
+          
+          if (isUserInCrew) {
+            flatCuts.push({
+              client: { id: client.id, name: client.name },
+              address,
+              otsId: ots.id,
+            });
+          }
         }
       }
     }
