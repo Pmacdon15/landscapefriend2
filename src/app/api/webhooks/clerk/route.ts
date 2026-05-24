@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
         }
 
         case "subscriptionItem.active": {
-          const data = evt.data as any;
-          const orgId = data.organization_id;
+          const data = evt.data;
+          const orgId = data.id;
           const status = data.status;
 
           console.log(
