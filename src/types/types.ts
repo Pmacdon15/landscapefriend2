@@ -162,3 +162,17 @@ export interface CutListItem {
 export interface DbClientResult extends Client {
   total_count: number;
 }
+
+export interface AddClientModalProps {
+  members: { id: string; name: string }[];
+  setOptimistic: (action: OptimisticAction) => void;
+}
+
+export interface AddressFormValue {
+  key: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  assigned_to: string;
+}
