@@ -145,3 +145,40 @@ CREATE TABLE IF NOT EXISTS completion_photos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_completion_photos_job_id ON completion_photos(completed_job_id);
+
+-- Invoices
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    org_id TEXT NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    invoice_number TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft', -- 'draft', 'sent', 'paid'
+    issue_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    paid_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(org_id, invoice_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_org_id ON invoices(org_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_client_id ON invoices(client_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+
+-- Invoice Items
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    service_type TEXT NOT NULL, -- e.g., 'grass', 'snow', 'other'
+    address_id UUID REFERENCES addresses(id) ON DELETE SET NULL,
+    description TEXT,
+    quantity NUMERIC NOT NULL DEFAULT 1,
+    unit_price NUMERIC NOT NULL DEFAULT 0,
+    amount NUMERIC NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items(invoice_id);
+
