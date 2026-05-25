@@ -15,6 +15,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { Button } from "../ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface InvoiceCardProps {
   invoice: DbInvoiceResult;
@@ -36,6 +46,7 @@ export function InvoiceCard({
   onSendEmail,
 }: InvoiceCardProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   const formattedDate = (d: Date | string) => {
@@ -79,7 +90,12 @@ export function InvoiceCard({
     }[invoice.status] || "bg-slate-50 text-slate-700 border-slate-200";
 
   return (
-    <div className="relative bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between h-[230px]">
+    <>
+      <div
+        className={`relative bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between h-[230px] ${
+          dropdownOpen ? "z-30" : "z-10 hover:z-20"
+        }`}
+      >
       {/* Top Header */}
       <div>
         <div className="flex items-start justify-between">
@@ -210,9 +226,8 @@ export function InvoiceCard({
                     <button
                       type="button"
                       onClick={() => {
-                        if (!confirm("Are you sure you want to permanently delete this invoice?"))
-                          return;
-                        handleAction("delete", () => onDelete(invoice.id));
+                        setDropdownOpen(false);
+                        setDeleteDialogOpen(true);
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 flex items-center gap-2 font-medium"
                     >
@@ -278,5 +293,33 @@ export function InvoiceCard({
         </div>
       </div>
     </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete invoice{" "}
+              <span className="font-mono font-bold text-green-700 dark:text-green-400">
+                {invoice.invoice_number}
+              </span>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                handleAction("delete", () => onDelete(invoice.id));
+              }}
+              variant="destructive"
+            >
+              Delete Invoice
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
