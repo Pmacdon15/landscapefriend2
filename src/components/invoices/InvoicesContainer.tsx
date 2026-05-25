@@ -196,7 +196,7 @@ export default function InvoicesContainer({
       if (res.ok) {
         const data = await res.json();
         // Map clients to standard billing structure
-        const mapped = data.clients.map((c: any) => ({
+        const mapped = data.clients.map((c: ClientSearchResult) => ({
           id: c.id,
           name: c.name,
           email: c.email,
@@ -321,8 +321,9 @@ export default function InvoicesContainer({
       } else {
         toast.error(res.error || "Failed to create invoice");
       }
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred");
+    } catch (err) {
+      const error = err as Error;
+      toast.error(error.message || "An error occurred");
     } finally {
       setSubmittingInvoice(false);
     }
@@ -344,16 +345,12 @@ export default function InvoicesContainer({
 
   // Delete Invoice handler
   const handleDelete = async (invoiceId: string) => {
-    if (!confirm("Are you sure you want to permanently delete this invoice?"))
-      return;
-
     startTransition(() => {
       setOptimistic({ type: "delete-invoice", invoiceId });
     });
     const res = await deleteInvoiceWithOrgAction(invoiceId);
     if (res.success) {
-      toast.success("Invoice deleted successfully");
-      router.refresh();
+      toast.success("Invoice deleted successfully");     
     } else {
       toast.error(res.error || "Failed to delete invoice");
     }
@@ -361,14 +358,63 @@ export default function InvoicesContainer({
 
   // Email Invoice handler
   const handleSendEmail = async (invoiceId: string) => {
-    const res = await sendInvoiceEmailAction(invoiceId);
-    if (res.success) {
-      toast.success("Invoice sent to client email successfully!");
-      // Automatically triggers revalidation which sets invoice to 'sent'
-      router.refresh();
-    } else {
-      toast.error(res.error || "Failed to send email");
+    const invoice = activeInvoices.find((inv) => inv.id === invoiceId);
+    if (!invoice) {
+      toast.error("Invoice not found in list");
+      return;
     }
+
+    setIsExporting(true);
+    setSelectedInvoice(invoice); // Ensure it is rendered in A4 print-ready DOM
+
+    toast.info("Generating invoice PDF & dispatching via email...");
+
+    setTimeout(async () => {
+      const element = document.getElementById(`invoice-print-${invoice.id}`);
+      if (!element) {
+        toast.error("Failed to render PDF container");
+        setIsExporting(false);
+        return;
+      }
+
+      try {
+        const canvas = await html2canvas(element, {
+          scale: 1.5, // Balanced quality scale for crisp text at lightweight size
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: "#ffffff",
+        });
+
+        // Convert to compressed JPEG (70% quality) instead of PNG to stay well under Next.js 1MB Server Action payload limit
+        const imgData = canvas.toDataURL("image/jpeg", 0.7);
+        const pdf = new jsPDF("p", "mm", "a4");
+
+        const pdfWidth = 210; // A4 width
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
+        
+        // Output as base64 string (robust parsing across all versions)
+        const pdfDataUri = pdf.output("datauristring");
+        const pdfBase64 = pdfDataUri.split(",")[1];
+        const filename = `${invoice.invoice_number}-${invoice.client_name.replace(/\s+/g, "_")}.pdf`;
+
+        const res = await sendInvoiceEmailAction(invoiceId, pdfBase64, filename);
+        if (res.success) {
+          toast.success(`Invoice ${invoice.invoice_number} sent to client email successfully with PDF attachment!`);
+          router.refresh();
+        } else {
+          toast.error(res.error || "Failed to send email");
+        }
+      } catch (err) {
+        const error = err as Error;
+        console.error(error);
+        toast.error(`Email sending failed during PDF compile: ${error.message}`);
+      } finally {
+        setIsExporting(false);
+      }
+    }, 400);
   };
 
   // PDF Download trigger (Desktop A4 fixed mode)
@@ -406,9 +452,10 @@ export default function InvoicesContainer({
           `${invoice.invoice_number}-${invoice.client_name.replace(/\s+/g, "_")}.pdf`,
         );
         toast.success(`Downloaded ${invoice.invoice_number} successfully!`);
-      } catch (err: any) {
-        console.error(err);
-        toast.error(`PDF generation failed: ${err.message}`);
+      } catch (err) {
+        const error = err as Error;
+        console.error(error);
+        toast.error(`PDF generation failed: ${error.message}`);
       } finally {
         setIsExporting(false);
       }

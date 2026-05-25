@@ -83,9 +83,7 @@ export async function deleteInvoiceAction(invoiceId: string) {
 }
 
 // Action wrapper for deleting invoice that receives invoice and clears cache
-export async function deleteInvoiceWithOrgAction(
-  invoiceId: string, 
-) {
+export async function deleteInvoiceWithOrgAction(invoiceId: string) {
   const result = await deleteInvoiceDal(invoiceId);
 
   return result.match(
@@ -102,12 +100,18 @@ export async function deleteInvoiceWithOrgAction(
   );
 }
 
-export async function sendInvoiceEmailAction(invoiceId: string) {
-  const result = await sendInvoiceEmailDal(invoiceId);
+export async function sendInvoiceEmailAction(
+  invoiceId: string,
+  pdfBase64?: string,
+  filename?: string,
+) {
+  const result = await sendInvoiceEmailDal(invoiceId, pdfBase64, filename);
 
   return result.match(
-    (_success) => {
-      // The email sending changes status to "sent" under the hood, so revalidate
+    (invoice) => {
+      // Revalidate cache tags for the updated invoice status
+      updateTag(`invoices-${invoice.org_id}`);
+      updateTag(`invoice-detail-${invoice.id}`);
       return {
         success: true,
         error: null,
