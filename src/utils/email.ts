@@ -14,11 +14,18 @@ interface SendEmailParams {
  * to attach a PDF document if pdfBase64 and filename are provided.
  */
 export async function sendEmailWithSes(params: SendEmailParams): Promise<void> {
-  const { senderEmail, recipientEmail, subject, htmlBody, pdfBase64, filename } = params;
+  const {
+    senderEmail,
+    recipientEmail,
+    subject,
+    htmlBody,
+    pdfBase64,
+    filename,
+  } = params;
 
   if (pdfBase64 && filename) {
     const boundary = `NextPart_${Date.now().toString(16)}`;
-    
+
     // Chunk base64 string every 76 characters to follow MIME specs
     const chunkedBase64 = pdfBase64.match(/.{1,76}/g)?.join("\n") || pdfBase64;
 
@@ -46,7 +53,9 @@ export async function sendEmailWithSes(params: SendEmailParams): Promise<void> {
       `--${boundary}--`,
     ].join("\n");
 
-    const { SESClient, SendRawEmailCommand } = await import("@aws-sdk/client-ses");
+    const { SESClient, SendRawEmailCommand } = await import(
+      "@aws-sdk/client-ses"
+    );
     const ses = new SESClient({
       region: process.env.AWS_REGION ?? "us-east-1",
       credentials: {

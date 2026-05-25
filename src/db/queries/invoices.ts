@@ -34,8 +34,6 @@ export interface DbInvoiceResult {
   total_count?: number;
 }
 
-
-
 export async function getInvoicesDb(
   orgId: string,
   limit: number,
@@ -64,6 +62,7 @@ export async function getInvoicesDb(
       AND (${!statusVal}::boolean OR i.status = ${statusVal})
       AND (
         ${!searchQuery}::boolean OR
+        i.id::text ILIKE ${searchPattern} OR
         c.name ILIKE ${searchPattern} OR
         i.invoice_number ILIKE ${searchPattern} OR
         i.status ILIKE ${searchPattern} OR
@@ -250,7 +249,9 @@ export async function updateInvoiceStatusDb(
   return getInvoiceByIdDb(invoiceId);
 }
 
-export async function deleteInvoiceDb(invoiceId: string): Promise<DbInvoiceResult | null> {
+export async function deleteInvoiceDb(
+  invoiceId: string,
+): Promise<DbInvoiceResult | null> {
   const result = await sql`
     DELETE FROM invoices
     WHERE id = ${invoiceId}

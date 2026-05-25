@@ -28,9 +28,15 @@ export default async function InvoicesPage(props: {
     const page = Number(
       Array.isArray(params.page) ? params.page[0] : (params.page ?? 1),
     );
-    const search = Array.isArray(params.search)
+    let search = Array.isArray(params.search)
       ? params.search[0]
       : (params.search ?? undefined);
+    const invoiceParam = params.invoice || params.invoiceId;
+    if (!search && invoiceParam) {
+      search = Array.isArray(invoiceParam)
+        ? invoiceParam[0]
+        : (invoiceParam ?? undefined);
+    }
     const status = Array.isArray(params.status)
       ? params.status[0]
       : (params.status ?? undefined);
@@ -41,9 +47,15 @@ export default async function InvoicesPage(props: {
     const page = Number(
       Array.isArray(params.page) ? params.page[0] : (params.page ?? 1),
     );
-    const search = Array.isArray(params.search)
+    let search = Array.isArray(params.search)
       ? params.search[0]
       : (params.search ?? undefined);
+    const invoiceParam = params.invoice || params.invoiceId;
+    if (!search && invoiceParam) {
+      search = Array.isArray(invoiceParam)
+        ? invoiceParam[0]
+        : (invoiceParam ?? undefined);
+    }
     const status = Array.isArray(params.status)
       ? params.status[0]
       : (params.status ?? undefined);
@@ -54,11 +66,17 @@ export default async function InvoicesPage(props: {
     Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
   );
 
-  const searchPromise = props.searchParams.then((params) =>
-    String(
-      (Array.isArray(params.search) ? params.search[0] : params.search) ?? "",
-    ),
-  );
+  const searchPromise = props.searchParams.then((params) => {
+    const search =
+      (Array.isArray(params.search) ? params.search[0] : params.search) ?? "";
+    const invoiceParam = params.invoice || params.invoiceId;
+    if (!search && invoiceParam) {
+      return (
+        (Array.isArray(invoiceParam) ? invoiceParam[0] : invoiceParam) ?? ""
+      );
+    }
+    return search;
+  });
 
   const statusPromise = props.searchParams.then((params) =>
     String(

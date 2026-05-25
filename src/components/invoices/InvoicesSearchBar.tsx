@@ -11,6 +11,7 @@ import { Button } from "../ui/button";
 export function InvoicesSearchBar({
   setOptimisticSearch,
   optimisticValue,
+  activeInvoices,
 }: {
   setOptimisticSearch: (
     action:
@@ -18,11 +19,21 @@ export function InvoicesSearchBar({
       | { type: "optimistic-search"; invoices: DbInvoiceResult[] },
   ) => void;
   optimisticValue: string;
+  activeInvoices: DbInvoiceResult[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [inputValue, setInputValue] = useState(optimisticValue);
+  const matchedInvoice = activeInvoices.find(
+    (inv) =>
+      inv.id === optimisticValue || inv.invoice_number === optimisticValue,
+  );
+
+  const displaySearchValue = matchedInvoice
+    ? matchedInvoice.invoice_number
+    : optimisticValue;
+
+  const [inputValue, setInputValue] = useState(displaySearchValue);
   const [isFocused, setIsFocused] = useState(false);
   const [debouncedValue] = useDebouncedValue(inputValue, { wait: 300 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -53,9 +64,9 @@ export function InvoicesSearchBar({
 
   useEffect(() => {
     if (!isFocused) {
-      setInputValue(optimisticValue);
+      setInputValue(displaySearchValue);
     }
-  }, [optimisticValue, isFocused]);
+  }, [displaySearchValue, isFocused]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -96,10 +107,14 @@ export function InvoicesSearchBar({
       params.set("search", query);
       params.set("page", "1");
       params.delete("clientId");
+      params.delete("invoice");
+      params.delete("invoiceId");
     } else {
       params.delete("search");
       params.delete("page");
       params.delete("clientId");
+      params.delete("invoice");
+      params.delete("invoiceId");
     }
     router.push(`?${params.toString()}`);
     setIsFocused(false);
@@ -114,10 +129,12 @@ export function InvoicesSearchBar({
       });
     });
 
-    const params = new URLSearchParams(searchParams);
-    params.set("search", invoice.invoice_number);
-    params.set("page", "1");
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("invoice", invoice.invoice_number);
+    params.set("invoiceId", invoice.invoice_number);
     params.set("clientId", invoice.client_id);
+    params.delete("search");
+    params.delete("page");
     router.push(`?${params.toString()}`);
     setIsFocused(false);
   };
