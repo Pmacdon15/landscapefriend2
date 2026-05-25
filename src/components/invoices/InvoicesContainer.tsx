@@ -1,29 +1,15 @@
 "use client";
 
-import html2canvas from "html2canvas-pro";
-import jsPDF from "jspdf";
 import { Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  use,
-  useEffect,
-  useOptimistic,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { use, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import {
-  deleteInvoiceWithOrgAction,
-  sendInvoiceEmailAction,
-  updateInvoiceStatusAction,
-} from "@/actions/invoices";
+import { useUpdateInvoiceStatus } from "@/mutations/invoices";
 import type { DbInvoiceResult, RevenueStats } from "@/db/queries/invoices";
 import { Button } from "../ui/button";
 import { CreateInvoiceModal } from "./CreateInvoiceModal";
 import { InvoiceCard } from "./InvoiceCard";
 import { InvoiceDetailModal } from "./InvoiceDetailModal";
-import { InvoicePDFView } from "./InvoicePDFView";
 import InvoicesRevenueGraph from "./InvoicesRevenueGraph";
 import { InvoicesSearchBar } from "./InvoicesSearchBar";
 
@@ -57,6 +43,7 @@ export default function InvoicesContainer({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [_isPending, startTransition] = useTransition();
+  const updateStatusMutation = useUpdateInvoiceStatus();
 
   // Load promises
   const initialInvoices = use(invoicesPromise);
@@ -127,13 +114,8 @@ export default function InvoicesContainer({
   const [selectedInvoice, setSelectedInvoice] =
     useState<DbInvoiceResult | null>(null);
 
-  const urlInvoice =
-    searchParams.get("invoice") || searchParams.get("invoiceId");
+  const urlInvoice = searchParams.get("invoice") || searchParams.get("invoiceId");
   const lastOpenedInvoiceRef = useRef<string | null>(null);
-
-  // Hidden print reference
-  const printRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (urlInvoice && urlInvoice !== lastOpenedInvoiceRef.current) {
@@ -143,8 +125,12 @@ export default function InvoicesContainer({
           (inv) => inv.id === urlInvoice,
         );
         if (found) {
-          setSelectedInvoice(found);
-          setDetailModalOpen(true);
+          if (selectedInvoice?.id !== found.id) {
+            setSelectedInvoice(found);
+          }
+          if (!detailModalOpen) {
+            setDetailModalOpen(true);
+          }
           lastOpenedInvoiceRef.current = urlInvoice;
         }
       } else {
@@ -153,150 +139,40 @@ export default function InvoicesContainer({
           (inv) => inv.invoice_number === urlInvoice,
         );
         if (found) {
-          setSelectedInvoice(found);
+          if (selectedInvoice?.id !== found.id) {
+            setSelectedInvoice(found);
+          }
         }
-        setDetailModalOpen(false);
+        if (detailModalOpen) {
+          setDetailModalOpen(false);
+        }
         lastOpenedInvoiceRef.current = urlInvoice;
       }
     } else if (!urlInvoice) {
-      setDetailModalOpen(false);
+      if (detailModalOpen) {
+        setDetailModalOpen(false);
+      }
       lastOpenedInvoiceRef.current = null;
     }
-  }, [urlInvoice, optimisticState.invoices]);
+  }, [urlInvoice, optimisticState.invoices, detailModalOpen, selectedInvoice]);
 
   // Status Change handler
   const handleStatusChange = async (invoiceId: string, newStatus: string) => {
     startTransition(() => {
       setOptimistic({ type: "edit-status", invoiceId, status: newStatus });
     });
-    const res = await updateInvoiceStatusAction(invoiceId, newStatus);
-    if (res.success) {
-      toast.success(`Invoice updated to ${newStatus}`);     
-    } else {
-      toast.error(res.error || "Failed to update status");
+    try {
+      await updateStatusMutation.mutateAsync({ invoiceId, status: newStatus });
+    } catch (err) {
+      console.error("Failed to update status:", err);
     }
   };
 
-  // Delete Invoice handler
-  const handleDelete = async (invoiceId: string) => {
+  // Delete Success handler
+  const handleDeleteSuccess = (invoiceId: string) => {
     startTransition(() => {
       setOptimistic({ type: "delete-invoice", invoiceId });
     });
-    const res = await deleteInvoiceWithOrgAction(invoiceId);
-    if (res.success) {
-      toast.success("Invoice deleted successfully");
-    } else {
-      toast.error(res.error || "Failed to delete invoice");
-    }
-  };
-
-  // Email Invoice handler
-  const handleSendEmail = async (invoiceId: string) => {
-    const invoice = activeInvoices.find((inv) => inv.id === invoiceId);
-    if (!invoice) {
-      toast.error("Invoice not found in list");
-      return;
-    }
-
-    setIsExporting(true);
-    setSelectedInvoice(invoice);
-
-    toast.info("Generating invoice PDF & dispatching via email...");
-
-    setTimeout(async () => {
-      const element = document.getElementById(`invoice-print-${invoice.id}`);
-      if (!element) {
-        toast.error("Failed to render PDF container");
-        setIsExporting(false);
-        return;
-      }
-
-      try {
-        const canvas = await html2canvas(element, {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: "#ffffff",
-        });
-
-        const imgData = canvas.toDataURL("image/jpeg", 0.7);
-        const pdf = new jsPDF("p", "mm", "a4");
-
-        const pdfWidth = 210;
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
-
-        const pdfDataUri = pdf.output("datauristring");
-        const pdfBase64 = pdfDataUri.split(",")[1];
-        const filename = `${invoice.invoice_number}-${invoice.client_name.replace(/\s+/g, "_")}.pdf`;
-
-        const res = await sendInvoiceEmailAction(
-          invoiceId,
-          pdfBase64,
-          filename,
-        );
-        if (res.success) {
-          toast.success(
-            `Invoice ${invoice.invoice_number} sent to client email successfully with PDF attachment!`,
-          );         
-        } else {
-          toast.error(res.error || "Failed to send email");
-        }
-      } catch (err) {
-        const error = err as Error;
-        console.error(error);
-        toast.error(
-          `Email sending failed during PDF compile: ${error.message}`,
-        );
-      } finally {
-        setIsExporting(false);
-      }
-    }, 400);
-  };
-
-  // PDF Download trigger
-  const handleDownloadPDF = async (invoice: DbInvoiceResult) => {
-    setIsExporting(true);
-    setSelectedInvoice(invoice);
-
-    setTimeout(async () => {
-      const element = document.getElementById(`invoice-print-${invoice.id}`);
-      if (!element) {
-        toast.error("Failed to render PDF container");
-        setIsExporting(false);
-        return;
-      }
-
-      try {
-        const canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: "#ffffff",
-        });
-
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("p", "mm", "a4");
-
-        const pdfWidth = 210;
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-        pdf.save(
-          `${invoice.invoice_number}-${invoice.client_name.replace(/\s+/g, "_")}.pdf`,
-        );
-        toast.success(`Downloaded ${invoice.invoice_number} successfully!`);
-      } catch (err) {
-        const error = err as Error;
-        console.error(error);
-        toast.error(`PDF generation failed: ${error.message}`);
-      } finally {
-        setIsExporting(false);
-      }
-    }, 400);
   };
 
   // Status Filter click
@@ -335,25 +211,6 @@ export default function InvoicesContainer({
 
   return (
     <div className="w-full flex flex-col gap-6 p-1 md:p-4">
-      {/* Off-screen fixed container for html2canvas to capture in Desktop A4 mode */}
-      <div
-        style={{
-          position: "absolute",
-          left: "-9999px",
-          top: "-9999px",
-          zIndex: -100,
-        }}
-      >
-        {selectedInvoice && (
-          <InvoicePDFView
-            ref={printRef}
-            invoice={selectedInvoice}
-            orgName={organizationName}
-            logoUrl={organizationLogo}
-          />
-        )}
-      </div>
-
       {/* Analytics Graph */}
       <div className="w-full">
         <InvoicesRevenueGraph stats={revenueStats} />
@@ -401,24 +258,10 @@ export default function InvoicesContainer({
             key={invoice.id}
             invoice={invoice}
             hasSendInvoices={hasSendInvoices}
-            onViewDetails={(inv) => {
-              startTransition(() => {
-                setOptimistic({
-                  type: "update-search",
-                  value: inv.invoice_number,
-                });
-              });
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("invoice", inv.id);
-              params.set("invoiceId", inv.id);
-              params.set("clientId", inv.client_id);
-              params.delete("search");
-              router.push(`?${params.toString()}`);
-            }}
-            onDownloadPDF={handleDownloadPDF}
             onStatusChange={handleStatusChange}
-            onDelete={handleDelete}
-            onSendEmail={handleSendEmail}
+            onDeleteSuccess={handleDeleteSuccess}
+            orgName={organizationName}
+            logoUrl={organizationLogo}
           />
         ))}
 
@@ -450,9 +293,6 @@ export default function InvoicesContainer({
         hasSendInvoices={hasSendInvoices}
         organizationName={organizationName}
         organizationLogo={organizationLogo}
-        onDownloadPDF={handleDownloadPDF}
-        onSendEmail={handleSendEmail}
-        isExporting={isExporting}
       />
     </div>
   );

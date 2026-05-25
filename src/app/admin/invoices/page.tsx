@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import InvoicesContainer from "@/components/invoices/InvoicesContainer";
 import { PageHeader } from "@/components/layout/page-header";
 import PaginationButtons from "@/components/pagination-buttons";
+import { getClientsForInfoDal } from "@/dal/clients";
 import {
   getInvoicesDal,
   getNextInvoiceNumberDal,
@@ -24,7 +25,7 @@ export default async function InvoicesPage(props: {
     .protect()
     .then((a) => a.has({ feature: "send_invoices" }) || false);
 
-  const invoicesPromise = props.searchParams.then((params) => {
+  const invoicesPromise = props.searchParams.then(async (params) => {
     const page = Number(
       Array.isArray(params.page) ? params.page[0] : (params.page ?? 1),
     );
@@ -37,13 +38,23 @@ export default async function InvoicesPage(props: {
         ? invoiceParam[0]
         : (invoiceParam ?? undefined);
     }
+
+    const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+    if (!search && clientId) {
+      const clientData = await getClientsForInfoDal(1, undefined, clientId);
+      const client = clientData.clients.find((c) => c.id === clientId);
+      if (client) {
+        search = client.name;
+      }
+    }
+
     const status = Array.isArray(params.status)
       ? params.status[0]
       : (params.status ?? undefined);
     return getInvoicesDal(page, search, status).then((data) => data.data);
   });
 
-  const totalPagesPromise = props.searchParams.then((params) => {
+  const totalPagesPromise = props.searchParams.then(async (params) => {
     const page = Number(
       Array.isArray(params.page) ? params.page[0] : (params.page ?? 1),
     );
@@ -56,6 +67,16 @@ export default async function InvoicesPage(props: {
         ? invoiceParam[0]
         : (invoiceParam ?? undefined);
     }
+
+    const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+    if (!search && clientId) {
+      const clientData = await getClientsForInfoDal(1, undefined, clientId);
+      const client = clientData.clients.find((c) => c.id === clientId);
+      if (client) {
+        search = client.name;
+      }
+    }
+
     const status = Array.isArray(params.status)
       ? params.status[0]
       : (params.status ?? undefined);
@@ -66,7 +87,7 @@ export default async function InvoicesPage(props: {
     Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
   );
 
-  const searchPromise = props.searchParams.then((params) => {
+  const searchPromise = props.searchParams.then(async (params) => {
     const search =
       (Array.isArray(params.search) ? params.search[0] : params.search) ?? "";
     const invoiceParam = params.invoice || params.invoiceId;
@@ -74,6 +95,15 @@ export default async function InvoicesPage(props: {
       return (
         (Array.isArray(invoiceParam) ? invoiceParam[0] : invoiceParam) ?? ""
       );
+    }
+
+    const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+    if (!search && clientId) {
+      const clientData = await getClientsForInfoDal(1, undefined, clientId);
+      const client = clientData.clients.find((c) => c.id === clientId);
+      if (client) {
+        return client.name;
+      }
     }
     return search;
   });

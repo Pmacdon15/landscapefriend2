@@ -131,7 +131,6 @@ export function InvoicesSearchBar({
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("invoice", invoice.invoice_number);
-    params.set("invoiceId", invoice.invoice_number);
     params.set("clientId", invoice.client_id);
     params.delete("search");
     params.delete("page");

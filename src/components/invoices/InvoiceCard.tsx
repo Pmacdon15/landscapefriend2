@@ -1,5 +1,7 @@
 "use client";
 
+import html2canvas from "html2canvas-pro";
+import jsPDF from "jspdf";
 import {
   CheckCircle,
   Clock,
@@ -11,8 +13,10 @@ import {
   MoreVertical,
   Trash2,
 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useDeleteInvoice, useSendInvoiceEmail } from "@/mutations/invoices";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,29 +29,138 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { Button } from "../ui/button";
+import { InvoicePDFView } from "./InvoicePDFView";
 
 interface InvoiceCardProps {
   invoice: DbInvoiceResult;
   hasSendInvoices: boolean;
-  onViewDetails: (invoice: DbInvoiceResult) => void;
-  onDownloadPDF: (invoice: DbInvoiceResult) => void;
   onStatusChange: (invoiceId: string, newStatus: string) => Promise<void>;
-  onDelete: (invoiceId: string) => Promise<void>;
-  onSendEmail: (invoiceId: string) => Promise<void>;
+  onDeleteSuccess: (invoiceId: string) => void;
+  orgName: string;
+  logoUrl: string | null;
 }
 
 export function InvoiceCard({
   invoice,
   hasSendInvoices,
-  onViewDetails,
-  onDownloadPDF,
   onStatusChange,
-  onDelete,
-  onSendEmail,
+  onDeleteSuccess,
+  orgName,
+  logoUrl,
 }: InvoiceCardProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const deleteInvoiceMutation = useDeleteInvoice();
+  const sendEmailMutation = useSendInvoiceEmail();
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handleViewDetails = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("invoice", invoice.id);
+    params.set("clientId", invoice.client_id);
+    params.delete("search");
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleDeleteInvoice = async () => {
+    onDeleteSuccess(invoice.id);
+    try {
+      await deleteInvoiceMutation.mutateAsync(invoice.id);
+    } catch (err) {
+      console.error("Failed to delete invoice:", err);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    setIsExporting(true);
+    setTimeout(async () => {
+      const element = document.getElementById(`invoice-print-${invoice.id}`);
+      if (!element) {
+        toast.error("Failed to render PDF container");
+        setIsExporting(false);
+        return;
+      }
+
+      try {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: "#ffffff",
+        });
+
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF("p", "mm", "a4");
+
+        const pdfWidth = 210;
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+        pdf.save(
+          `${invoice.invoice_number}-${invoice.client_name.replace(/\s+/g, "_")}.pdf`,
+        );
+        toast.success(`Downloaded ${invoice.invoice_number} successfully!`);
+      } catch (err) {
+        const error = err as Error;
+        console.error(error);
+        toast.error(`PDF generation failed: ${error.message}`);
+      } finally {
+        setIsExporting(false);
+      }
+    }, 400);
+  };
+
+  const handleSendEmail = async () => {
+    setIsExporting(true);
+    toast.info("Generating invoice PDF & dispatching via email...");
+
+    setTimeout(async () => {
+      const element = document.getElementById(`invoice-print-${invoice.id}`);
+      if (!element) {
+        toast.error("Failed to render PDF container");
+        setIsExporting(false);
+        return;
+      }
+
+      try {
+        const canvas = await html2canvas(element, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: "#ffffff",
+        });
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.7);
+        const pdf = new jsPDF("p", "mm", "a4");
+
+        const pdfWidth = 210;
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
+
+        const pdfDataUri = pdf.output("datauristring");
+        const pdfBase64 = pdfDataUri.split(",")[1];
+        const filename = `${invoice.invoice_number}-${invoice.client_name.replace(/\s+/g, "_")}.pdf`;
+
+        await sendEmailMutation.mutateAsync({
+          invoiceId: invoice.id,
+          pdfBase64,
+          filename,
+        });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsExporting(false);
+      }
+    }, 400);
+  };
 
   const formattedDate = (d: Date | string) => {
     try {
@@ -91,6 +204,22 @@ export function InvoiceCard({
 
   return (
     <>
+      {/* Hidden print-ready container for html2canvas to capture */}
+      <div
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: "-9999px",
+          zIndex: -100,
+        }}
+      >
+        <InvoicePDFView
+          invoice={invoice}
+          orgName={orgName}
+          logoUrl={logoUrl}
+        />
+      </div>
+
       <div
         className={`relative bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between h-[230px] ${
           dropdownOpen ? "z-30" : "z-10 hover:z-20"
@@ -141,7 +270,7 @@ export function InvoiceCard({
                         type="button"
                         onClick={() => {
                           setDropdownOpen(false);
-                          onViewDetails(invoice);
+                          handleViewDetails();
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 flex items-center gap-2"
                       >
@@ -152,24 +281,33 @@ export function InvoiceCard({
                       <button
                         type="button"
                         onClick={() => {
-                          setDropdownOpen(false);
-                          onDownloadPDF(invoice);
+                          handleAction("download", () => handleDownloadPDF());
                         }}
+                        disabled={isExporting}
                         className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 flex items-center gap-2"
                       >
-                        <Download className="h-4 w-4 text-slate-400" />
+                        {isExporting && loadingAction === "download" ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                        ) : (
+                          <Download className="h-4 w-4 text-slate-400" />
+                        )}
                         Download PDF
                       </button>
 
                       {hasSendInvoices && (
                         <button
                           type="button"
-                          onClick={() =>
-                            handleAction("email", () => onSendEmail(invoice.id))
-                          }
+                          onClick={() => {
+                            handleAction("email", () => handleSendEmail());
+                          }}
+                          disabled={isExporting}
                           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 flex items-center gap-2 border-b border-slate-100 dark:border-slate-900"
                         >
-                          <Mail className="h-4 w-4 text-slate-400" />
+                          {isExporting && loadingAction === "email" ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                          ) : (
+                            <Mail className="h-4 w-4 text-slate-400" />
+                          )}
                           Send via Email
                         </button>
                       )}
@@ -284,7 +422,7 @@ export function InvoiceCard({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onViewDetails(invoice)}
+                onClick={handleViewDetails}
                 className="h-8 rounded-full text-xs font-bold bg-green-50/50 hover:bg-green-50 text-green-700 border-green-200/50 dark:bg-slate-900/50 dark:hover:bg-slate-900 dark:text-green-400 dark:border-slate-800"
               >
                 View details
@@ -311,7 +449,7 @@ export function InvoiceCard({
             <AlertDialogAction
               onClick={() => {
                 setDeleteDialogOpen(false);
-                handleAction("delete", () => onDelete(invoice.id));
+                handleAction("delete", () => handleDeleteInvoice());
               }}
               variant="destructive"
             >

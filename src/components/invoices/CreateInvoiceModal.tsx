@@ -2,8 +2,7 @@
 
 import { Loader2, PlusCircle, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
-import { createInvoiceAction } from "@/actions/invoices";
+import { useCreateInvoice } from "@/mutations/invoices";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -69,7 +68,8 @@ export function CreateInvoiceModal({
       unit_price: 45,
     },
   ]);
-  const [submittingInvoice, setSubmittingInvoice] = useState(false);
+
+  const createInvoiceMutation = useCreateInvoice();
 
   if (!isOpen) return null;
 
@@ -153,17 +153,14 @@ export function CreateInvoiceModal({
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClient) {
-      toast.error("Please select a client first");
       return;
     }
     if (lineItems.some((item) => !item.address_id)) {
-      toast.error("Please pick a service address for all items");
       return;
     }
 
-    setSubmittingInvoice(true);
     try {
-      const res = await createInvoiceAction({
+      const invoice = await createInvoiceMutation.mutateAsync({
         clientId: selectedClient.id,
         invoiceNumber: invoiceNo,
         issueDate,
@@ -178,40 +175,32 @@ export function CreateInvoiceModal({
         })),
       });
 
-      if (res.success && res.invoice) {
-        toast.success("Invoice created successfully!");
-        onInvoiceCreated(res.invoice as DbInvoiceResult);
-        onClose();
-        // Reset form
-        setSelectedClient(null);
-        setClientQuery("");
-        setInvoiceNotes("");
-        setLineItems([
-          {
-            id: crypto.randomUUID(),
-            service_type: "grass",
-            address_id: "",
-            description: "",
-            quantity: 1,
-            unit_price: 45,
-          },
-        ]);
-        // Increment number
-        setInvoiceNo((prev) => {
-          const match = prev.match(/INV-(\d+)/);
-          if (match) {
-            return `INV-${String(parseInt(match[1], 10) + 1).padStart(4, "0")}`;
-          }
-          return `INV-${Date.now()}`;
-        });
-      } else {
-        toast.error(res.error || "Failed to create invoice");
-      }
+      onInvoiceCreated(invoice as DbInvoiceResult);
+      onClose();
+      // Reset form
+      setSelectedClient(null);
+      setClientQuery("");
+      setInvoiceNotes("");
+      setLineItems([
+        {
+          id: crypto.randomUUID(),
+          service_type: "grass",
+          address_id: "",
+          description: "",
+          quantity: 1,
+          unit_price: 45,
+        },
+      ]);
+      // Increment number
+      setInvoiceNo((prev) => {
+        const match = prev.match(/INV-(\d+)/);
+        if (match) {
+          return `INV-${String(parseInt(match[1], 10) + 1).padStart(4, "0")}`;
+        }
+        return `INV-${Date.now()}`;
+      });
     } catch (err) {
-      const error = err as Error;
-      toast.error(error.message || "An error occurred");
-    } finally {
-      setSubmittingInvoice(false);
+      console.error("Failed to create invoice:", err);
     }
   };
 
@@ -427,7 +416,9 @@ export function CreateInvoiceModal({
                           required
                           className="w-full mt-2 h-10 border rounded-md px-3 text-sm bg-background border-input capitalize"
                         >
-                          <option value="">-- Choose client location --</option>
+                          <option value="">
+                            -- Choose client location --
+                          </option>
                           {selectedClient.addresses.map((addr) => (
                             <option key={addr.id} value={addr.id}>
                               {addr.street}, {addr.city}
@@ -536,10 +527,10 @@ export function CreateInvoiceModal({
               </Button>
               <Button
                 type="submit"
-                disabled={submittingInvoice || !selectedClient}
+                disabled={createInvoiceMutation.isPending || !selectedClient}
                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-lg shadow-green-600/20 px-8 h-10"
               >
-                {submittingInvoice ? (
+                {createInvoiceMutation.isPending ? (
                   <>
                     <Loader2 className="animate-spin h-4 w-4 mr-2" />
                     Generating...
