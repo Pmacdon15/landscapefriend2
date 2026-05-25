@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Receipt,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -103,6 +104,16 @@ export function NavBar({
       permissions: {
         roles: ["org:admin"],
         features: ["history"],
+      },
+    },
+
+    {
+      href: buildHref("/admin/invoices"),
+      label: "Invoices",
+      icon: Receipt,
+      permissions: {
+        roles: ["org:admin"],
+        features: ["invoices"],
       },
     },
 
