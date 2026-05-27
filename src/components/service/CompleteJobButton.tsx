@@ -12,10 +12,10 @@ import type { Address } from "@/zod/schemas";
 interface CompleteJobButtonProps {
   address: Address;
   date: Date;
-  currentUserId: string | null;
+  _currentUserId: string | null;
   oneTimeServiceId?: string;
   customServiceType?: string;
-  onCompleteOptimistic: (params: {
+  _onCompleteOptimistic: (params: {
     addressId: string;
     timestamp: Date;
     currentUserId: string;
@@ -28,10 +28,10 @@ interface CompleteJobButtonProps {
 export function CompleteJobButton({
   address,
   date,
-  currentUserId,
+  _currentUserId,
   oneTimeServiceId,
   customServiceType,
-  onCompleteOptimistic,
+  _onCompleteOptimistic,
 }: CompleteJobButtonProps) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const { mutate: completeJob, isPending: isCompleting } = useCompleteJob();
@@ -60,14 +60,14 @@ export function CompleteJobButton({
     const serviceType = customServiceType || (isSnow ? "snow" : "grass");
 
     startTransition(() => {
-      onCompleteOptimistic({
-        addressId: address.id,
-        timestamp,
-        currentUserId: currentUserId ?? "",
-        serviceType,
-        scheduledDate: date,
-        oneTimeServiceId,
-      });
+      // onCompleteOptimistic({
+      //   addressId: address.id,
+      //   timestamp,
+      //   currentUserId: currentUserId ?? "",
+      //   serviceType,
+      //   scheduledDate: date,
+      //   oneTimeServiceId,
+      // });
 
       completeJob({
         addressId: address.id,
