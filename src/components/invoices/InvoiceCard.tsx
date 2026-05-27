@@ -16,7 +16,6 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useDeleteInvoice, useSendInvoiceEmail } from "@/mutations/invoices";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
+import { useDeleteInvoice, useSendInvoiceEmail } from "@/mutations/invoices";
 import { Button } from "../ui/button";
 import { InvoicePDFView } from "./InvoicePDFView";
 
@@ -213,11 +213,7 @@ export function InvoiceCard({
           zIndex: -100,
         }}
       >
-        <InvoicePDFView
-          invoice={invoice}
-          orgName={orgName}
-          logoUrl={logoUrl}
-        />
+        <InvoicePDFView invoice={invoice} orgName={orgName} logoUrl={logoUrl} />
       </div>
 
       <div
