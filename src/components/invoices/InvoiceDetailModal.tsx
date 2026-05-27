@@ -5,8 +5,8 @@ import jsPDF from "jspdf";
 import { Download, Loader2, Mail, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSendInvoiceEmail } from "@/mutations/invoices";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
+import { useSendInvoiceEmail } from "@/mutations/invoices";
 import { Button } from "../ui/button";
 import { InvoicePDFView } from "./InvoicePDFView";
 

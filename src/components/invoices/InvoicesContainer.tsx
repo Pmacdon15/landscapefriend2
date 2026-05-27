@@ -2,10 +2,16 @@
 
 import { Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { use, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
-import { toast } from "sonner";
-import { useUpdateInvoiceStatus } from "@/mutations/invoices";
+import {
+  use,
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import type { DbInvoiceResult, RevenueStats } from "@/db/queries/invoices";
+import { useUpdateInvoiceStatus } from "@/mutations/invoices";
 import { Button } from "../ui/button";
 import { CreateInvoiceModal } from "./CreateInvoiceModal";
 import { InvoiceCard } from "./InvoiceCard";
@@ -114,7 +120,8 @@ export default function InvoicesContainer({
   const [selectedInvoice, setSelectedInvoice] =
     useState<DbInvoiceResult | null>(null);
 
-  const urlInvoice = searchParams.get("invoice") || searchParams.get("invoiceId");
+  const urlInvoice =
+    searchParams.get("invoice") || searchParams.get("invoiceId");
   const lastOpenedInvoiceRef = useRef<string | null>(null);
 
   useEffect(() => {

@@ -204,7 +204,19 @@ export function ServiceListContent({
     dateParam ?? new Date().toLocaleDateString("en-CA"),
   );
 
+  const onDragStart = () => {
+    // Disable smooth scrolling during drag to avoid lagging/jerky auto-scroll on mobile/desktop
+    if (typeof document !== "undefined") {
+      document.documentElement.style.scrollBehavior = "auto";
+    }
+  };
+
   const onDragEnd = (result: DropResult) => {
+    // Re-enable smooth scrolling after drag finishes
+    if (typeof document !== "undefined") {
+      document.documentElement.style.scrollBehavior = "";
+    }
+
     if (!result.destination) return;
     const sourceIndex = result.source.index;
     const destIndex = result.destination.index;
@@ -278,7 +290,15 @@ export function ServiceListContent({
 
       <div className="max-w-4xl mx-auto">
         {optimisticState.cuts.length > 0 ? (
-          <DragDropContext onDragEnd={onDragEnd}>
+          <DragDropContext
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            autoScrollerOptions={{
+              startFromPercentage: 0.25, // Start auto-scrolling when within 25% of container/screen edge
+              maxScrollAtPercentage: 0.05, // Reach max scroll speed when within 5% of edge
+              maxPixelScroll: 28, // Increase maximum scroll speed to be fast and responsive
+            }}
+          >
             <Droppable droppableId="cut-list-droppable">
               {(provided) => (
                 <div

@@ -298,10 +298,10 @@ export function ServiceListItem({
                     <CompleteJobButton
                       address={address}
                       date={date}
-                      currentUserId={currentUserId}
+                      _currentUserId={currentUserId}
                       oneTimeServiceId={isOts ? ots.id : undefined}
                       customServiceType={isOts ? ots.service_type : undefined}
-                      onCompleteOptimistic={onCompleteOptimistic}
+                      _onCompleteOptimistic={onCompleteOptimistic}
                     />
                   )}
                 </div>

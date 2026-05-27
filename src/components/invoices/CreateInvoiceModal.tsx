@@ -2,8 +2,8 @@
 
 import { Loader2, PlusCircle, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import { useCreateInvoice } from "@/mutations/invoices";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
+import { useCreateInvoice } from "@/mutations/invoices";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -416,9 +416,7 @@ export function CreateInvoiceModal({
                           required
                           className="w-full mt-2 h-10 border rounded-md px-3 text-sm bg-background border-input capitalize"
                         >
-                          <option value="">
-                            -- Choose client location --
-                          </option>
+                          <option value="">-- Choose client location --</option>
                           {selectedClient.addresses.map((addr) => (
                             <option key={addr.id} value={addr.id}>
                               {addr.street}, {addr.city}

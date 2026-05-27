@@ -39,7 +39,9 @@ export default async function InvoicesPage(props: {
         : (invoiceParam ?? undefined);
     }
 
-    const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+    const clientId = Array.isArray(params.clientId)
+      ? params.clientId[0]
+      : params.clientId;
     if (!search && clientId) {
       const clientData = await getClientsForInfoDal(1, undefined, clientId);
       const client = clientData.clients.find((c) => c.id === clientId);
@@ -68,7 +70,9 @@ export default async function InvoicesPage(props: {
         : (invoiceParam ?? undefined);
     }
 
-    const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+    const clientId = Array.isArray(params.clientId)
+      ? params.clientId[0]
+      : params.clientId;
     if (!search && clientId) {
       const clientData = await getClientsForInfoDal(1, undefined, clientId);
       const client = clientData.clients.find((c) => c.id === clientId);
@@ -97,7 +101,9 @@ export default async function InvoicesPage(props: {
       );
     }
 
-    const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+    const clientId = Array.isArray(params.clientId)
+      ? params.clientId[0]
+      : params.clientId;
     if (!search && clientId) {
       const clientData = await getClientsForInfoDal(1, undefined, clientId);
       const client = clientData.clients.find((c) => c.id === clientId);
