@@ -108,10 +108,20 @@ export function generateInvoiceEmailHtml(
   orgName: string,
   orgLogo: string | null,
 ): string {
-  const formattedAmount = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(invoice.total_amount);
+  const subtotal = invoice.items.reduce((sum, item) => sum + Number(item.amount), 0);
+  const taxRate = Number(invoice.tax_rate || 0);
+  const taxAmount = subtotal * (taxRate / 100);
+
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(val);
+  };
+
+  const formattedSubtotal = formatCurrency(subtotal);
+  const formattedTaxAmount = formatCurrency(taxAmount);
+  const formattedAmount = formatCurrency(invoice.total_amount);
 
   // Build Table 1: Service Locations
   const locationsHtmlRows = invoice.items
@@ -169,6 +179,14 @@ export function generateInvoiceEmailHtml(
         <tr>
           <td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Due Date</td>
           <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #334155; font-weight: 600;">${new Date(invoice.due_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Subtotal</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #334155;">${formattedSubtotal}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Tax (${taxRate.toFixed(2)}%)</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #334155;">${formattedTaxAmount}</td>
         </tr>
         <tr>
           <td style="padding: 12px; font-weight: bold; color: #0f172a;">Total Amount Due</td>

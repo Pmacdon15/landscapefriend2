@@ -14,6 +14,7 @@ export async function createInvoiceAction(data: {
   issueDate: string;
   dueDate: string;
   notes: string | null;
+  taxRate: number;
   items: {
     service_type: string;
     address_id: string | null;
@@ -28,6 +29,7 @@ export async function createInvoiceAction(data: {
     (invoice) => {
       updateTag(`invoices-${invoice.org_id}`);
       updateTag(`invoices-revenue-${invoice.org_id}`);
+      updateTag(`invoices-existing-numbers-${invoice.org_id}`);
       return {
         success: true,
         invoice,
@@ -91,6 +93,7 @@ export async function deleteInvoiceWithOrgAction(invoiceId: string) {
       updateTag(`invoices-${deleted.org_id}`);
       updateTag(`invoices-revenue-${deleted.org_id}`);
       updateTag(`invoice-detail-${invoiceId}`);
+      updateTag(`invoices-existing-numbers-${deleted.org_id}`);
       return {
         success: true,
         error: null,

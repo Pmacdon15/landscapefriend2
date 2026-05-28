@@ -32,6 +32,13 @@ export const InvoicePDFView = React.forwardRef<
     }).format(amount);
   };
 
+  const subtotal = invoice.items.reduce(
+    (sum, item) => sum + Number(item.amount),
+    0,
+  );
+  const taxRate = Number(invoice.tax_rate || 0);
+  const taxAmount = subtotal * (taxRate / 100);
+
   return (
     <div
       ref={ref}
@@ -196,12 +203,14 @@ export const InvoicePDFView = React.forwardRef<
             <div className="flex justify-between text-sm">
               <span className="text-slate-500 font-semibold">Subtotal:</span>
               <span className="font-bold text-slate-800">
-                {formatCurrency(invoice.total_amount)}
+                {formatCurrency(subtotal)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500 font-semibold">Tax (0.00%):</span>
-              <span className="font-bold text-slate-800">$0.00</span>
+              <span className="text-slate-500 font-semibold">Tax ({taxRate.toFixed(2)}%):</span>
+              <span className="font-bold text-slate-800">
+                {formatCurrency(taxAmount)}
+              </span>
             </div>
             <div className="flex justify-between border-t border-slate-200 pt-3 text-base">
               <span className="text-slate-900 font-extrabold uppercase tracking-wide">

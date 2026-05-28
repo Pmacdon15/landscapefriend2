@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, PlusCircle, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { useCreateInvoice } from "@/mutations/invoices";
 import { Button } from "../ui/button";
@@ -32,6 +32,7 @@ interface CreateInvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   nextInvoiceNumber: string;
+  existingInvoiceNumbers: string[];
   onInvoiceCreated: (invoice: DbInvoiceResult) => void;
 }
 
@@ -39,6 +40,7 @@ export function CreateInvoiceModal({
   isOpen,
   onClose,
   nextInvoiceNumber,
+  existingInvoiceNumbers,
   onInvoiceCreated,
 }: CreateInvoiceModalProps) {
   const [invoiceNo, setInvoiceNo] = useState(nextInvoiceNumber);
@@ -58,6 +60,28 @@ export function CreateInvoiceModal({
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
   );
   const [invoiceNotes, setInvoiceNotes] = useState("");
+  const [taxRate, setTaxRate] = useState<number>(0);
+
+  // Validate duplicate invoice numbers
+  const invoiceNumberExists = existingInvoiceNumbers.includes(invoiceNo.trim());
+
+  // Keep suggestion unique and updated
+  useEffect(() => {
+    let suggested = nextInvoiceNumber;
+    let count = 1;
+    while (existingInvoiceNumbers.includes(suggested)) {
+      const match = nextInvoiceNumber.match(/INV-(\d+)/);
+      if (match) {
+        const nextNum = parseInt(match[1], 10) + count;
+        suggested = `INV-${String(nextNum).padStart(4, "0")}`;
+      } else {
+        suggested = `INV-${Date.now()}`;
+        break;
+      }
+      count++;
+    }
+    setInvoiceNo(suggested);
+  }, [nextInvoiceNumber, existingInvoiceNumbers]);
   const [lineItems, setLineItems] = useState<TempLineItem[]>([
     {
       id: "initial-0",
@@ -143,15 +167,26 @@ export function CreateInvoiceModal({
     );
   };
 
-  const calculateInvoiceTotal = () => {
+  const calculateInvoiceSubtotal = () => {
     return lineItems.reduce(
       (sum, item) => sum + item.quantity * item.unit_price,
       0,
     );
   };
 
+  const calculateInvoiceTaxAmount = () => {
+    return calculateInvoiceSubtotal() * (taxRate / 100);
+  };
+
+  const calculateInvoiceTotal = () => {
+    return calculateInvoiceSubtotal() + calculateInvoiceTaxAmount();
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (invoiceNumberExists) {
+      return;
+    }
     if (!selectedClient) {
       return;
     }
@@ -160,12 +195,13 @@ export function CreateInvoiceModal({
     }
 
     try {
-      const invoice = await createInvoiceMutation.mutateAsync({
+       const invoice = await createInvoiceMutation.mutateAsync({
         clientId: selectedClient.id,
         invoiceNumber: invoiceNo,
         issueDate,
         dueDate,
         notes: invoiceNotes || null,
+        taxRate: Number(taxRate),
         items: lineItems.map((item) => ({
           service_type: item.service_type,
           address_id: item.address_id || null,
@@ -178,9 +214,10 @@ export function CreateInvoiceModal({
       onInvoiceCreated(invoice as DbInvoiceResult);
       onClose();
       // Reset form
-      setSelectedClient(null);
+       setSelectedClient(null);
       setClientQuery("");
       setInvoiceNotes("");
+      setTaxRate(0);
       setLineItems([
         {
           id: crypto.randomUUID(),
@@ -225,7 +262,7 @@ export function CreateInvoiceModal({
 
         <form onSubmit={handleFormSubmit} className="space-y-6">
           {/* Form Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
               <Label
                 htmlFor="invoiceNum"
@@ -238,8 +275,13 @@ export function CreateInvoiceModal({
                 value={invoiceNo}
                 onChange={(e) => setInvoiceNo(e.target.value)}
                 required
-                className="mt-2 font-mono"
+                className={`mt-2 font-mono ${invoiceNumberExists ? "border-red-500 focus-visible:ring-red-500" : ""}`}
               />
+              {invoiceNumberExists && (
+                <p className="mt-1 text-[10px] text-red-500 font-semibold leading-none">
+                  Invoice number already in use.
+                </p>
+              )}
             </div>
 
             <div>
@@ -273,6 +315,25 @@ export function CreateInvoiceModal({
                 onChange={(e) => setDueDate(e.target.value)}
                 required
                 className="mt-2"
+              />
+            </div>
+
+            <div>
+              <Label
+                htmlFor="taxRate"
+                className="font-bold text-xs uppercase tracking-wider text-slate-400"
+              >
+                Tax Rate (%)
+              </Label>
+              <Input
+                id="taxRate"
+                type="number"
+                step="0.01"
+                min="0"
+                value={taxRate}
+                onChange={(e) => setTaxRate(Number(e.target.value))}
+                required
+                className="mt-2 font-mono"
               />
             </div>
           </div>
@@ -504,14 +565,32 @@ export function CreateInvoiceModal({
           </div>
 
           {/* Total display & Action buttons */}
-          <div className="border-t dark:border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-center sm:text-left">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">
-                Calculated Total
-              </span>
-              <span className="text-2xl font-black text-green-700 dark:text-green-400">
-                ${calculateInvoiceTotal().toFixed(2)}
-              </span>
+          <div className="border-t dark:border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex flex-wrap gap-x-8 gap-y-2 text-center sm:text-left">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">
+                  Subtotal
+                </span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  ${calculateInvoiceSubtotal().toFixed(2)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">
+                  Tax ({taxRate.toFixed(2)}%)
+                </span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  ${calculateInvoiceTaxAmount().toFixed(2)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">
+                  Calculated Total
+                </span>
+                <span className="text-2xl font-black text-green-700 dark:text-green-400">
+                  ${calculateInvoiceTotal().toFixed(2)}
+                </span>
+              </div>
             </div>
 
             <div className="flex gap-3 w-full sm:w-auto">
@@ -525,7 +604,7 @@ export function CreateInvoiceModal({
               </Button>
               <Button
                 type="submit"
-                disabled={createInvoiceMutation.isPending || !selectedClient}
+                disabled={createInvoiceMutation.isPending || !selectedClient || invoiceNumberExists}
                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-lg shadow-green-600/20 px-8 h-10"
               >
                 {createInvoiceMutation.isPending ? (
