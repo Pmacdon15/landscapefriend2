@@ -28,6 +28,7 @@ interface InvoicesContainerProps {
   invoicesPromise: Promise<DbInvoiceResult[]>;
   revenueStatsPromise: Promise<RevenueStats[]>;
   nextInvoiceNumberPromise: Promise<string>;
+  existingInvoiceNumbersPromise: Promise<string[]>;
   organizationInfoPromise: Promise<OrgInfo | null>;
   searchPromise: Promise<string>;
   statusPromise: Promise<string>;
@@ -41,6 +42,7 @@ export default function InvoicesContainer({
   invoicesPromise,
   revenueStatsPromise,
   nextInvoiceNumberPromise,
+  existingInvoiceNumbersPromise,
   organizationInfoPromise,
   searchPromise,
   statusPromise,
@@ -55,12 +57,13 @@ export default function InvoicesContainer({
   const initialInvoices = use(invoicesPromise);
   const revenueStats = use(revenueStatsPromise);
   const nextInvoiceNumber = use(nextInvoiceNumberPromise);
+  const initialExistingInvoiceNumbers = use(existingInvoiceNumbersPromise);
   const orgInfo = use(organizationInfoPromise);
   const searchValue = use(searchPromise);
   const statusValue = use(statusPromise);
   const hasSendInvoices = use(hasSendInvoicesPromise);
 
-  const organizationName = orgInfo?.name || "Landscape Friend";
+   const organizationName = orgInfo?.name || "Landscape Friend";
   const organizationLogo = orgInfo?.logoUrl || null;
 
   // Optimistic States
@@ -290,6 +293,7 @@ export default function InvoicesContainer({
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         nextInvoiceNumber={nextInvoiceNumber}
+        existingInvoiceNumbers={initialExistingInvoiceNumbers}
         onInvoiceCreated={handleInvoiceCreated}
       />
 

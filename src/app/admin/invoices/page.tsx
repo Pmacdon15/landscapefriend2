@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import PaginationButtons from "@/components/pagination-buttons";
 import { getClientsForInfoDal } from "@/dal/clients";
 import {
+  getExistingInvoiceNumbersDal,
   getInvoicesDal,
   getNextInvoiceNumberDal,
   getOrganizationInfoDal,
@@ -123,6 +124,7 @@ export default async function InvoicesPage(props: {
 
   const revenueStatsPromise = getRevenueStatsDal();
   const nextInvoiceNumberPromise = getNextInvoiceNumberDal();
+  const existingInvoiceNumbersPromise = getExistingInvoiceNumbersDal();
   const organizationInfoPromise = getOrganizationInfoDal();
 
   return (
@@ -145,6 +147,7 @@ export default async function InvoicesPage(props: {
               invoicesPromise={invoicesPromise}
               revenueStatsPromise={revenueStatsPromise}
               nextInvoiceNumberPromise={nextInvoiceNumberPromise}
+              existingInvoiceNumbersPromise={existingInvoiceNumbersPromise}
               organizationInfoPromise={organizationInfoPromise}
               searchPromise={searchPromise}
               statusPromise={statusPromise}

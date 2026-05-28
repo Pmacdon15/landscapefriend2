@@ -23,6 +23,7 @@ export interface DbInvoiceResult {
   issue_date: Date | string;
   due_date: Date | string;
   notes: string | null;
+  tax_rate: number;
   created_at: Date;
   updated_at: Date;
   sent_at: Date | null;
@@ -89,6 +90,7 @@ export async function getInvoicesDb(
       pi.issue_date,
       pi.due_date,
       pi.notes,
+      pi.tax_rate::float AS tax_rate,
       pi.created_at,
       pi.updated_at,
       pi.sent_at,
@@ -98,7 +100,7 @@ export async function getInvoicesDb(
       (SELECT count FROM total_count)::int as total_count,
       COALESCE(
         (
-          SELECT SUM(amount) 
+          SELECT SUM(amount) * (1 + COALESCE(pi.tax_rate, 0) / 100.0)
           FROM invoice_items 
           WHERE invoice_id = pi.id
         ),
@@ -140,6 +142,7 @@ export async function getInvoiceByIdDb(
       i.issue_date,
       i.due_date,
       i.notes,
+      i.tax_rate::float AS tax_rate,
       i.created_at,
       i.updated_at,
       i.sent_at,
@@ -148,7 +151,7 @@ export async function getInvoiceByIdDb(
       c.email AS client_email,
       COALESCE(
         (
-          SELECT SUM(amount) 
+          SELECT SUM(amount) * (1 + COALESCE(i.tax_rate, 0) / 100.0)
           FROM invoice_items 
           WHERE invoice_id = i.id
         ),
@@ -182,6 +185,7 @@ export async function insertInvoiceDb(
   issueDate: string,
   dueDate: string,
   notes: string | null,
+  taxRate: number,
   items: {
     service_type: string;
     address_id: string | null;
@@ -192,8 +196,8 @@ export async function insertInvoiceDb(
 ): Promise<DbInvoiceResult> {
   // 1. Insert Invoice
   const invoiceResult = await sql`
-    INSERT INTO invoices (org_id, client_id, invoice_number, issue_date, due_date, notes)
-    VALUES (${orgId}, ${clientId}, ${invoiceNumber}, ${issueDate}::date, ${dueDate}::date, ${notes || null})
+    INSERT INTO invoices (org_id, client_id, invoice_number, issue_date, due_date, notes, tax_rate)
+    VALUES (${orgId}, ${clientId}, ${invoiceNumber}, ${issueDate}::date, ${dueDate}::date, ${notes || null}, ${taxRate})
     RETURNING *
   `;
 
@@ -278,7 +282,7 @@ export async function getRevenueGraphStatsDb(
       to_char(issue_date, 'YYYY-MM') AS month,
       COALESCE(SUM(
         (
-          SELECT SUM(amount) 
+          SELECT SUM(amount) * (1 + COALESCE(i.tax_rate, 0) / 100.0)
           FROM invoice_items 
           WHERE invoice_id = i.id
         )
@@ -315,4 +319,16 @@ export async function getNextInvoiceNumberDb(orgId: string): Promise<string> {
   }
 
   return `INV-${Date.now()}`;
+}
+
+export async function getExistingInvoiceNumbersDb(orgId: string): Promise<string[]> {
+  "use cache";
+  cacheTag(`invoices-existing-numbers-${orgId}`);
+
+  const result = await sql`
+    SELECT invoice_number 
+    FROM invoices
+    WHERE org_id = ${orgId}
+  `;
+  return result.map((r) => r.invoice_number);
 }

@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import {
   type DbInvoiceResult,
   deleteInvoiceDb,
+  getExistingInvoiceNumbersDb,
   getInvoiceByIdDb,
   getInvoicesDb,
   getNextInvoiceNumberDb,
@@ -126,6 +127,7 @@ export async function createInvoiceDal(data: {
   issueDate: string;
   dueDate: string;
   notes: string | null;
+  taxRate: number;
   items: {
     service_type: string;
     address_id: string | null;
@@ -154,6 +156,7 @@ export async function createInvoiceDal(data: {
       data.issueDate,
       data.dueDate,
       data.notes,
+      data.taxRate,
       data.items,
     );
     return ok(invoice);
@@ -294,5 +297,22 @@ export async function sendInvoiceEmailDal(
     return err({
       reason: errObj.message || "SES connection failed or email rejected.",
     });
+  }
+}
+
+export async function getExistingInvoiceNumbersDal(): Promise<string[]> {
+  await connection();
+  const { orgId, orgRole, has } = await auth.protect();
+  const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
+
+  if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    return await getExistingInvoiceNumbersDb(orgId);
+  } catch (error) {
+    console.error("Error in getExistingInvoiceNumbersDal:", error);
+    return [];
   }
 }
