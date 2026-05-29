@@ -253,11 +253,11 @@ export function InvoiceCard({
 
                 {dropdownOpen && (
                   <>
-                    {/* Backdrop */}
-                    {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop */}
-                    {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop */}
-                    <div
-                      className="fixed inset-0 z-40"
+                    <button
+                      type="button"
+                      aria-label="Close dropdown"
+                      tabIndex={-1}
+                      className="fixed inset-0 z-40 cursor-default"
                       onClick={() => setDropdownOpen(false)}
                     />
                     {/* Menu List */}
