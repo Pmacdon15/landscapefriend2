@@ -68,7 +68,7 @@ export default function Home(props: PageProps<"/">) {
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/10 to-transparent" />
         </div>
 
         <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-start gap-6 px-6 py-24 md:py-36">
