@@ -35,6 +35,22 @@ export interface DbInvoiceResult {
   total_count?: number;
 }
 
+export interface DbInvoiceRow {
+  id: string;
+  org_id: string;
+  client_id: string;
+  invoice_number: string;
+  status: string;
+  issue_date: Date | string;
+  due_date: Date | string;
+  notes: string | null;
+  tax_rate: number | string;
+  created_at: Date | string;
+  updated_at: Date | string;
+  sent_at: Date | string | null;
+  paid_at: Date | string | null;
+}
+
 export async function getInvoicesDb(
   orgId: string,
   limit: number,
@@ -223,30 +239,30 @@ export async function updateInvoiceStatusDb(
   invoiceId: string,
   status: string,
 ): Promise<DbInvoiceResult | null> {
-  let result: any[] = [];
+  let result: DbInvoiceRow[] = [];
   const now = new Date().toISOString();
 
   if (status === "sent") {
-    result = await sql`
+    result = (await sql`
       UPDATE invoices
       SET status = ${status}, sent_at = ${now}, updated_at = ${now}
       WHERE id = ${invoiceId}
       RETURNING *
-    `;
+    `) as unknown as DbInvoiceRow[];
   } else if (status === "paid") {
-    result = await sql`
+    result = (await sql`
       UPDATE invoices
       SET status = ${status}, paid_at = ${now}, updated_at = ${now}
       WHERE id = ${invoiceId}
       RETURNING *
-    `;
+    `) as unknown as DbInvoiceRow[];
   } else {
-    result = await sql`
+    result = (await sql`
       UPDATE invoices
       SET status = ${status}, updated_at = ${now}
       WHERE id = ${invoiceId}
       RETURNING *
-    `;
+    `) as unknown as DbInvoiceRow[];
   }
 
   if (result.length === 0) return null;

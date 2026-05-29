@@ -186,8 +186,8 @@ export function InvoiceCard({
     setDropdownOpen(false);
     try {
       await fn();
-    } catch (e: any) {
-      toast.error(e.message || "Action failed");
+    } catch (e) {
+      toast.error((e as Error).message || "Action failed");
     } finally {
       setLoadingAction(null);
     }
