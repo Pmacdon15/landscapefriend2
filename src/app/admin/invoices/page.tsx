@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
-import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import InvoicesContainer from "@/components/invoices/InvoicesContainer";
+import { InvoicesSkeleton } from "@/components/invoices/invoices-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import PaginationButtons from "@/components/pagination-buttons";
 import { getClientsForInfoDal } from "@/dal/clients";
@@ -134,15 +134,9 @@ export default async function InvoicesPage(props: {
         description="Create, monitor, and send professional invoices to your clients."
       />
 
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="animate-spin h-8 w-8 text-primary" />
-          </div>
-        }
-      >
+      <Suspense fallback={<InvoicesSkeleton />}>
         <div id="invoice-list">
-          <Suspense>
+          <Suspense fallback={<InvoicesSkeleton />}>
             <InvoicesContainer
               invoicesPromise={invoicesPromise}
               revenueStatsPromise={revenueStatsPromise}
