@@ -45,7 +45,7 @@ const features = [
     title: "Invoices Made Easy",
     description:
       "Generate clean invoices for completed work without the paperwork.",
-    href: "/pricing",
+    href: "/invoices",
   },
 ];
 
@@ -67,7 +67,7 @@ export default function Home(props: PageProps<"/">) {
             sizes="100vw"
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/35 to-background/15" />
+          <div className="absolute inset-0 bg-linear-to-t from-background/80 via-background/35 to-background/15" />
         </div>
 
         <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-start gap-6 px-6 py-24 md:py-36">
@@ -103,7 +103,7 @@ export default function Home(props: PageProps<"/">) {
 
       {/* Features */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-24">
-        <div className="mb-10 max-w-2xl">
+        <div className="my-10 max-w-2xl">
           <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             Everything you need to keep the season running
           </h2>
