@@ -127,6 +127,25 @@
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+    background-color: oklch(0.96 0.03 150);
+    background-image: linear-gradient(
+        oklch(0.97 0.02 150 / 0.55),
+        oklch(0.97 0.02 150 / 0.55)
+      ),
+      url("/lawn.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+  .dark html,
+  html.dark {
+    background-color: oklch(0.16 0.01 150);
+    background-image: linear-gradient(
+        oklch(0.16 0.01 150 / 0.88),
+        oklch(0.16 0.01 150 / 0.88)
+      ),
+      url("/lawn.png");
   }
 }
 

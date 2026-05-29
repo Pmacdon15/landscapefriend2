@@ -70,18 +70,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 dark:bg-slate-950`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <body className="min-h-svh flex flex-col relative">
-          <div
-            className="fixed inset-0 z-[-1] pointer-events-none opacity-60 dark:opacity-25"
-            style={{
-              backgroundImage: 'url("/lawn.png")',
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-            }}
-          />
           <Providers>
             <Suspense>
               <NavBar datePromise={datePromise} />
