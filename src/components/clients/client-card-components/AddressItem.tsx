@@ -51,6 +51,9 @@ export function AddressItem({
   const [isOneTimePopoverOpen, setIsOneTimePopoverOpen] = useState(false);
   const { mutate: updateAssignee } = useUpdateAddressAssignee();
 
+  const incompleteOneTimeServices =
+    address.one_time_services?.filter((ots) => !ots.completed_job_id) || [];
+
   return (
     <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -231,9 +234,8 @@ export function AddressItem({
             >
               <CalendarDays className="h-3 w-3 mr-1.5" />
               One-Offs{" "}
-              {address.one_time_services &&
-                address.one_time_services.length > 0 &&
-                `(${address.one_time_services.length})`}
+              {incompleteOneTimeServices.length > 0 &&
+                `(${incompleteOneTimeServices.length})`}
             </PopoverTrigger>
             <PopoverContent className="w-80" align="end">
               <div className="space-y-4">
@@ -248,7 +250,7 @@ export function AddressItem({
                 <OneTimeForm
                   addressId={address.id}
                   members={members}
-                  oneTimeServices={address.one_time_services}
+                  oneTimeServices={incompleteOneTimeServices}
                   setOptimistic={setOptimistic}
                   onSuccess={() => setIsOneTimePopoverOpen(false)}
                 />
