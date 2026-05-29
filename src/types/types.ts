@@ -144,12 +144,12 @@ export type OptimisticServiceAction =
   | { type: "select-client"; value: string; cuts: CutListItem[] };
 
 export type {
-  Client,
   Address,
-  Schedule,
-  CompletedJob,
   Assignment,
+  Client,
+  CompletedJob,
   OneTimeService,
+  Schedule,
 };
 
 export interface ClientCardProps {
