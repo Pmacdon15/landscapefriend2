@@ -49,6 +49,7 @@ const features = [
   },
 ];
 
+
 export default function Home(props: PageProps<"/">) {
   const datePromise = props.searchParams.then((p) =>
     String(Array.isArray(p.date) ? p.date[0] : (p.date ?? "")),
