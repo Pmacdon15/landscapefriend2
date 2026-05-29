@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
-import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ClientInfoContainer from "@/components/clients/client-info/client-info-container";
+import { ClientsSkeleton } from "@/components/clients/clients-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import PaginationButtons from "@/components/pagination-buttons";
 import { getOrganizationMembersDal } from "@/dal/clerk";
@@ -63,13 +63,7 @@ export default async function ClientInfoListPage(
         description="Manage your clients and their recurring schedules."
       />
 
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center col-span-full py-12">
-            <Loader2 className="animate-spin h-8 w-8 text-primary" />
-          </div>
-        }
-      >
+      <Suspense fallback={<ClientsSkeleton />}>
         <div id="client-list">
           <ClientInfoContainer
             isAdminPromise={isAdminPromise}

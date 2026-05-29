@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
-import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { ServiceListSkeleton } from "@/components/service/service-skeleton";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForCutListDal } from "@/dal/clients";
 import { ServiceListContent } from "../../components/clients/service-list-content";
@@ -58,13 +58,7 @@ export default async function ClientsServicePage(
         description="View and manage the clients scheduled for service on a specific date."
       />
 
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="animate-spin h-8 w-8 text-primary" />
-          </div>
-        }
-      >
+      <Suspense fallback={<ServiceListSkeleton />}>
         <ServiceListContent
           currentUserIdPromise={currentUserIdPromise}
           isAdminPromise={isAdminPromise}

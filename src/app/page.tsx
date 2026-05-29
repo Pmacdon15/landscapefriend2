@@ -36,8 +36,7 @@ const features = [
   {
     icon: CalendarClock,
     title: "Daily Service Routes",
-    description:
-      "See exactly what needs mowing today, sorted and ready to go.",
+    description: "See exactly what needs mowing today, sorted and ready to go.",
     href: "/clients-service",
   },
   {
@@ -108,8 +107,8 @@ export default function Home(props: PageProps<"/">) {
             Everything you need to keep the season running
           </h2>
           <p className="mt-3 text-pretty text-muted-foreground">
-            A focused set of tools built for the day-to-day reality of lawn
-            care professionals.
+            A focused set of tools built for the day-to-day reality of lawn care
+            professionals.
           </p>
         </div>
 
