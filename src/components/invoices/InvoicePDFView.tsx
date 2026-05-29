@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 
@@ -58,10 +59,12 @@ export const InvoicePDFView = React.forwardRef<
         <div className="flex justify-between items-start border-b border-slate-100 pb-8 mb-8">
           <div className="flex items-center gap-4">
             {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={logoUrl}
                 alt={orgName}
+                width={64}
+                height={64}
+                unoptimized
                 className="h-16 w-16 object-contain rounded-md border border-slate-100 bg-white"
               />
             ) : (
