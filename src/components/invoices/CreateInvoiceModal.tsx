@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, PlusCircle, Trash2, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { useCreateInvoice } from "@/mutations/invoices";
 import { Button } from "../ui/button";
@@ -195,7 +195,7 @@ export function CreateInvoiceModal({
     }
 
     try {
-       const invoice = await createInvoiceMutation.mutateAsync({
+      const invoice = await createInvoiceMutation.mutateAsync({
         clientId: selectedClient.id,
         invoiceNumber: invoiceNo,
         issueDate,
@@ -214,7 +214,7 @@ export function CreateInvoiceModal({
       onInvoiceCreated(invoice as DbInvoiceResult);
       onClose();
       // Reset form
-       setSelectedClient(null);
+      setSelectedClient(null);
       setClientQuery("");
       setInvoiceNotes("");
       setTaxRate(0);
@@ -604,7 +604,11 @@ export function CreateInvoiceModal({
               </Button>
               <Button
                 type="submit"
-                disabled={createInvoiceMutation.isPending || !selectedClient || invoiceNumberExists}
+                disabled={
+                  createInvoiceMutation.isPending ||
+                  !selectedClient ||
+                  invoiceNumberExists
+                }
                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-lg shadow-green-600/20 px-8 h-10"
               >
                 {createInvoiceMutation.isPending ? (
