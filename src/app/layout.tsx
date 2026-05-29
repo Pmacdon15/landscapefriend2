@@ -6,6 +6,7 @@ import { NavBar } from "@/components/layout/nav-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "@/providers/query-provider";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import { Suspense } from "react";
 
 const geistSans = Geist({
@@ -86,6 +87,7 @@ export default function RootLayout({
               <NavBar datePromise={datePromise} />
             </Suspense>
             <main className="flex-1 flex flex-col">{children}</main>
+            <Analytics />
             <Footer />
             <Toaster />
           </Providers>

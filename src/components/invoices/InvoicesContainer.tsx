@@ -63,7 +63,7 @@ export default function InvoicesContainer({
   const statusValue = use(statusPromise);
   const hasSendInvoices = use(hasSendInvoicesPromise);
 
-   const organizationName = orgInfo?.name || "Landscape Friend";
+  const organizationName = orgInfo?.name || "Landscape Friend";
   const organizationLogo = orgInfo?.logoUrl || null;
 
   // Optimistic States

@@ -207,7 +207,9 @@ export const InvoicePDFView = React.forwardRef<
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500 font-semibold">Tax ({taxRate.toFixed(2)}%):</span>
+              <span className="text-slate-500 font-semibold">
+                Tax ({taxRate.toFixed(2)}%):
+              </span>
               <span className="font-bold text-slate-800">
                 {formatCurrency(taxAmount)}
               </span>

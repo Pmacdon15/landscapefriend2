@@ -108,7 +108,10 @@ export function generateInvoiceEmailHtml(
   orgName: string,
   orgLogo: string | null,
 ): string {
-  const subtotal = invoice.items.reduce((sum, item) => sum + Number(item.amount), 0);
+  const subtotal = invoice.items.reduce(
+    (sum, item) => sum + Number(item.amount),
+    0,
+  );
   const taxRate = Number(invoice.tax_rate || 0);
   const taxAmount = subtotal * (taxRate / 100);
 
