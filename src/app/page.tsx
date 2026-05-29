@@ -67,18 +67,17 @@ export default function Home(props: PageProps<"/">) {
             sizes="100vw"
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/10 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
         </div>
 
         <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-start gap-6 px-6 py-24 md:py-36">
           <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/20 backdrop-blur-sm">
             Lawn care, made simple
           </span>
-          <h1 className="max-w-3xl text-balance text-5xl font-extrabold tracking-tight text-foreground md:text-7xl">
+          <h1 className="max-w-3xl text-balance text-5xl font-extrabold tracking-tight text-foreground [text-shadow:0_2px_12px_rgba(0,0,0,0.25)] md:text-7xl">
             Run your landscaping business from one clean dashboard
           </h1>
-          <p className="max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
+          <p className="max-w-xl text-pretty text-lg font-medium leading-relaxed text-foreground/90 [text-shadow:0_1px_8px_rgba(0,0,0,0.2)]">
             Manage clients, plan your daily routes, and schedule repeat cuts
             with total control. Landscape Friend handles the busywork so you can
             focus on the lawns.
