@@ -72,9 +72,9 @@ export default function RootLayout({
         lang="en"
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 dark:bg-slate-950`}
       >
-        <body className="min-h-svh flex flex-col bg-slate-50 dark:bg-slate-950 relative">
+        <body className="min-h-svh flex flex-col relative">
           <div
-            className="fixed inset-0 z-[-1] pointer-events-none opacity-40 dark:opacity-20"
+            className="fixed inset-0 z-[-1] pointer-events-none opacity-60 dark:opacity-25"
             style={{
               backgroundImage: 'url("/lawn.png")',
               backgroundSize: "cover",
