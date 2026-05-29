@@ -17,30 +17,35 @@ const features = [
     title: "Client Management",
     description:
       "Keep every customer, address, and note organized in one tidy place.",
+    href: "/client-info-list",
   },
   {
     icon: MapPin,
     title: "Smart Route Planning",
     description:
       "Map your daily stops and cut down on drive time between lawns.",
+    href: "/clients-service",
   },
   {
     icon: Repeat,
-    title: "Repeat Scheduling",
+    title: "Client Info",
     description:
-      "Set recurring cuts once and let Landscape Friend handle the rest.",
+      "Browse and update every client's details whenever you need them.",
+    href: "/client-info-list",
   },
   {
     icon: CalendarClock,
     title: "Daily Service Routes",
     description:
       "See exactly what needs mowing today, sorted and ready to go.",
+    href: "/clients-service",
   },
   {
     icon: Receipt,
     title: "Invoices Made Easy",
     description:
       "Generate clean invoices for completed work without the paperwork.",
+    href: "/pricing",
   },
 ];
 
@@ -111,20 +116,23 @@ export default function Home(props: PageProps<"/">) {
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
-            <Card
+            <Link
               key={feature.title}
-              className="transition-all hover:-translate-y-1 hover:ring-primary/30"
+              href={feature.href}
+              className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              <CardHeader>
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <feature.icon className="h-5 w-5" />
-                </div>
-                <CardTitle className="text-lg">{feature.title}</CardTitle>
-                <CardDescription className="leading-relaxed">
-                  {feature.description}
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Card className="h-full transition-all group-hover:-translate-y-1 group-hover:ring-primary/30 group-hover:shadow-lg">
+                <CardHeader>
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                    <feature.icon className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-lg">{feature.title}</CardTitle>
+                  <CardDescription className="leading-relaxed">
+                    {feature.description}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
           ))}
         </div>
       </section>
