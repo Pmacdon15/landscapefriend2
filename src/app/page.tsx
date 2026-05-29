@@ -121,7 +121,7 @@ export default function Home(props: PageProps<"/">) {
               href={feature.href}
               className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              <Card className="h-full transition-all group-hover:-translate-y-1 group-hover:ring-primary/30 group-hover:shadow-lg">
+              <Card className="h-full bg-card/70 backdrop-blur-md transition-all group-hover:bg-card/85 group-hover:-translate-y-1 group-hover:ring-primary/30 group-hover:shadow-lg">
                 <CardHeader>
                   <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                     <feature.icon className="h-5 w-5" />
