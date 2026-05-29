@@ -147,3 +147,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
 - `yarn lint`: Runs Biome linter.
 - `yarn format`: Formats code with Biome.
 </details>
+
+## Attribution
+
+Lawn mower Icon by Sergey Tikhonov on <a href="https://icon-icons.com/authors/449-sergey-tikhonov">Icon-Icons.com</a>
