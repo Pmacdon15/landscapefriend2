@@ -63,10 +63,11 @@ export function InvoicesSearchBar({
   const invoicesList = data?.invoices || [];
 
   useEffect(() => {
-    if (!isFocused) {
-      setInputValue(displaySearchValue);
+    setInputValue(displaySearchValue);
+    if (!displaySearchValue) {
+      setIsFocused(false);
     }
-  }, [displaySearchValue, isFocused]);
+  }, [displaySearchValue]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

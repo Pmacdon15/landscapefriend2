@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { type MouseEvent, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -64,6 +64,28 @@ export function InvoiceCard({
     params.set("invoice", invoice.id);
     params.set("clientId", invoice.client_id);
     params.delete("search");
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleClientClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("search", invoice.client_name);
+    params.set("page", "1");
+    params.delete("clientId");
+    params.delete("invoice");
+    params.delete("invoiceId");
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleInvoiceNumberClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("search", invoice.invoice_number);
+    params.set("page", "1");
+    params.delete("clientId");
+    params.delete("invoice");
+    params.delete("invoiceId");
     router.push(`?${params.toString()}`);
   };
 
@@ -226,10 +248,22 @@ export function InvoiceCard({
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-mono font-bold text-green-700 dark:text-green-400 block mb-1">
-                {invoice.invoice_number}
+                <button
+                  type="button"
+                  onClick={handleInvoiceNumberClick}
+                  className="hover:underline hover:text-green-800 dark:hover:text-green-300 transition-colors focus-visible:outline-none text-left"
+                >
+                  {invoice.invoice_number}
+                </button>
               </span>
               <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 truncate max-w-[180px]">
-                {invoice.client_name}
+                <button
+                  type="button"
+                  onClick={handleClientClick}
+                  className="hover:underline hover:text-green-700 dark:hover:text-green-400 transition-colors focus-visible:outline-none text-left w-full truncate"
+                >
+                  {invoice.client_name}
+                </button>
               </h4>
             </div>
 

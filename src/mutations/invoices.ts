@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   createInvoiceAction,
@@ -8,6 +8,7 @@ import {
 } from "@/actions/invoices";
 
 export function useCreateInvoice() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: Parameters<typeof createInvoiceAction>[0]) => {
       const { success, invoice, error } = await createInvoiceAction(data);
@@ -17,6 +18,7 @@ export function useCreateInvoice() {
       return invoice;
     },
     onSuccess: (invoice) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice-search"] });
       toast.success(`Invoice ${invoice.invoice_number} created successfully!`);
     },
     onError: (error: Error) => {
@@ -26,6 +28,7 @@ export function useCreateInvoice() {
 }
 
 export function useUpdateInvoiceStatus() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       invoiceId,
@@ -44,6 +47,7 @@ export function useUpdateInvoiceStatus() {
       return { invoice, status };
     },
     onSuccess: ({ invoice, status }) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice-search"] });
       toast.success(`Invoice ${invoice.invoice_number} updated to ${status}`);
     },
     onError: (error: Error) => {
@@ -53,6 +57,7 @@ export function useUpdateInvoiceStatus() {
 }
 
 export function useDeleteInvoice() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (invoiceId: string) => {
       const { success, error } = await deleteInvoiceWithOrgAction(invoiceId);
@@ -62,6 +67,7 @@ export function useDeleteInvoice() {
       return invoiceId;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice-search"] });
       toast.success("Invoice deleted successfully");
     },
     onError: (error: Error) => {

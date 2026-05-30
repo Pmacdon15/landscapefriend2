@@ -182,7 +182,15 @@ export default function InvoicesContainer({
   const handleDeleteSuccess = (invoiceId: string) => {
     startTransition(() => {
       setOptimistic({ type: "delete-invoice", invoiceId });
+      setOptimistic({ type: "update-search", value: "" });
     });
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("search");
+    params.delete("page");
+    params.delete("clientId");
+    params.delete("invoice");
+    params.delete("invoiceId");
+    router.push(`?${params.toString()}`);
   };
 
   // Status Filter click
@@ -206,7 +214,18 @@ export default function InvoicesContainer({
         type: "add-invoice",
         invoice,
       });
+      setOptimistic({
+        type: "update-search",
+        value: "",
+      });
     });
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("search");
+    params.delete("page");
+    params.delete("clientId");
+    params.delete("invoice");
+    params.delete("invoiceId");
+    router.push(`?${params.toString()}`);
   };
 
   const handleCloseDetailModal = () => {
