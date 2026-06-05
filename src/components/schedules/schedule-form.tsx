@@ -155,9 +155,6 @@ export function ScheduleForm({
                     mode="single"
                     selected={field.state.value}
                     onSelect={(date) => field.handleChange(date || new Date())}
-                    disabled={(date) =>
-                      date < new Date(new Date().setHours(0, 0, 0, 0))
-                    }
                   />
                 </PopoverContent>
               </Popover>
