@@ -120,7 +120,7 @@ export function Footer() {
             warning.
           </p>
           <p className="text-xs text-slate-400 dark:text-slate-600 text-center mt-2">
-            © 2026 Scheduler App. All rights reserved.
+            © 2026 Landscape Friend. All rights reserved.
           </p>
         </div>
       </div>
