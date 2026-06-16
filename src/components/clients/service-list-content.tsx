@@ -19,6 +19,7 @@ import { ServiceSearchBar } from "@/components/service/ServiceSearchBar";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 import type { CutListItem, OptimisticServiceAction } from "@/types/types";
 import type { Client, SiteMap } from "@/zod/schemas";
+import { cn } from "@/lib/utils";
 
 interface ServiceListContentProps {
   isAdminPromise: Promise<boolean>;
@@ -46,6 +47,9 @@ export function ServiceListContent({
   const searchParams = useSearchParams();
 
   const [viewingImage, setViewingImage] = useState<SiteMap | null>(null);
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "completed" | "incomplete"
+  >("all");
 
   const currentUserId = use(currentUserIdPromise);
   const isAdmin = use(isAdminPromise);
@@ -217,6 +221,7 @@ export function ServiceListContent({
       document.documentElement.style.scrollBehavior = "";
     }
 
+    if (statusFilter !== "all") return;
     if (!result.destination) return;
     const sourceIndex = result.source.index;
     const destIndex = result.destination.index;
@@ -262,6 +267,13 @@ export function ServiceListContent({
   const completedServices = optimisticState.cuts.filter(isCardCompleted).length;
   const remainingServices = totalServices - completedServices;
 
+  const filteredCuts = optimisticState.cuts.filter((item) => {
+    const isCompleted = isCardCompleted(item);
+    if (statusFilter === "completed") return isCompleted;
+    if (statusFilter === "incomplete") return !isCompleted;
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <ServiceHeader
@@ -288,58 +300,154 @@ export function ServiceListContent({
         }
       />
 
-      <div className="max-w-4xl mx-auto">
-        {optimisticState.cuts.length > 0 ? (
-          <DragDropContext
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-            autoScrollerOptions={{
-              startFromPercentage: 0.25, // Start auto-scrolling when within 25% of container/screen edge
-              maxScrollAtPercentage: 0.05, // Reach max scroll speed when within 5% of edge
-              maxPixelScroll: 28, // Increase maximum scroll speed to be fast and responsive
-            }}
-          >
-            <Droppable droppableId="cut-list-droppable">
-              {(provided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="space-y-4"
-                >
-                  {optimisticState.cuts.map((item, index) => (
-                    <div
-                      key={
-                        item.otsId
-                          ? `ots-${item.otsId}`
-                          : `recurring-${item.address.id}`
-                      }
-                      id={
-                        item.otsId
-                          ? `address-ots-${item.otsId}`
-                          : `address-recurring-${item.address.id}`
-                      }
-                    >
-                      <ServiceListItem
-                        isAdmin={isAdmin}
-                        item={item}
-                        index={index}
-                        date={parsedDefaultDate}
-                        currentUserId={currentUserId}
-                        members={members}
-                        onCompleteOptimistic={(params) =>
-                          dispatch({ type: "complete", ...params })
-                        }
-                        onViewPhoto={setViewingImage}
-                        setOptimistic={dispatch}
-                        allCuts={flatCuts}
-                      />
-                    </div>
-                  ))}
-                  {provided.placeholder}
-                </div>
+      <div className="max-w-4xl mx-auto space-y-4">
+        {/* Client-side Status Filter */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={cn(
+                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 cursor-pointer",
+                statusFilter === "all"
+                  ? "bg-slate-900 border-slate-900 text-white dark:bg-slate-100 dark:border-slate-100 dark:text-slate-900 shadow-sm scale-[1.02]"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800",
               )}
-            </Droppable>
-          </DragDropContext>
+            >
+              <span>All</span>
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold transition-all",
+                  statusFilter === "all"
+                    ? "bg-white/20 text-white dark:bg-slate-950/20 dark:text-slate-900"
+                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+                )}
+              >
+                {totalServices}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter("incomplete")}
+              className={cn(
+                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 cursor-pointer",
+                statusFilter === "incomplete"
+                  ? "bg-amber-600 border-amber-600 text-white dark:bg-amber-500 dark:border-amber-500 shadow-sm scale-[1.02]"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800",
+              )}
+            >
+              <span>Incomplete</span>
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold transition-all",
+                  statusFilter === "incomplete"
+                    ? "bg-white/20 text-white dark:bg-amber-950/20 dark:text-amber-950"
+                    : "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400",
+                )}
+              >
+                {remainingServices}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter("completed")}
+              className={cn(
+                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 cursor-pointer",
+                statusFilter === "completed"
+                  ? "bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-500 dark:border-emerald-500 shadow-sm scale-[1.02]"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800",
+              )}
+            >
+              <span>Completed</span>
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold transition-all",
+                  statusFilter === "completed"
+                    ? "bg-white/20 text-white dark:bg-emerald-950/20 dark:text-emerald-955"
+                    : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400",
+                )}
+              >
+                {completedServices}
+              </span>
+            </button>
+          </div>
+
+          {statusFilter !== "all" && (
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+              Drag-to-reorder is disabled while filtering
+            </span>
+          )}
+        </div>
+
+        {optimisticState.cuts.length > 0 ? (
+          filteredCuts.length > 0 ? (
+            <DragDropContext
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              autoScrollerOptions={{
+                startFromPercentage: 0.25, // Start auto-scrolling when within 25% of container/screen edge
+                maxScrollAtPercentage: 0.05, // Reach max scroll speed when within 5% of edge
+                maxPixelScroll: 28, // Increase maximum scroll speed to be fast and responsive
+              }}
+            >
+              <Droppable droppableId="cut-list-droppable">
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-4"
+                  >
+                    {filteredCuts.map((item, index) => (
+                      <div
+                        key={
+                          item.otsId
+                            ? `ots-${item.otsId}`
+                            : `recurring-${item.address.id}`
+                        }
+                        id={
+                          item.otsId
+                            ? `address-ots-${item.otsId}`
+                            : `address-recurring-${item.address.id}`
+                        }
+                      >
+                        <ServiceListItem
+                          isAdmin={isAdmin}
+                          item={item}
+                          index={index}
+                          date={parsedDefaultDate}
+                          currentUserId={currentUserId}
+                          members={members}
+                          onCompleteOptimistic={(params) =>
+                            dispatch({ type: "complete", ...params })
+                          }
+                          onViewPhoto={setViewingImage}
+                          setOptimistic={dispatch}
+                          allCuts={flatCuts}
+                          isDragDisabled={statusFilter !== "all"}
+                        />
+                      </div>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          ) : (
+            <div className="text-center py-16 bg-white/50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-800">
+              <h3 className="text-lg font-semibold mb-1">
+                {statusFilter === "completed"
+                  ? "No completed services"
+                  : "All services completed!"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {statusFilter === "completed"
+                  ? "There are no completed services for this date."
+                  : "Great job! All assigned services for this date have been completed."}
+              </p>
+            </div>
+          )
         ) : (
           <ServiceEmptyState
             date={parsedDefaultDate}
