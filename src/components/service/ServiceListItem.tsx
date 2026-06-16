@@ -40,6 +40,7 @@ interface ServiceListItemProps {
   }) => void;
   setOptimistic?: (action: OptimisticServiceAction) => void;
   allCuts?: CutListItem[];
+  isDragDisabled?: boolean;
 }
 
 export function ServiceListItem({
@@ -53,6 +54,7 @@ export function ServiceListItem({
   onCompleteOptimistic,
   setOptimistic,
   allCuts,
+  isDragDisabled = false,
 }: ServiceListItemProps) {
   const { client, address } = item;
   const isSnow = address.schedule?.frequency === "daily";
@@ -105,7 +107,11 @@ export function ServiceListItem({
     : `recurring-${address.id}`;
 
   return (
-    <Draggable draggableId={draggableId} index={index}>
+    <Draggable
+      draggableId={draggableId}
+      index={index}
+      isDragDisabled={isDragDisabled}
+    >
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
@@ -119,14 +125,21 @@ export function ServiceListItem({
         >
           <CardContent className="p-0">
             <div className="flex items-center">
-              <div
-                {...provided.dragHandleProps}
-                className="p-4 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <GripVertical className="h-6 w-6" />
-              </div>
+              {!isDragDisabled && (
+                <div
+                  {...provided.dragHandleProps}
+                  className="p-4 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <GripVertical className="h-6 w-6" />
+                </div>
+              )}
 
-              <div className="flex-1 py-4 pr-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div
+                className={cn(
+                  "flex-1 py-4 pr-4 flex flex-col md:flex-row md:items-center justify-between gap-4",
+                  isDragDisabled && "pl-4",
+                )}
+              >
                 <div className="flex-1 space-y-3">
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div className="space-y-2">
