@@ -128,28 +128,93 @@ export function ServiceListItem({
             {/* Collapsed Compact View */}
             <div className="service-card-compact hidden items-center p-3 gap-3">
               {!isDragDisabled && (
-                <div
+                <button
+                  type="button"
                   {...provided.dragHandleProps}
                   onMouseDown={() => {
-                    document.getElementById("service-list-container")?.classList.add("dragging-active");
-                    const cleanUp = () => {
-                      document.getElementById("service-list-container")?.classList.remove("dragging-active");
-                      window.removeEventListener("mouseup", cleanUp);
-                    };
-                    window.addEventListener("mouseup", cleanUp);
+                    const container = document.getElementById(
+                      "service-list-container",
+                    );
+                    if (container) {
+                      const cards = container.querySelectorAll(".service-card");
+                      let heightBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightBefore +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      container.classList.add("dragging-active");
+                      container.setAttribute("data-drag-started", "false");
+
+                      let heightAfter = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightAfter +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      const dy = heightBefore - heightAfter;
+                      container.style.paddingTop = `${dy}px`;
+
+                      const cleanUp = () => {
+                        if (
+                          container.getAttribute("data-drag-started") !== "true"
+                        ) {
+                          container.classList.remove("dragging-active");
+                          container.style.paddingTop = "";
+                        }
+                        window.removeEventListener("mouseup", cleanUp);
+                      };
+                      window.addEventListener("mouseup", cleanUp);
+                    }
                   }}
                   onTouchStart={() => {
-                    document.getElementById("service-list-container")?.classList.add("dragging-active");
-                    const cleanUp = () => {
-                      document.getElementById("service-list-container")?.classList.remove("dragging-active");
-                      window.removeEventListener("touchend", cleanUp);
-                    };
-                    window.addEventListener("touchend", cleanUp);
+                    const container = document.getElementById(
+                      "service-list-container",
+                    );
+                    if (container) {
+                      const cards = container.querySelectorAll(".service-card");
+                      let heightBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightBefore +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      container.classList.add("dragging-active");
+                      container.setAttribute("data-drag-started", "false");
+
+                      let heightAfter = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightAfter +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      const dy = heightBefore - heightAfter;
+                      container.style.paddingTop = `${dy}px`;
+
+                      const cleanUp = () => {
+                        if (
+                          container.getAttribute("data-drag-started") !== "true"
+                        ) {
+                          container.classList.remove("dragging-active");
+                          container.style.paddingTop = "";
+                        }
+                        window.removeEventListener("touchend", cleanUp);
+                      };
+                      window.addEventListener("touchend", cleanUp);
+                    }
                   }}
-                  className="text-slate-400 dark:text-slate-500 cursor-grab active:cursor-grabbing shrink-0"
+                  className="text-slate-400 dark:text-slate-500 cursor-grab active:cursor-grabbing shrink-0 bg-transparent border-0 p-0 focus:outline-none"
                 >
                   <GripVertical className="h-5 w-5" />
-                </div>
+                </button>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -183,28 +248,93 @@ export function ServiceListItem({
             {/* Full Detailed View */}
             <div className="service-card-full flex items-center">
               {!isDragDisabled && (
-                <div
+                <button
+                  type="button"
                   {...provided.dragHandleProps}
                   onMouseDown={() => {
-                    document.getElementById("service-list-container")?.classList.add("dragging-active");
-                    const cleanUp = () => {
-                      document.getElementById("service-list-container")?.classList.remove("dragging-active");
-                      window.removeEventListener("mouseup", cleanUp);
-                    };
-                    window.addEventListener("mouseup", cleanUp);
+                    const container = document.getElementById(
+                      "service-list-container",
+                    );
+                    if (container) {
+                      const cards = container.querySelectorAll(".service-card");
+                      let heightBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightBefore +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      container.classList.add("dragging-active");
+                      container.setAttribute("data-drag-started", "false");
+
+                      let heightAfter = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightAfter +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      const dy = heightBefore - heightAfter;
+                      container.style.paddingTop = `${dy}px`;
+
+                      const cleanUp = () => {
+                        if (
+                          container.getAttribute("data-drag-started") !== "true"
+                        ) {
+                          container.classList.remove("dragging-active");
+                          container.style.paddingTop = "";
+                        }
+                        window.removeEventListener("mouseup", cleanUp);
+                      };
+                      window.addEventListener("mouseup", cleanUp);
+                    }
                   }}
                   onTouchStart={() => {
-                    document.getElementById("service-list-container")?.classList.add("dragging-active");
-                    const cleanUp = () => {
-                      document.getElementById("service-list-container")?.classList.remove("dragging-active");
-                      window.removeEventListener("touchend", cleanUp);
-                    };
-                    window.addEventListener("touchend", cleanUp);
+                    const container = document.getElementById(
+                      "service-list-container",
+                    );
+                    if (container) {
+                      const cards = container.querySelectorAll(".service-card");
+                      let heightBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightBefore +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      container.classList.add("dragging-active");
+                      container.setAttribute("data-drag-started", "false");
+
+                      let heightAfter = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightAfter +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      const dy = heightBefore - heightAfter;
+                      container.style.paddingTop = `${dy}px`;
+
+                      const cleanUp = () => {
+                        if (
+                          container.getAttribute("data-drag-started") !== "true"
+                        ) {
+                          container.classList.remove("dragging-active");
+                          container.style.paddingTop = "";
+                        }
+                        window.removeEventListener("touchend", cleanUp);
+                      };
+                      window.addEventListener("touchend", cleanUp);
+                    }
                   }}
-                  className="p-4 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
+                  className="p-4 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 focus:outline-none"
                 >
                   <GripVertical className="h-6 w-6" />
-                </div>
+                </button>
               )}
 
               <div

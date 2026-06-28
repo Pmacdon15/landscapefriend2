@@ -210,14 +210,25 @@ export function ServiceListContent({
 
   const onDragStart = () => {
     if (typeof document !== "undefined") {
-      document.getElementById("service-list-container")?.classList.add("dragging-active");
+      const container = document.getElementById("service-list-container");
+      container?.classList.add("dragging-active");
+      container?.setAttribute("data-drag-started", "true");
       document.documentElement.style.scrollBehavior = "auto";
     }
   };
 
   const onDragEnd = (result: DropResult) => {
     if (typeof document !== "undefined") {
-      document.getElementById("service-list-container")?.classList.remove("dragging-active");
+      const container = document.getElementById("service-list-container");
+      container?.setAttribute("data-drag-started", "false");
+      setTimeout(() => {
+        if (container?.getAttribute("data-drag-started") !== "true") {
+          container?.classList.remove("dragging-active");
+          if (container) {
+            container.style.paddingTop = "";
+          }
+        }
+      }, 250);
       document.documentElement.style.scrollBehavior = "";
     }
 
