@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -16,6 +16,7 @@ import type { CreateClientInput } from "@/zod/schemas";
 
 export function useCreateClient() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateClientInput) => {
       const { success, client, error } = await createClientAction(data);
@@ -26,6 +27,8 @@ export function useCreateClient() {
       return client;
     },
     onSuccess: (client) => {
+      queryClient.invalidateQueries({ queryKey: ["client-search"] });
+      queryClient.invalidateQueries({ queryKey: ["client-search-history"] });
       toast.success(`${client.name} created`);
       router.push(`/client-info-list?clientId=${client.id}`);
     },
@@ -36,6 +39,7 @@ export function useCreateClient() {
 }
 
 export function useUpdateClient() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       clientId,
@@ -55,6 +59,8 @@ export function useUpdateClient() {
       return client;
     },
     onSuccess: (client) => {
+      queryClient.invalidateQueries({ queryKey: ["client-search"] });
+      queryClient.invalidateQueries({ queryKey: ["client-search-history"] });
       toast.success(`${client.name} updated`);
     },
     onError: (error: Error) => {
@@ -64,6 +70,7 @@ export function useUpdateClient() {
 }
 
 export function useUpdateAddressAssignee() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       addressId,
@@ -83,6 +90,8 @@ export function useUpdateAddressAssignee() {
       return { success: true };
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-search"] });
+      queryClient.invalidateQueries({ queryKey: ["client-search-history"] });
       toast.success("Assignee updated");
     },
     onError: (error: Error) => {
@@ -92,6 +101,7 @@ export function useUpdateAddressAssignee() {
 }
 
 export function useDeleteClient() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (clientId: string) => {
       const { success, error } = await deleteClientAction(clientId);
@@ -102,6 +112,8 @@ export function useDeleteClient() {
       return { success: true };
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-search"] });
+      queryClient.invalidateQueries({ queryKey: ["client-search-history"] });
       toast.success("Client deleted");
     },
     onError: (error: Error) => {

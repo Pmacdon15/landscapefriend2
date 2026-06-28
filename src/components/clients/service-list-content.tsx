@@ -16,10 +16,10 @@ import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
 import { ServiceListItem } from "@/components/service/ServiceListItem";
 import { ServiceSearchBar } from "@/components/service/ServiceSearchBar";
+import { cn } from "@/lib/utils";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 import type { CutListItem, OptimisticServiceAction } from "@/types/types";
 import type { Client, SiteMap } from "@/zod/schemas";
-import { cn } from "@/lib/utils";
 
 interface ServiceListContentProps {
   isAdminPromise: Promise<boolean>;

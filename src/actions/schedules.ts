@@ -36,6 +36,7 @@ export async function deleteScheduleAction(addressId: string) {
       updateTag(`schedules-${schedule.org_id}`);
       updateTag(`clients-info-${schedule.org_id}`);
       updateTag(`clients-cutlist-${schedule.org_id}`);
+      updateTag(`clients-search-${schedule.org_id}`);
       return { success: true, schedule, error: null };
     },
     (err) => ({ success: false, schedule: null, error: err.reason }),
