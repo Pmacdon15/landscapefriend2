@@ -175,3 +175,19 @@
     box-shadow: 0 0 0 0 transparent;
   }
 }
+
+/* Drag-and-drop collapsed state styles */
+.dragging-active .service-card,
+.service-card.is-dragging {
+  height: auto;
+}
+
+.dragging-active .service-card-full,
+.service-card.is-dragging .service-card-full {
+  display: none;
+}
+
+.dragging-active .service-card-compact,
+.service-card.is-dragging .service-card-compact {
+  display: flex;
+}

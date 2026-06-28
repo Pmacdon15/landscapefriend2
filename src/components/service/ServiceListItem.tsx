@@ -116,22 +116,225 @@ export function ServiceListItem({
         <Card
           ref={provided.innerRef}
           {...provided.draggableProps}
+          style={provided.draggableProps.style}
           className={cn(
-            "border border-slate-200 dark:border-slate-800 transition-colors",
+            "service-card border border-slate-200 dark:border-slate-800 transition-colors",
             snapshot.isDragging
-              ? "bg-slate-50 dark:bg-slate-800 shadow-lg ring-1 ring-primary"
+              ? "bg-slate-50 dark:bg-slate-800 shadow-lg ring-1 ring-primary is-dragging"
               : "bg-white dark:bg-slate-900 shadow-sm",
           )}
         >
           <CardContent className="p-0">
-            <div className="flex items-center">
+            {/* Collapsed Compact View */}
+            <div className="service-card-compact hidden items-center p-3 gap-3">
               {!isDragDisabled && (
-                <div
+                <button
+                  type="button"
                   {...provided.dragHandleProps}
-                  className="p-4 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
+                  onMouseDown={() => {
+                    const container = document.getElementById(
+                      "service-list-container",
+                    );
+                    if (container) {
+                      const cards = container.querySelectorAll(".service-card");
+                      let heightBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightBefore +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      container.classList.add("dragging-active");
+                      container.setAttribute("data-drag-started", "false");
+
+                      let heightAfter = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightAfter +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      const dy = heightBefore - heightAfter;
+                      container.style.paddingTop = `${dy}px`;
+
+                      const cleanUp = () => {
+                        if (
+                          container.getAttribute("data-drag-started") !== "true"
+                        ) {
+                          container.classList.remove("dragging-active");
+                          container.style.paddingTop = "";
+                        }
+                        window.removeEventListener("mouseup", cleanUp);
+                      };
+                      window.addEventListener("mouseup", cleanUp);
+                    }
+                  }}
+                  onTouchStart={() => {
+                    const container = document.getElementById(
+                      "service-list-container",
+                    );
+                    if (container) {
+                      const cards = container.querySelectorAll(".service-card");
+                      let heightBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightBefore +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      container.classList.add("dragging-active");
+                      container.setAttribute("data-drag-started", "false");
+
+                      let heightAfter = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightAfter +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      const dy = heightBefore - heightAfter;
+                      container.style.paddingTop = `${dy}px`;
+
+                      const cleanUp = () => {
+                        if (
+                          container.getAttribute("data-drag-started") !== "true"
+                        ) {
+                          container.classList.remove("dragging-active");
+                          container.style.paddingTop = "";
+                        }
+                        window.removeEventListener("touchend", cleanUp);
+                      };
+                      window.addEventListener("touchend", cleanUp);
+                    }
+                  }}
+                  className="text-slate-400 dark:text-slate-500 cursor-grab active:cursor-grabbing shrink-0 bg-transparent border-0 p-0 focus:outline-none"
+                >
+                  <GripVertical className="h-5 w-5" />
+                </button>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-base font-bold text-slate-900 dark:text-white truncate">
+                    {client.name}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border scale-90 origin-left shrink-0",
+                      isGrassType &&
+                        "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50",
+                      isSnowType &&
+                        "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/50",
+                      serviceType === "spring-fall-cleanup" &&
+                        "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/50",
+                      serviceType === "trimming" &&
+                        "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border-violet-200 dark:border-violet-800",
+                      serviceType === "other" &&
+                        "bg-slate-50 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400 border-slate-200 dark:border-slate-800",
+                    )}
+                  >
+                    {isOts ? `One-Time: ${title}` : title}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                  {address.street}, {address.city}
+                </p>
+              </div>
+            </div>
+
+            {/* Full Detailed View */}
+            <div className="service-card-full flex items-center">
+              {!isDragDisabled && (
+                <button
+                  type="button"
+                  {...provided.dragHandleProps}
+                  onMouseDown={() => {
+                    const container = document.getElementById(
+                      "service-list-container",
+                    );
+                    if (container) {
+                      const cards = container.querySelectorAll(".service-card");
+                      let heightBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightBefore +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      container.classList.add("dragging-active");
+                      container.setAttribute("data-drag-started", "false");
+
+                      let heightAfter = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightAfter +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      const dy = heightBefore - heightAfter;
+                      container.style.paddingTop = `${dy}px`;
+
+                      const cleanUp = () => {
+                        if (
+                          container.getAttribute("data-drag-started") !== "true"
+                        ) {
+                          container.classList.remove("dragging-active");
+                          container.style.paddingTop = "";
+                        }
+                        window.removeEventListener("mouseup", cleanUp);
+                      };
+                      window.addEventListener("mouseup", cleanUp);
+                    }
+                  }}
+                  onTouchStart={() => {
+                    const container = document.getElementById(
+                      "service-list-container",
+                    );
+                    if (container) {
+                      const cards = container.querySelectorAll(".service-card");
+                      let heightBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightBefore +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      container.classList.add("dragging-active");
+                      container.setAttribute("data-drag-started", "false");
+
+                      let heightAfter = 0;
+                      for (let i = 0; i < index; i++) {
+                        if (cards[i]) {
+                          heightAfter +=
+                            cards[i].getBoundingClientRect().height;
+                        }
+                      }
+
+                      const dy = heightBefore - heightAfter;
+                      container.style.paddingTop = `${dy}px`;
+
+                      const cleanUp = () => {
+                        if (
+                          container.getAttribute("data-drag-started") !== "true"
+                        ) {
+                          container.classList.remove("dragging-active");
+                          container.style.paddingTop = "";
+                        }
+                        window.removeEventListener("touchend", cleanUp);
+                      };
+                      window.addEventListener("touchend", cleanUp);
+                    }
+                  }}
+                  className="p-4 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 focus:outline-none"
                 >
                   <GripVertical className="h-6 w-6" />
-                </div>
+                </button>
               )}
 
               <div

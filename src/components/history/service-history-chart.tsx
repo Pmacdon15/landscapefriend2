@@ -229,26 +229,17 @@ export function ServiceHistoryChart({ data }: { data: ChartDataPoint[] }) {
                   }`}
                 />
                 {/* Large Invisible Hover Target */}
-                {/* biome-ignore lint/a11y/useSemanticElements: circle is an SVG element and cannot be a semantic button */}
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r="16"
-                  fill="transparent"
-                  className="cursor-pointer focus:outline-none"
-                  role="button"
-                  aria-label={`View stats for ${format(p.original.date, "MMM dd, yyyy")}`}
-                  tabIndex={0}
-                  onMouseEnter={() => setHoveredPoint(i)}
-                  onMouseLeave={() => setHoveredPoint(null)}
-                  onFocus={() => setHoveredPoint(i)}
-                  onBlur={() => setHoveredPoint(null)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                    }
-                  }}
-                />
+                <foreignObject x={p.x - 16} y={p.y - 16} width="32" height="32">
+                  <button
+                    type="button"
+                    className="w-full h-full cursor-pointer focus:outline-none rounded-full bg-transparent border-0 opacity-0"
+                    aria-label={`View stats for ${format(p.original.date, "MMM dd, yyyy")}`}
+                    onMouseEnter={() => setHoveredPoint(i)}
+                    onMouseLeave={() => setHoveredPoint(null)}
+                    onFocus={() => setHoveredPoint(i)}
+                    onBlur={() => setHoveredPoint(null)}
+                  />
+                </foreignObject>
               </g>
             ))}
           </svg>

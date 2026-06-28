@@ -148,13 +148,7 @@ export default function InvoicesRevenueGraph({
             const isHovered = hoveredBar === index;
 
             return (
-              /* biome-ignore lint/a11y/noStaticElementInteractions: svg chart hover interaction */
-              <g
-                key={d.month}
-                onMouseEnter={() => setHoveredBar(index)}
-                onMouseLeave={() => setHoveredBar(null)}
-                className="cursor-pointer transition-all duration-300"
-              >
+              <g key={d.month}>
                 {/* Visual Bar with Rounded Top */}
                 <path
                   d={`
@@ -208,6 +202,24 @@ export default function InvoicesRevenueGraph({
                     </text>
                   </g>
                 )}
+
+                {/* Interactive Overlay Button */}
+                <foreignObject
+                  x={xPos - spacing / 2}
+                  y={paddingTop}
+                  width={barWidth + spacing}
+                  height={chartHeight - paddingTop}
+                >
+                  <button
+                    type="button"
+                    className="w-full h-full cursor-pointer focus:outline-none bg-transparent border-0 opacity-0"
+                    aria-label={`Revenue for ${getMonthName(d.month)}: ${formatCurrency(d.revenue)}`}
+                    onMouseEnter={() => setHoveredBar(index)}
+                    onMouseLeave={() => setHoveredBar(null)}
+                    onFocus={() => setHoveredBar(index)}
+                    onBlur={() => setHoveredBar(null)}
+                  />
+                </foreignObject>
               </g>
             );
           })}

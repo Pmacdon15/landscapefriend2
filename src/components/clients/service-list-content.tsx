@@ -209,15 +209,26 @@ export function ServiceListContent({
   );
 
   const onDragStart = () => {
-    // Disable smooth scrolling during drag to avoid lagging/jerky auto-scroll on mobile/desktop
     if (typeof document !== "undefined") {
+      const container = document.getElementById("service-list-container");
+      container?.classList.add("dragging-active");
+      container?.setAttribute("data-drag-started", "true");
       document.documentElement.style.scrollBehavior = "auto";
     }
   };
 
   const onDragEnd = (result: DropResult) => {
-    // Re-enable smooth scrolling after drag finishes
     if (typeof document !== "undefined") {
+      const container = document.getElementById("service-list-container");
+      container?.setAttribute("data-drag-started", "false");
+      setTimeout(() => {
+        if (container?.getAttribute("data-drag-started") !== "true") {
+          container?.classList.remove("dragging-active");
+          if (container) {
+            container.style.paddingTop = "";
+          }
+        }
+      }, 250);
       document.documentElement.style.scrollBehavior = "";
     }
 
@@ -300,7 +311,7 @@ export function ServiceListContent({
         }
       />
 
-      <div className="max-w-4xl mx-auto space-y-4">
+      <div id="service-list-container" className="max-w-4xl mx-auto space-y-4">
         {/* Client-side Status Filter */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-1.5">
