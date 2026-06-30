@@ -16,6 +16,7 @@ import { ServiceEmptyState } from "@/components/service/ServiceEmptyState";
 import { ServiceHeader } from "@/components/service/ServiceHeader";
 import { ServiceListItem } from "@/components/service/ServiceListItem";
 import { ServiceSearchBar } from "@/components/service/ServiceSearchBar";
+import { LayoutList, ListCollapse } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUpdateRouteOrder } from "@/mutations/routes";
 import type { CutListItem, OptimisticServiceAction } from "@/types/types";
@@ -50,6 +51,7 @@ export function ServiceListContent({
   const [statusFilter, setStatusFilter] = useState<
     "all" | "completed" | "incomplete"
   >("all");
+  const [isListCollapsed, setIsListCollapsed] = useState(false);
 
   const currentUserId = use(currentUserIdPromise);
   const isAdmin = use(isAdminPromise);
@@ -210,25 +212,12 @@ export function ServiceListContent({
 
   const onDragStart = () => {
     if (typeof document !== "undefined") {
-      const container = document.getElementById("service-list-container");
-      container?.classList.add("dragging-active");
-      container?.setAttribute("data-drag-started", "true");
       document.documentElement.style.scrollBehavior = "auto";
     }
   };
 
   const onDragEnd = (result: DropResult) => {
     if (typeof document !== "undefined") {
-      const container = document.getElementById("service-list-container");
-      container?.setAttribute("data-drag-started", "false");
-      setTimeout(() => {
-        if (container?.getAttribute("data-drag-started") !== "true") {
-          container?.classList.remove("dragging-active");
-          if (container) {
-            container.style.paddingTop = "";
-          }
-        }
-      }, 250);
       document.documentElement.style.scrollBehavior = "";
     }
 
@@ -311,7 +300,13 @@ export function ServiceListContent({
         }
       />
 
-      <div id="service-list-container" className="max-w-4xl mx-auto space-y-4">
+      <div
+        id="service-list-container"
+        className={cn(
+          "max-w-4xl mx-auto space-y-4",
+          isListCollapsed && "list-collapsed",
+        )}
+      >
         {/* Client-side Status Filter */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-1.5">
@@ -385,11 +380,36 @@ export function ServiceListContent({
             </button>
           </div>
 
-          {statusFilter !== "all" && (
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
-              Drag-to-reorder is disabled while filtering
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {statusFilter !== "all" && (
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                Drag-to-reorder is disabled while filtering
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsListCollapsed(!isListCollapsed)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 cursor-pointer shadow-sm",
+                isListCollapsed
+                  ? "bg-slate-900 border-slate-900 text-white dark:bg-slate-100 dark:border-slate-100 dark:text-slate-900 scale-[1.02]"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800",
+              )}
+            >
+              {isListCollapsed ? (
+                <>
+                  <LayoutList className="h-3.5 w-3.5" />
+                  <span>Expand List</span>
+                </>
+              ) : (
+                <>
+                  <ListCollapse className="h-3.5 w-3.5" />
+                  <span>Collapse List</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {optimisticState.cuts.length > 0 ? (
