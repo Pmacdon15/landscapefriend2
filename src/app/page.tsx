@@ -59,7 +59,7 @@ export default function Home(props: PageProps<"/">) {
       <section className="relative w-full overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src="/checkered-lawn.png"
+            src="/checkered-lawn.jpg"
             alt="A freshly mowed lawn with a classic checkered stripe pattern"
             fill
             priority
