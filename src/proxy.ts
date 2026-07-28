@@ -1,27 +1,38 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/api/webhooks/clerk",
-  "/privacy",
-  "/terms",
-]);
+const publicRoutes = [
+  /^\/$/,
+  /^\/api\/webhooks\/clerk/,
+  /^\/privacy/,
+  /^\/terms/,
+];
 
-const isAdminRoute = createRouteMatcher([
-  "/client-info-list(.*)",
-  "/admin(.*)",
-  "/stats(.*)",
-  "history(.*)",
-]);
+const adminRoutes = [
+  /^\/client-info-list.*/,
+  /^\/admin.*/,
+  /^\/stats.*/,
+  /^\/history.*/,
+];
+
+const matchesRoute = (patterns: RegExp[], pathname: string) =>
+  patterns.some((pattern) => pattern.test(pathname));
 
 export default clerkMiddleware(async (auth, request) => {
-  if (isPublicRoute(request)) return;
+  const { pathname } = request.nextUrl;
 
-  if (isAdminRoute(request)) {
+  if (matchesRoute(publicRoutes, pathname)) {
+    return;
+  }
+
+  if (matchesRoute(adminRoutes, pathname)) {
     const { orgRole } = await auth.protect();
-    if (orgRole !== "org:admin")
+
+    if (orgRole !== "org:admin") {
       return NextResponse.redirect(new URL("/", request.url));
+    }
+  } else {    
+    await auth.protect();
   }
 });
 
