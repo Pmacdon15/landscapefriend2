@@ -75,38 +75,36 @@ export async function getClientsForCutListDal(
   userIdOverride?: string,
   clientId?: string,
 ): Promise<Client[]> {
-  try {
-    if (date === "") return [];
-    const { orgId, userId, orgRole } = await auth.protect();
-    if (!orgId || !userId) throw new Error("Unauthorized");
-
-    // Check organization member limit!
-    const memberLimitCheck = await checkOrgMemberLimit(orgId);
-    if (memberLimitCheck.isErr()) {
-      console.warn(
-        `[getClientsForCutListDal] Org ${orgId} has exceeded its member limit: ${memberLimitCheck.error.reason}`,
-      );
-      return []; // Return empty array to disable pulling up clients on schedule
-    }
-
-    const isAdmin = orgRole === "org:admin";
-    const targetUserId = isAdmin && userIdOverride ? userIdOverride : userId;
-    const showAll = isAdmin && userIdOverride === "all";
-
-    const results = await getClientsForCutListDb(
-      orgId,
-      date,
-      targetUserId,
-      showAll,
-      searchQuery,
-      clientId,
-    );
-
-    return results;
-  } catch (error) {
-    console.error("DAL Error:", error);
+  if (date === "") return [];
+  const { orgId, userId, orgRole } = await auth.protect();
+  if (!orgId || !userId) {
+    console.error("Unauthorized");
     return [];
   }
+
+  const memberLimitCheck = await checkOrgMemberLimit(orgId);
+  if (memberLimitCheck.isErr()) {
+    console.warn(
+      `[getClientsForCutListDal] Org ${orgId} has exceeded its member limit: ${memberLimitCheck.error.reason}`,
+    );
+    return [];
+  }
+
+  const targetUserId =
+    orgRole === "org:admin" && userIdOverride ? userIdOverride : userId;
+  const showAll = orgRole === "org:admin" && userIdOverride === "all";
+
+  return await getClientsForCutListDb(
+    orgId,
+    date,
+    targetUserId,
+    showAll,
+    searchQuery,
+    clientId,
+  ).catch((e) => {
+    console.error("DAL Error:", e);
+    return [];
+  });
 }
 
 export async function createClientDal(
