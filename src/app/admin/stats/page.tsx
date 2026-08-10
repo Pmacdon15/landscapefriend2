@@ -6,11 +6,8 @@ import { MonthlySection } from "@/components/history/monthly-section";
 import { ServiceHistoryChart } from "@/components/history/service-history-chart";
 import { StatsSection } from "@/components/history/stats-section";
 import { PageHeader } from "@/components/layout/page-header";
-import {
-  getMonthlyStatsDal,
-  getPastServicesStatsDal,
-  type PastServicesStats,
-} from "@/dal/admin";
+import { getMonthlyStatsDal, getPastServicesStatsDal } from "@/dal/admin";
+import { parseParams } from "@/lib/utils/search-params-util";
 
 export const metadata: Metadata = {
   title: "Service Statistics",
@@ -18,35 +15,15 @@ export const metadata: Metadata = {
     "Analyze historical landscaping service data, team performance metrics, and lifetime progress indicators.",
 };
 
-async function ChartWrapper({
-  statsPromise,
-}: {
-  statsPromise: Promise<PastServicesStats>;
-}) {
-  const stats = await statsPromise;
-  return <ServiceHistoryChart data={stats.cutsByDay} />;
-}
-
-export default async function StatsPage(props: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+export default async function StatsPage(props: PageProps<"/admin/stats">) {
   const datePromise = props.searchParams.then((params) => {
-    const d = params.date;
-    const dateVal = Array.isArray(d) ? d[0] : d;
-    if (dateVal) {
-      return dateVal;
-    }
-    const m = params.month;
-    const monthVal = Array.isArray(m) ? m[0] : m;
-    if (monthVal) {
-      return `${monthVal}-01`;
-    }
-    return null;
-  });
+    const dateVal = parseParams(params.date);
+    if (dateVal) return dateVal;
 
-  const monthlyStatsPromise = datePromise.then((dateVal) => {
-    const monthVal = dateVal ? dateVal.slice(0, 7) : undefined;
-    return getMonthlyStatsDal(monthVal || undefined);
+    const monthVal = parseParams(params.month);
+    if (monthVal) return `${monthVal}-01`;
+
+    return null;
   });
 
   const lifetimeStatsPromise = getPastServicesStatsDal();
@@ -64,14 +41,20 @@ export default async function StatsPage(props: {
       </div>
 
       <Suspense fallback={<StatsSkeleton />}>
-        <ChartWrapper statsPromise={lifetimeStatsPromise} />
+        <ServiceHistoryChart
+          cutsByDayPromise={lifetimeStatsPromise.then((data) => data.cutsByDay)}
+        />
       </Suspense>
 
       <div className="pt-4">
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Suspense fallback={<StatsSkeleton />}>
-              <MonthlySection dataPromise={monthlyStatsPromise} />
+              <MonthlySection
+                dataPromise={datePromise.then((dateVal) =>
+                  getMonthlyStatsDal(dateVal ? dateVal.slice(0, 7) : undefined),
+                )}
+              />
             </Suspense>
           </div>
           <div>

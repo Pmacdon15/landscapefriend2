@@ -31,7 +31,7 @@ export default clerkMiddleware(async (auth, request) => {
     if (orgRole !== "org:admin") {
       return NextResponse.redirect(new URL("/", request.url));
     }
-  } else {    
+  } else {
     await auth.protect();
   }
 });

@@ -125,11 +125,11 @@ export type OptimisticAction =
       notes?: string;
     }
   | { type: "delete-schedule"; addressId: string }
-  | { 
-    type: "add-one-time-service"; 
-    addressId: string; 
-    service: OneTimeService; 
-  }
+  | {
+      type: "add-one-time-service";
+      addressId: string;
+      service: OneTimeService;
+    }
   | { type: "delete-one-time-service"; addressId: string; serviceId: string };
 
 export type OptimisticServiceAction =
@@ -205,4 +205,88 @@ export interface AddressFormValue {
   state: string;
   zip: string;
   assigned_to: string;
+}
+
+export interface PastServicesStats {
+  totalCuts: number;
+  cutsByUser: {
+    user_name: string;
+    user_id: string | null;
+    count: number;
+  }[];
+  cutsByServiceType: {
+    service_type: string;
+    count: number;
+  }[];
+  cutsByDay: {
+    date: Date;
+    count: number;
+  }[];
+}
+
+export interface PastServiceItem extends CompletedJobRow {
+  client_name: string;
+  client_id: string;
+  street: string;
+  city: string;
+  completed_by_name: string | null;
+  assigned_to_name: string | null;
+  photos: {
+    id: string;
+    blob_path: string;
+    created_at: Date;
+  }[];
+}
+
+export interface MonthlyStats {
+  monthName: string;
+  totalCompleted: number;
+  userStats: {
+    id: string;
+    name: string;
+    completed: number;
+    scheduled: number;
+  }[];
+}
+
+export interface PastServicesStats {
+  totalCuts: number;
+  cutsByUser: {
+    user_name: string;
+    user_id: string | null;
+    count: number;
+  }[];
+  cutsByServiceType: {
+    service_type: string;
+    count: number;
+  }[];
+  cutsByDay: {
+    date: Date;
+    count: number;
+  }[];
+}
+
+export interface PastServiceItem extends CompletedJobRow {
+  client_name: string;
+  client_id: string;
+  street: string;
+  city: string;
+  completed_by_name: string | null;
+  assigned_to_name: string | null;
+  photos: {
+    id: string;
+    blob_path: string;
+    created_at: Date;
+  }[];
+}
+
+export interface MonthlyStats {
+  monthName: string;
+  totalCompleted: number;
+  userStats: {
+    id: string;
+    name: string;
+    completed: number;
+    scheduled: number;
+  }[];
 }

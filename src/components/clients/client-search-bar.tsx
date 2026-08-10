@@ -8,11 +8,11 @@ import {
   useClientSearch,
   useDefaultClientSearch,
 } from "@/hooks/use-client-search";
-import type { Client, OptimisticAction } from "@/types/types";
 import {
   handleSearch as utilHandleSearch,
   handleSelectClient as utilHandleSelectClient,
-} from "@/utils/client-search-utils";
+} from "@/lib/utils/client-search-utils";
+import type { Client, OptimisticAction } from "@/types/types";
 import { Button } from "../ui/button";
 
 export function ClientSearchBar({

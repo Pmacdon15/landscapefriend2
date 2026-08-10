@@ -13,7 +13,7 @@ import {
   type RevenueStats,
   updateInvoiceStatusDb,
 } from "../db/queries/invoices";
-import { generateInvoiceEmailHtml, sendEmailWithSes } from "../utils/email";
+import { generateInvoiceEmailHtml, sendEmailWithSes } from "../lib/utils/email";
 
 export async function getInvoicesDal(
   page = 1,

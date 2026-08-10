@@ -1,16 +1,21 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
-import { useMemo, useState } from "react";
+import { use, useMemo, useState } from "react";
 
 interface ChartDataPoint {
   date: string | Date;
   count: number;
 }
 
-export function ServiceHistoryChart({ data }: { data: ChartDataPoint[] }) {
+export function ServiceHistoryChart({
+  cutsByDayPromise,
+}: {
+  cutsByDayPromise: Promise<ChartDataPoint[]>;
+}) {
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
+  const data = use(cutsByDayPromise);
   // Parse and sort data chronologically
   const points = useMemo(() => {
     if (!data || data.length === 0) return [];

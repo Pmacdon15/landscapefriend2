@@ -6,8 +6,7 @@ import { Loader2, Search, User2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { PastServiceItem } from "@/dal/admin";
-import type { Client } from "@/types/types";
+import type { Client, PastServiceItem } from "@/types/types";
 
 interface HistorySearchBarProps {
   setOptimistic: (

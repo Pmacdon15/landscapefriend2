@@ -8,8 +8,8 @@ import {
   useOptimistic,
 } from "react";
 import PaginationButtons from "@/components/pagination-buttons";
-import type { PastServiceItem } from "@/dal/admin";
-import type { Client } from "@/types/types";
+
+import type { Client, PastServiceItem } from "@/types/types";
 import { ClientSchedulesCard } from "../clients/client-schedules-card";
 import { HistoryList } from "./history-list";
 import { HistorySearchBar } from "./history-search-bar";

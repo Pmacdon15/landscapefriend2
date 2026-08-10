@@ -16,64 +16,18 @@ import {
 import type {
   AssignmentRow,
   CompletedJobRow,
+  MonthlyStats,
+  PastServiceItem,
+  PastServicesStats,
   ScheduleRow,
 } from "@/types/types";
 
-export interface PastServicesStats {
-  totalCuts: number;
-  cutsByUser: {
-    user_name: string;
-    user_id: string | null;
-    count: number;
-  }[];
-  cutsByServiceType: {
-    service_type: string;
-    count: number;
-  }[];
-  cutsByDay: {
-    date: Date;
-    count: number;
-  }[];
-}
-
-export interface PastServiceItem extends CompletedJobRow {
-  client_name: string;
-  client_id: string;
-  street: string;
-  city: string;
-  completed_by_name: string | null;
-  assigned_to_name: string | null;
-  photos: {
-    id: string;
-    blob_path: string;
-    created_at: Date;
-  }[];
-}
-
-export interface MonthlyStats {
-  monthName: string;
-  totalCompleted: number;
-  userStats: {
-    id: string;
-    name: string;
-    completed: number;
-    scheduled: number;
-  }[];
-}
-
 export async function getPastServicesStatsDal(): Promise<PastServicesStats> {
-  await connection();
+  // await connection();
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
   if (!orgId || !isAdmin || !has({ feature: "stats" })) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    const stats = await getPastServicesStatsDb(orgId);
-    return stats as unknown as PastServicesStats;
-  } catch (error) {
-    console.error("Error in getPastServicesStatsDal:", error);
+    console.error("Unauthorized");
     return {
       totalCuts: 0,
       cutsByUser: [],
@@ -81,6 +35,16 @@ export async function getPastServicesStatsDal(): Promise<PastServicesStats> {
       cutsByDay: [],
     };
   }
+
+  return getPastServicesStatsDb(orgId).catch((error) => {
+    console.error("Error in getPastServicesStatsDal:", error);
+    return {
+      totalCuts: 0,
+      cutsByUser: [],
+      cutsByServiceType: [],
+      cutsByDay: [],
+    };
+  });
 }
 
 export async function getPastServicesListDal(

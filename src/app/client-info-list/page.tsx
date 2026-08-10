@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import PaginationButtons from "@/components/pagination-buttons";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForInfoDal } from "@/dal/clients";
+import { parseParams } from "@/lib/utils/search-params-util";
 
 export const metadata: Metadata = {
   title: "Client Roster",
@@ -17,10 +18,6 @@ export const metadata: Metadata = {
 export default async function ClientInfoListPage(
   props: PageProps<"/client-info-list">,
 ) {
-  function parseParams(p: string | string[] | undefined): string | undefined {
-    return Array.isArray(p) ? p[0] : p;
-  }
-
   const clientsPromise = props.searchParams.then((params) =>
     getClientsForInfoDal(
       Number(parseParams(params.page) ?? 1),
@@ -29,7 +26,7 @@ export default async function ClientInfoListPage(
     ),
   );
 
-    return (
+  return (
     <div className="container mx-auto max-w-7xl px-4 py-4 md:py-8">
       <PageHeader
         title="Clients"
