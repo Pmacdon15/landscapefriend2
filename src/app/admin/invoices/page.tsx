@@ -5,127 +5,30 @@ import InvoicesContainer from "@/components/invoices/InvoicesContainer";
 import { InvoicesSkeleton } from "@/components/invoices/invoices-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import PaginationButtons from "@/components/pagination-buttons";
-import { getClientsForInfoDal } from "@/dal/clients";
-import {
-  getExistingInvoiceNumbersDal,
   getInvoicesDal,
   getNextInvoiceNumberDal,
   getOrganizationInfoDal,
   getRevenueStatsDal,
 } from "@/dal/invoices";
+import { parseParams } from "@/lib/utils/search-params-util";
 
 export const metadata: Metadata = {
   title: "Invoices",
   description: "Create, manage, and dispatch billing invoices for clients.",
 };
 
-export default async function InvoicesPage(props: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const hasSendInvoicesPromise = auth
-    .protect()
-    .then((a) => a.has({ feature: "send_invoices" }) || false);
-
-  const invoicesPromise = props.searchParams.then(async (params) => {
-    const page = Number(
-      Array.isArray(params.page) ? params.page[0] : (params.page ?? 1),
-    );
-    let search = Array.isArray(params.search)
-      ? params.search[0]
-      : (params.search ?? undefined);
-    const invoiceParam = params.invoice || params.invoiceId;
-    if (!search && invoiceParam) {
-      search = Array.isArray(invoiceParam)
-        ? invoiceParam[0]
-        : (invoiceParam ?? undefined);
-    }
-
-    const clientId = Array.isArray(params.clientId)
-      ? params.clientId[0]
-      : params.clientId;
-    if (!search && clientId) {
-      const clientData = await getClientsForInfoDal(1, undefined, clientId);
-      const client = clientData.clients.find((c) => c.id === clientId);
-      if (client) {
-        search = client.name;
-      }
-    }
-
-    const status = Array.isArray(params.status)
-      ? params.status[0]
-      : (params.status ?? undefined);
-    return getInvoicesDal(page, search, status).then((data) => data.data);
-  });
-
-  const totalPagesPromise = props.searchParams.then(async (params) => {
-    const page = Number(
-      Array.isArray(params.page) ? params.page[0] : (params.page ?? 1),
-    );
-    let search = Array.isArray(params.search)
-      ? params.search[0]
-      : (params.search ?? undefined);
-    const invoiceParam = params.invoice || params.invoiceId;
-    if (!search && invoiceParam) {
-      search = Array.isArray(invoiceParam)
-        ? invoiceParam[0]
-        : (invoiceParam ?? undefined);
-    }
-
-    const clientId = Array.isArray(params.clientId)
-      ? params.clientId[0]
-      : params.clientId;
-    if (!search && clientId) {
-      const clientData = await getClientsForInfoDal(1, undefined, clientId);
-      const client = clientData.clients.find((c) => c.id === clientId);
-      if (client) {
-        search = client.name;
-      }
-    }
-
-    const status = Array.isArray(params.status)
-      ? params.status[0]
-      : (params.status ?? undefined);
-    return getInvoicesDal(page, search, status).then((data) => data.totalPages);
-  });
-
-  const pagePromise = props.searchParams.then((params) =>
-    Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
-  );
-
-  const searchPromise = props.searchParams.then(async (params) => {
-    const search =
-      (Array.isArray(params.search) ? params.search[0] : params.search) ?? "";
-    const invoiceParam = params.invoice || params.invoiceId;
-    if (!search && invoiceParam) {
-      return (
-        (Array.isArray(invoiceParam) ? invoiceParam[0] : invoiceParam) ?? ""
-      );
-    }
-
-    const clientId = Array.isArray(params.clientId)
-      ? params.clientId[0]
-      : params.clientId;
-    if (!search && clientId) {
-      const clientData = await getClientsForInfoDal(1, undefined, clientId);
-      const client = clientData.clients.find((c) => c.id === clientId);
-      if (client) {
-        return client.name;
-      }
-    }
-    return search;
-  });
-
-  const statusPromise = props.searchParams.then((params) =>
-    String(
-      (Array.isArray(params.status) ? params.status[0] : params.status) ??
-        "all",
+export default function InvoicesPage(props: PageProps<"/admin/invoices">) {
+ 
+  const invoicesPromise = props.searchParams.then(async (params) =>
+    getInvoicesDal(
+      Number(parseParams(params.page) ?? 1),
+      parseParams(params.search) ||
+        parseParams(params.invoice) ||
+        parseParams(params.invoiceId) ||
+        parseParams(params.clientId),
+      parseParams(params.status),
     ),
   );
-
-  const revenueStatsPromise = getRevenueStatsDal();
-  const nextInvoiceNumberPromise = getNextInvoiceNumberDal();
-  const existingInvoiceNumbersPromise = getExistingInvoiceNumbersDal();
-  const organizationInfoPromise = getOrganizationInfoDal();
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-4 md:py-8">
@@ -138,14 +41,23 @@ export default async function InvoicesPage(props: {
         <div id="invoice-list">
           <Suspense fallback={<InvoicesSkeleton />}>
             <InvoicesContainer
-              invoicesPromise={invoicesPromise}
-              revenueStatsPromise={revenueStatsPromise}
-              nextInvoiceNumberPromise={nextInvoiceNumberPromise}
-              existingInvoiceNumbersPromise={existingInvoiceNumbersPromise}
-              organizationInfoPromise={organizationInfoPromise}
-              searchPromise={searchPromise}
-              statusPromise={statusPromise}
-              hasSendInvoicesPromise={hasSendInvoicesPromise}
+              invoicesPromise={invoicesPromise.then((data) => data.data)}
+              revenueStatsPromise={getRevenueStatsDal()}
+              nextInvoiceNumberPromise={getNextInvoiceNumberDal()}
+              organizationInfoPromise={getOrganizationInfoDal()}
+              searchPromise={props.searchParams.then(
+                async (params) =>
+                  parseParams(params.search) ||
+                  parseParams(params.invoice) ||
+                  parseParams(params.invoiceId) ||
+                  "",
+              )}
+              statusPromise={props.searchParams.then(
+                (params) => parseParams(params.status) ?? "all",
+              )}
+              hasSendInvoicesPromise={auth
+                .protect()
+                .then((a) => a.has({ feature: "send_invoices" }) || false)}
             />
           </Suspense>
         </div>
@@ -153,8 +65,10 @@ export default async function InvoicesPage(props: {
 
       <Suspense>
         <PaginationButtons
-          pagePromise={pagePromise}
-          totalPagesPromise={totalPagesPromise}
+          pagePromise={props.searchParams.then((params) =>
+            Number(parseParams(params.page) ?? 1),
+          )}
+          totalPagesPromise={invoicesPromise.then((data) => data.totalPages)}
           hash="invoice-list"
         />
       </Suspense>

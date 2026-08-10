@@ -1,10 +1,20 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { err, ok, type Result } from "neverthrow";
+import {
+  err,
+  errAsync,
+  okAsync,
+  type Result,
+  type ResultAsync,
+} from "neverthrow";
 import { connection } from "next/server";
+import {
+  type CreateInvoiceInput,
+  CreateInvoiceInputSchema,
+  UpdateInvoiceStatusInputSchema,
+} from "@/zod/schemas";
 import {
   type DbInvoiceResult,
   deleteInvoiceDb,
-  getExistingInvoiceNumbersDb,
   getInvoiceByIdDb,
   getInvoicesDb,
   getNextInvoiceNumberDb,
@@ -25,294 +35,274 @@ export async function getInvoicesDal(
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
   if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    const pageSize = 10;
-    const offset = (page - 1) * pageSize;
-
-    const list = await getInvoicesDb(orgId, pageSize, offset, search, status);
-    const totalCount = list.length > 0 ? Number(list[0].total_count) : 0;
-    const totalPages = Math.ceil(totalCount / pageSize);
-
-    return {
-      data: list,
-      totalPages,
-    };
-  } catch (error) {
-    console.error("Error in getInvoicesDal:", error);
+    console.error("Unauthorized");
     return { data: [], totalPages: 0 };
   }
+
+  return await getInvoicesDb(orgId, 10, (page - 1) * 10, search, status)
+    .then((list) => {
+      return {
+        data: list,
+        totalPages: Math.ceil(
+          list.length > 0 ? Number(list[0].total_count) : 0 / 10,
+        ),
+      };
+    })
+    .catch((e) => {
+      console.error("Error in getInvoicesDal:", e);
+      return { data: [], totalPages: 0 };
+    });
 }
 
 export async function getInvoiceByIdDal(
   invoiceId: string,
 ): Promise<DbInvoiceResult | null> {
-  await connection();
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
   if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    const invoice = await getInvoiceByIdDb(invoiceId);
-    if (!invoice || invoice.org_id !== orgId) {
-      return null;
-    }
-    return invoice;
-  } catch (error) {
-    console.error("Error in getInvoiceByIdDal:", error);
+    console.error("Unauthorized");
     return null;
   }
+
+  return await getInvoiceByIdDb(invoiceId)
+    .then((invoice) => {
+      if (!invoice || invoice.org_id !== orgId) {
+        return null;
+      }
+      return invoice;
+    })
+    .catch((e) => {
+      console.error("Error in getInvoiceByIdDal:", e);
+      return null;
+    });
 }
 
 export async function getNextInvoiceNumberDal(): Promise<string> {
-  await connection();
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
   if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
-    throw new Error("Unauthorized");
+    console.error("Unauthorized");
+    return "";
   }
 
-  return getNextInvoiceNumberDb(orgId);
+  return getNextInvoiceNumberDb(orgId).catch((e) => {
+    console.error("Error in getNextInvoiceNumberDal:", e);
+    return "";
+  });
 }
 
 export async function getRevenueStatsDal(): Promise<RevenueStats[]> {
-  await connection();
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
   if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    return await getRevenueGraphStatsDb(orgId);
-  } catch (error) {
-    console.error("Error in getRevenueStatsDal:", error);
+    console.error("Unauthorized");
     return [];
   }
+
+  return await getRevenueGraphStatsDb(orgId).catch((e) => {
+    console.error("Error in getRevenueStatsDal:", e);
+    return [];
+  });
 }
 
 export async function getOrganizationInfoDal(): Promise<{
   name: string;
   logoUrl: string | null;
 } | null> {
-  await connection();
   const { orgId } = await auth.protect();
-  if (!orgId) return null;
-
-  try {
-    const client = await clerkClient();
-    const org = await client.organizations.getOrganization({
-      organizationId: orgId,
-    });
-    return {
-      name: org.name,
-      logoUrl: org.imageUrl || null,
-    };
-  } catch (error) {
-    console.error("Error fetching organization info from Clerk:", error);
+  if (!orgId) {
+    console.error("Unauthorized");
     return null;
   }
-}
 
-export async function createInvoiceDal(data: {
-  clientId: string;
-  invoiceNumber: string;
-  issueDate: string;
-  dueDate: string;
-  notes: string | null;
-  taxRate: number;
-  items: {
-    service_type: string;
-    address_id: string | null;
-    description: string | null;
-    quantity: number;
-    unit_price: number;
-  }[];
-}): Promise<Result<DbInvoiceResult, { reason: string }>> {
-  await connection();
+  return await clerkClient()
+    .then((client) => {
+      return client.organizations
+        .getOrganization({
+          organizationId: orgId,
+        })
+        .then((org) => {
+          return {
+            name: org.name,
+            logoUrl: org.imageUrl || null,
+          };
+        });
+    })
+    .catch((e) => {
+      console.error("Error fetching organization info from Clerk:", e);
+      return null;
+    });
+}
+export async function createInvoiceDal(
+  data: CreateInvoiceInput,
+): Promise<ResultAsync<DbInvoiceResult, { reason: string }>> {
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
   if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
-    return err({ reason: "Unauthorized" });
+    return errAsync({ reason: "Unauthorized" } as const);
   }
 
-  if (data.items.length === 0) {
-    return err({ reason: "Invoice must have at least one line item" });
+  const parseResult = CreateInvoiceInputSchema.safeParse(data);
+  if (!parseResult.success) {
+    const firstError =
+      parseResult.error.issues[0]?.message || "Invalid input data";
+    return errAsync({ reason: firstError } as const);
   }
 
-  try {
-    const invoice = await insertInvoiceDb(
-      orgId,
-      data.clientId,
-      data.invoiceNumber,
-      data.issueDate,
-      data.dueDate,
-      data.notes,
-      data.taxRate,
-      data.items,
-    );
-    return ok(invoice);
-  } catch (error) {
-    const errObj = error as Error;
-    console.error("Error in createInvoiceDal:", error);
-    return err({
-      reason: errObj.message || "Failed to create invoice in database",
+  const validatedData = parseResult.data;
+  return insertInvoiceDb(
+    orgId,
+    validatedData.clientId,
+    validatedData.invoiceNumber,
+    validatedData.issueDate,
+    validatedData.dueDate,
+    validatedData.notes,
+    validatedData.taxRate,
+    validatedData.items,
+  )
+    .then(async (result) => okAsync(result))
+    .catch((e: Error) => {
+      console.error("Error in createInvoiceDal:", e.cause, e.message);
+      return err({
+        reason: "Failed to create invoice in database",
+      } as const);
     });
-  }
 }
 
 export async function updateInvoiceStatusDal(
   invoiceId: string,
   status: string,
-): Promise<Result<DbInvoiceResult, { reason: string }>> {
-  await connection();
+): Promise<ResultAsync<DbInvoiceResult, { reason: string }>> {
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
   if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
-    return err({ reason: "Unauthorized" });
+    return errAsync({ reason: "Unauthorized" } as const);
   }
 
-  try {
-    const existing = await getInvoiceByIdDb(invoiceId);
-    if (!existing || existing.org_id !== orgId) {
-      return err({ reason: "Invoice not found" });
-    }
+  const parseResult = UpdateInvoiceStatusInputSchema.safeParse({
+    invoiceId,
+    status,
+  });
 
-    const updated = await updateInvoiceStatusDb(invoiceId, status);
-    if (!updated) {
-      return err({ reason: "Failed to update invoice status" });
-    }
+  if (!parseResult.success)
+    return errAsync({
+      reason:
+        parseResult.error.issues[0]?.message || "Invalid input parameters",
+    } as const);
 
-    return ok(updated);
-  } catch (error) {
-    const errObj = error as Error;
-    console.error("Error in updateInvoiceStatusDal:", error);
-    return err({ reason: errObj.message || "Failed to update status" });
-  }
+  const { invoiceId: validId, status: validStatus } = parseResult.data;
+
+  return await updateInvoiceStatusDb(validId, validStatus)
+    .then(async (updated) => {
+      if (updated) return okAsync(updated);
+      return errAsync({ reason: "Invoice not updated" } as const);
+    })
+    .catch((e: Error) => {
+      console.error("Invoice not status updated: ", e.cause, e.message);
+      return errAsync({ reason: "Invoice not updated" } as const);
+    });
 }
 
 export async function deleteInvoiceDal(
   invoiceId: string,
-): Promise<Result<DbInvoiceResult, { reason: string }>> {
-  await connection();
+): Promise<ResultAsync<DbInvoiceResult, { reason: string }>> {
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
   if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
-    return err({ reason: "Unauthorized" });
+    return errAsync({ reason: "Unauthorized" } as const);
   }
 
-  try {
-    const existing = await getInvoiceByIdDb(invoiceId);
-    if (!existing || existing.org_id !== orgId) {
-      return err({ reason: "Invoice not found" });
-    }
-
-    const deleted = await deleteInvoiceDb(invoiceId);
-    if (!deleted) {
-      return err({ reason: "Invoice not found or already deleted" });
-    }
-    return ok(deleted);
-  } catch (error) {
-    const errObj = error as Error;
-    console.error("Error in deleteInvoiceDal:", error);
-    return err({ reason: errObj.message || "Failed to delete invoice" });
-  }
+  return await deleteInvoiceDb(invoiceId)
+    .then(async (deleted) => {
+      if (!deleted) {
+        return errAsync({
+          reason: "Invoice not found or already deleted",
+        } as const);
+      }
+      return okAsync(deleted);
+    })
+    .catch(async (e: Error) => {
+      console.error("Error in deleteInvoiceDal:", e.cause, e.message);
+      return errAsync({ reason: "Failed to delete invoice" });
+    });
 }
 
 export async function sendInvoiceEmailDal(
   invoiceId: string,
   pdfBase64?: string,
   filename?: string,
-): Promise<Result<DbInvoiceResult, { reason: string }>> {
-  await connection();
+): Promise<ResultAsync<DbInvoiceResult, { reason: string }>> {
   const { orgId, orgRole, has } = await auth.protect();
   const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
-  // 1. Double block: Feature flag `send_invoices` must be present.
   if (
     !orgId ||
     !isAdmin ||
     !has({ feature: "invoices" }) ||
     !has({ feature: "send_invoices" })
   ) {
-    return err({ reason: "Action blocked by feature flags or role policies." });
-  }
-
-  try {
-    const invoice = await getInvoiceByIdDb(invoiceId);
-    if (!invoice || invoice.org_id !== orgId) {
-      return err({ reason: "Invoice not found." });
-    }
-
-    if (!invoice.client_email) {
-      return err({
-        reason: "Client does not have a configured email address.",
-      });
-    }
-
-    // Fetch org details for the email brand
-    const orgInfo = await getOrganizationInfoDal();
-    const orgName = orgInfo?.name || "Landscape Friend";
-    const orgLogo = orgInfo?.logoUrl || null;
-
-    const senderEmail =
-      process.env.SES_SENDER_EMAIL || "no-reply@landscapefriend.com";
-    const formattedSender = `${orgName} <${senderEmail}>`;
-
-    const emailSubject = `Invoice ${invoice.invoice_number} from ${orgName}`;
-
-    // 1. Generate the HTML body
-    const emailHtmlBody = generateInvoiceEmailHtml(invoice, orgName, orgLogo);
-
-    // 2. Dispatch using AWS SES (handles attachments internally!)
-    await sendEmailWithSes({
-      senderEmail: formattedSender,
-      recipientEmail: invoice.client_email,
-      subject: emailSubject,
-      htmlBody: emailHtmlBody,
-      pdfBase64,
-      filename,
-    });
-
-    // Update status to sent automatically
-    const updated = await updateInvoiceStatusDb(invoiceId, "sent");
-    if (!updated) {
-      return err({ reason: "Failed to update invoice status after sending." });
-    }
-
-    return ok(updated);
-  } catch (error) {
-    const errObj = error as Error;
-    console.error("Failed to send AWS SES email:", error);
-    return err({
-      reason: errObj.message || "SES connection failed or email rejected.",
+    return errAsync({
+      reason: "Action blocked by feature flags or role policies.",
     });
   }
+
+  const [invoice, orgInfo] = await Promise.all([
+    getInvoiceByIdDb(invoiceId),
+    getOrganizationInfoDal(),
+  ]);
+
+  if (!invoice || invoice.org_id !== orgId)
+    return errAsync({ reason: "Invoice not found." });
+
+  if (!invoice.client_email)
+    return errAsync({
+      reason: "Client does not have a configured email address.",
+    } as const);
+
+  const orgName = orgInfo?.name || "Landscape Friend";
+  const orgLogo = orgInfo?.logoUrl || null;
+
+  const senderEmail =
+    process.env.SES_SENDER_EMAIL || "no-reply@landscapefriend.com";
+  const formattedSender = `${orgName} <${senderEmail}>`;
+
+  const emailSubject = `Invoice ${invoice.invoice_number} from ${orgName}`;
+
+  const emailHtmlBody = generateInvoiceEmailHtml(invoice, orgName, orgLogo);
+
+  return sendEmailWithSes({
+    senderEmail: formattedSender,
+    recipientEmail: invoice.client_email,
+    subject: emailSubject,
+    htmlBody: emailHtmlBody,
+    pdfBase64,
+    filename,
+  })
+    .then(() => updateInvoiceStatusDb(invoiceId, "sent"))
+    .then(async (updated) => {
+      if (!updated) {
+        return errAsync({
+          reason: "Failed to update invoice status after sending.",
+        } as const);
+      }
+      return okAsync(updated);
+    })
+    .catch((e: Error) => {
+      console.error(
+        "Failed to send AWS SES email or update status:",
+        e.cause,
+        e.message,
+      );
+      return errAsync({
+        reason: "SES connection failed or email rejected.",
+      } as const);
+    });
 }
 
-export async function getExistingInvoiceNumbersDal(): Promise<string[]> {
-  await connection();
-  const { orgId, orgRole, has } = await auth.protect();
-  const isAdmin = orgRole === "org:admin" || has({ role: "org:admin" });
 
-  if (!orgId || !isAdmin || !has({ feature: "invoices" })) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    return await getExistingInvoiceNumbersDb(orgId);
-  } catch (error) {
-    console.error("Error in getExistingInvoiceNumbersDal:", error);
-    return [];
-  }
-}

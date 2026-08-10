@@ -337,16 +337,4 @@ export async function getNextInvoiceNumberDb(orgId: string): Promise<string> {
   return `INV-${Date.now()}`;
 }
 
-export async function getExistingInvoiceNumbersDb(
-  orgId: string,
-): Promise<string[]> {
-  "use cache";
-  cacheTag(`invoices-existing-numbers-${orgId}`);
 
-  const result = await sql`
-    SELECT invoice_number 
-    FROM invoices
-    WHERE org_id = ${orgId}
-  `;
-  return result.map((r) => r.invoice_number);
-}

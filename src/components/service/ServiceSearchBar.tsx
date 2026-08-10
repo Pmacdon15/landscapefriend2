@@ -20,7 +20,7 @@ export function ServiceSearchBar({
   const searchParams = useSearchParams();
 
   const { data: defaultData } = useServiceSearchQuery(date, userId ?? "");
-
+//TODO: Fix invoice search
   return (
     <GenericSearchBar<CutListItem>
       items={items}
