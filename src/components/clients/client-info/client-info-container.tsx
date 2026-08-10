@@ -1,10 +1,10 @@
 "use client";
 import { Suspense, use, useOptimistic } from "react";
 import type { Client } from "@/types/types";
+import { clientInfoReducer } from "@/utils/client-reducers";
 import { AddClientModal } from "../add-client-modal";
 import { ClientCard } from "../client-card";
 import { ClientSearchBar } from "../client-search-bar";
-import { clientInfoReducer } from "@/utils/client-reducers";
 
 export default function ClientInfoContainer({
   clientsPromise,

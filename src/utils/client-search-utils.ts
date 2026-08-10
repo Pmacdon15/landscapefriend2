@@ -9,9 +9,7 @@ interface HandleSearchArgs {
   router: any;
   setInputValue: (value: string) => void;
   setIsFocused: (value: boolean) => void;
-  setOptimistic: (
-    action: OptimisticAction | { type: "update-search"; value: string },
-  ) => void;
+  setOptimistic: (action: OptimisticAction) => void;
 }
 
 export const handleSearch = ({
@@ -63,9 +61,7 @@ interface HandleSelectClientArgs {
   router: any;
   setInputValue: (value: string) => void;
   setIsFocused: (value: boolean) => void;
-  setOptimistic: (
-    action: OptimisticAction | { type: "update-search"; value: string },
-  ) => void;
+  setOptimistic: (action: OptimisticAction) => void;
 }
 
 export const handleSelectClient = ({

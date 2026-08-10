@@ -19,9 +19,7 @@ export function ClientSearchBar({
   setOptimistic,
   optimisticValue,
 }: {
-  setOptimistic: (
-    action: OptimisticAction | { type: "update-search"; value: string },
-  ) => void;
+  setOptimistic: (action: OptimisticAction) => void;
   optimisticValue: string;
 }) {
   const router = useRouter();
