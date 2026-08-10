@@ -28,46 +28,45 @@ export async function getClientsForInfoDal(
   searchQuery?: string,
   clientId?: string,
 ): Promise<{ clients: Client[]; totalPages: number }> {
-  try {
-    const { orgId, orgRole } = await auth.protect();
-    const isAdmin = orgRole === "org:admin";
+  const [{ orgId, orgRole }, members] = await Promise.all([
+    auth.protect(),
+    getOrganizationMembersDal(),
+  ]);
 
-    if (!orgId || !isAdmin) {
-      throw new Error("Unauthorized");
-    }
-
-    let matchedAssigneeIds: string[] = [];
-    if (searchQuery) {
-      const members = await getOrganizationMembersDal();
-      matchedAssigneeIds = members
-        .filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        .map((m) => m.id);
-    }
-
-    const pageSize = 6;
-    const offset = (page - 1) * pageSize;
-
-    const results = await getClientsForInfoDb(
-      orgId,
-      pageSize,
-      offset,
-      searchQuery,
-      matchedAssigneeIds,
-      clientId,
-    );
-
-    if (results.length === 0) {
-      return { clients: [], totalPages: 1 };
-    }
-
-    const totalCount = results[0].total_count;
-    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
-    return { clients: results, totalPages };
-  } catch (error) {
-    console.error("Error in getClientsForInfoDal:", error);
+  if (!orgId || orgRole !== "org:admin") {
+    console.error("Unauthorized");
     return { clients: [], totalPages: 0 };
   }
+
+  let matchedAssigneeIds: string[] = [];
+  if (searchQuery) {
+    matchedAssigneeIds = members
+      .filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .map((m) => m.id);
+  }
+
+  return getClientsForInfoDb(
+    orgId,
+    6,
+    (page - 1) * 6,
+    searchQuery,
+    matchedAssigneeIds,
+    clientId,
+  )
+    .then((results) => {
+      if (!results || results.length === 0) {
+        return { clients: [], totalPages: 1 };
+      }
+
+      return {
+        clients: results,
+        totalPages: Math.max(1, Math.ceil(results[0].total_count / 6)),
+      };
+    })
+    .catch((error) => {
+      console.error("Error in getClientsForInfoDal:", error);
+      return { clients: [], totalPages: 0 };
+    });
 }
 
 export async function getClientsForCutListDal(
