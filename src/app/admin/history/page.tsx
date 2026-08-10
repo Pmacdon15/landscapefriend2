@@ -15,36 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HistoryPage(props: PageProps<"/admin/history">) {
-  const pagePromise = props.searchParams.then(
-    (params) => parseParams(params.page) ?? 1,
-  );
-
-  const clientIdPromise = props.searchParams.then(
-    (params) => parseParams(params.clientId) ?? "",
-  );
-
-  const searchPromise = props.searchParams.then(
-    (params) => parseParams(params.search) ?? "",
-  );
-
-  const historyPromise = props.searchParams.then((params) => {
-    const page = Number(parseParams(params.page) ?? 1);
-    const clientId = Array.isArray(params.clientId)
-      ? params.clientId[0]
-      : (params.clientId ?? undefined);
-    const search = Array.isArray(params.search)
-      ? params.search[0]
-      : (params.search ?? undefined);
-    return getPastServicesListDal(page, clientId, search);
-  });
-
-  const clientPromise = clientIdPromise.then((clientId) => {
-    if (!clientId) return null;
-    return getClientsForInfoDal(1, undefined, clientId).then(
-      (data) => data.clients.find((c) => c.id === clientId) || null,
-    );
-  });
-
+  
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
       <PageHeader
@@ -54,10 +25,27 @@ export default async function HistoryPage(props: PageProps<"/admin/history">) {
 
       <Suspense fallback={<HistorySkeleton />}>
         <HistoryContainer
-          historyPromise={historyPromise}
-          pagePromise={pagePromise}
-          clientPromise={clientPromise}
-          searchPromise={searchPromise}
+          historyPromise={props.searchParams.then((params) =>
+            getPastServicesListDal(
+              Number(parseParams(params.page) ?? 1),
+              parseParams(params.clientId),
+              parseParams(params.search),
+            ),
+          )}
+          pagePromise={props.searchParams.then((params) =>
+            Number(parseParams(params.page) ?? 1),
+          )}
+          clientPromise={props.searchParams
+            .then((params) => parseParams(params.clientId) ?? "")
+            .then((clientId) => {
+              if (!clientId) return null;
+              return getClientsForInfoDal(1, undefined, clientId).then(
+                (data) => data.clients.find((c) => c.id === clientId) ?? null,
+              );
+            })}
+          searchPromise={props.searchParams.then(
+            (params) => parseParams(params.search) ?? "",
+          )}
           membersPromise={getOrganizationMembersDal()}
         />
       </Suspense>
