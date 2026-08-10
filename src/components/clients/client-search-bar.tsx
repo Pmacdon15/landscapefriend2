@@ -4,10 +4,7 @@ import { useDebouncedValue } from "@tanstack/react-pacer";
 import { Loader2, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  useClientSearch,
-  useDefaultClientSearch,
-} from "@/hooks/use-client-search";
+import { useClientSearch } from "@/hooks/use-client-search";
 import {
   handleSearch as utilHandleSearch,
   handleSelectClient as utilHandleSelectClient,
@@ -27,13 +24,19 @@ export function ClientSearchBar({
 
   const [inputValue, setInputValue] = useState(optimisticValue);
   const [isFocused, setIsFocused] = useState(false);
-  const [debouncedValue] = useDebouncedValue(inputValue, { wait: 300 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data, isFetching } = useClientSearch(debouncedValue);
-  const { defaultData } = useDefaultClientSearch();
+  const { data: defaultData, isFetching } = useClientSearch("");
 
-  const clients = data?.clients || [];
+  const clients = defaultData?.clients || [];
+
+  const filteredClients = clients.filter(
+    (c) =>
+      c.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+      c.addresses?.some((a) =>
+        a.street.toLowerCase().includes(inputValue.toLowerCase()),
+      ),
+  );
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -87,7 +90,7 @@ export function ClientSearchBar({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              handleSearch(inputValue, clients);
+              handleSearch(inputValue, filteredClients);
             }
           }}
           placeholder="Search clients..."
@@ -116,9 +119,9 @@ export function ClientSearchBar({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Searching...
             </div>
-          ) : clients.length > 0 ? (
+          ) : filteredClients.length > 0 ? (
             <div className="p-1">
-              {clients.map((client) => (
+              {filteredClients.map((client) => (
                 <button
                   type="button"
                   key={client.id}
