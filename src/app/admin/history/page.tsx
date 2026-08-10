@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { getPastServicesListDal } from "@/dal/admin";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForInfoDal } from "@/dal/clients";
+import { parseParams } from "@/lib/utils/search-params-util";
 import { HistoryContainer } from "../../../components/history/history-container";
 import { HistorySkeleton } from "../../../components/history/history-skeletons";
 
@@ -13,30 +14,21 @@ export const metadata: Metadata = {
     "View and analyze historical landscaping service data, team performance, and lifetime statistics.",
 };
 
-export default async function HistoryPage(props: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const pagePromise = props.searchParams.then((params) =>
-    Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
+export default async function HistoryPage(props: PageProps<"/admin/history">) {
+  const pagePromise = props.searchParams.then(
+    (params) => parseParams(params.page) ?? 1,
   );
 
-  const clientIdPromise = props.searchParams.then((params) =>
-    String(
-      (Array.isArray(params.clientId) ? params.clientId[0] : params.clientId) ??
-        "",
-    ),
+  const clientIdPromise = props.searchParams.then(
+    (params) => parseParams(params.clientId) ?? "",
   );
 
-  const searchPromise = props.searchParams.then((params) =>
-    String(
-      (Array.isArray(params.search) ? params.search[0] : params.search) ?? "",
-    ),
+  const searchPromise = props.searchParams.then(
+    (params) => parseParams(params.search) ?? "",
   );
 
   const historyPromise = props.searchParams.then((params) => {
-    const page = Number(
-      Array.isArray(params.page) ? params.page[0] : (params.page ?? 1),
-    );
+    const page = Number(parseParams(params.page) ?? 1);
     const clientId = Array.isArray(params.clientId)
       ? params.clientId[0]
       : (params.clientId ?? undefined);
@@ -53,8 +45,6 @@ export default async function HistoryPage(props: {
     );
   });
 
-  const membersPromise = getOrganizationMembersDal();
-
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
       <PageHeader
@@ -68,7 +58,7 @@ export default async function HistoryPage(props: {
           pagePromise={pagePromise}
           clientPromise={clientPromise}
           searchPromise={searchPromise}
-          membersPromise={membersPromise}
+          membersPromise={getOrganizationMembersDal()}
         />
       </Suspense>
     </div>
