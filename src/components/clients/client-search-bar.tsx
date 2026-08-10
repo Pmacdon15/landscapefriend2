@@ -1,16 +1,13 @@
 "use client";
 
-import { useDebouncedValue } from "@tanstack/react-pacer";
-import { Loader2, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
 import { useClientSearch } from "@/hooks/use-client-search";
 import {
   handleSearch as utilHandleSearch,
   handleSelectClient as utilHandleSelectClient,
 } from "@/lib/utils/client-search-utils";
 import type { Client, OptimisticAction } from "@/types/types";
-import { Button } from "../ui/button";
+import { GenericSearchBar } from "../ui/generic-search-bar";
 
 export function ClientSearchBar({
   setOptimistic,
@@ -22,141 +19,68 @@ export function ClientSearchBar({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [inputValue, setInputValue] = useState(optimisticValue);
-  const [isFocused, setIsFocused] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
   const { data: defaultData, isFetching } = useClientSearch("");
-
   const clients = defaultData?.clients || [];
 
-  const filteredClients = clients.filter(
-    (c) =>
-      c.name.toLowerCase().includes(inputValue.toLowerCase()) ||
-      c.addresses?.some((a) =>
-        a.street.toLowerCase().includes(inputValue.toLowerCase()),
-      ),
-  );
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsFocused(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleSearch = (query: string, immediateClients?: Client[]) => {
-    utilHandleSearch({
-      query,
-      immediateClients,
-      defaultData,
-      searchParams,
-      router,
-      setInputValue,
-      setIsFocused,
-      setOptimistic,
-    });
-  };
-
-  const handleSelectClient = (client: Client) => {
-    utilHandleSelectClient({
-      client,
-      searchParams,
-      router,
-      setInputValue,
-      setIsFocused,
-      setOptimistic,
-    });
-  };
-
   return (
-    <div className="relative w-full max-w-md z-40" ref={containerRef}>
-      <div className="relative flex items-center">
-        <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
-        <input
-          type="text"
-          value={isFocused ? inputValue : optimisticValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            setIsFocused(true);
-          }}
-          onFocus={() => setIsFocused(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleSearch(inputValue, filteredClients);
-            }
-          }}
-          placeholder="Search clients..."
-          className="flex h-10 w-full rounded-md border border-input bg-background px-9 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        {(isFocused ? inputValue : optimisticValue) && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-1 h-8 w-8"
-            onClick={() => {
-              setInputValue("");
-              setIsFocused(true);
-              handleSearch("");
-            }}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      {isFocused && inputValue.trim().length > 0 && (
-        <div className="absolute top-full mt-2 w-full rounded-md border bg-popover text-popover-foreground shadow-md max-h-[300px] overflow-y-auto">
-          {isFetching ? (
-            <div className="p-4 flex items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Searching...
-            </div>
-          ) : filteredClients.length > 0 ? (
-            <div className="p-1">
-              {filteredClients.map((client) => (
-                <button
-                  type="button"
-                  key={client.id}
-                  onClick={() => handleSelectClient(client)}
-                  className="w-full text-left flex flex-col p-2 hover:bg-accent hover:text-accent-foreground rounded-sm transition-colors"
+    <GenericSearchBar<Client>
+      items={clients}
+      optimisticValue={optimisticValue}
+      isLoading={isFetching}
+      placeholder="Search clients..."
+      emptyMessage="No clients found."
+      filterPredicate={(c, query) =>
+        c.name.toLowerCase().includes(query.toLowerCase()) ||
+        (c.addresses?.some((a) =>
+          a.street.toLowerCase().includes(query.toLowerCase()),
+        ) ?? false)
+      }
+      getItemKey={(c) => c.id}
+      onSearch={(query, filteredItems, setInputValue, setIsFocused) => {
+        utilHandleSearch({
+          query,
+          immediateClients: filteredItems,
+          defaultData,
+          searchParams,
+          router,
+          setInputValue,
+          setIsFocused,
+          setOptimistic,
+        });
+      }}
+      onSelect={(client, setInputValue, setIsFocused) => {
+        utilHandleSelectClient({
+          client,
+          searchParams,
+          router,
+          setInputValue,
+          setIsFocused,
+          setOptimistic,
+        });
+      }}
+      renderItem={(client) => (
+        <>
+          <span className="font-medium text-sm">{client.name}</span>
+          {client.addresses && client.addresses.length > 0 && (
+            <div className="flex flex-col">
+              {client.addresses.map((addr) => (
+                <span
+                  key={addr.id}
+                  className="text-xs text-muted-foreground"
                 >
-                  <span className="font-medium text-sm">{client.name}</span>
-                  {client.addresses && client.addresses.length > 0 && (
-                    <div className="flex flex-col">
-                      {client.addresses.map((addr) => (
-                        <span
-                          key={addr.id}
-                          className="text-xs text-muted-foreground"
-                        >
-                          {addr.street}, {addr.city}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {(client.email || client.phone) && (
-                    <span className="text-xs text-muted-foreground mt-0.5">
-                      {client.phone} {client.phone && client.email ? "•" : ""}{" "}
-                      {client.email}
-                    </span>
-                  )}
-                </button>
+                  {addr.street}, {addr.city}
+                </span>
               ))}
             </div>
-          ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              No clients found.
-            </div>
           )}
-        </div>
+          {(client.email || client.phone) && (
+            <span className="text-xs text-muted-foreground mt-0.5">
+              {client.phone} {client.phone && client.email ? "•" : ""}{" "}
+              {client.email}
+            </span>
+          )}
+        </>
       )}
-    </div>
+    />
   );
 }
