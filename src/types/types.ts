@@ -290,3 +290,9 @@ export interface MonthlyStats {
     scheduled: number;
   }[];
 }
+export type UserMonthlyStatRow = {
+  id: string;
+  name: string;
+  completed: number;
+  scheduled: number;
+};
