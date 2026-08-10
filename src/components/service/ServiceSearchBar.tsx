@@ -1,23 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useEffect, useRef, useState } from "react";
-import type {
-  Client,
-  CutListItem,
-  OptimisticServiceAction,
-} from "@/types/types";
+import { useEffect, useRef, useState } from "react";
+import { useServiceSearchQuery } from "@/hooks/use-service-search";
+import {
+  handleServiceSearch,
+  handleServiceSelect,
+} from "@/lib/service-search-utils";
+import type { ServiceSearchBarProps } from "@/types/types";
 import { Button } from "../ui/button";
-
-interface ServiceSearchBarProps {
-  items: CutListItem[];
-  optimisticValue: string;
-  setOptimistic: (action: OptimisticServiceAction) => void;
-  date: Date;
-  userId?: string | null;
-}
 
 export function ServiceSearchBar({
   items,
@@ -33,29 +25,7 @@ export function ServiceSearchBar({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
-  const { data: defaultData } = useQuery<{ clients: Client[] }>({
-    queryKey: [
-      "service-search",
-      date.toLocaleDateString("en-CA"),
-      userId || "all",
-    ],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        date: date.toLocaleDateString("en-CA"),
-      });
-      if (userId) params.set("userId", userId);
-
-      const res = await fetch(`/api/clients/cut-list?${params.toString()}`);
-      if (!res.ok) throw new Error("Network response was not ok");
-      return res.json();
-    },
-  });
-
-  useEffect(() => {
-    if (!isFocused) {
-      setInputValue(optimisticValue);
-    }
-  }, [optimisticValue, isFocused]);
+  const { data: defaultData } = useServiceSearchQuery(date, userId ?? "");
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -76,53 +46,6 @@ export function ServiceSearchBar({
       item.address.street.toLowerCase().includes(inputValue.toLowerCase()),
   );
 
-  const handleSelect = (item: CutListItem) => {
-    startTransition(() => {
-      // Optimistically filter to only this client's addresses and update search value
-      const filteredCuts = items.filter((c) => c.client.id === item.client.id);
-      setOptimistic({
-        type: "select-client",
-        value: item.client.name,
-        cuts: filteredCuts,
-      });
-
-      setInputValue(item.client.name);
-
-      const params = new URLSearchParams(searchParams);
-      params.delete("search");
-      params.set("clientId", item.client.id);
-      router.push(`/clients-service?${params.toString()}`);
-    });
-    setIsFocused(false);
-  };
-
-  const handleSearch = (query: string) => {
-    startTransition(() => {
-      if (!query && defaultData?.clients) {
-        const flatCuts = defaultData.clients.flatMap((client) =>
-          (client.addresses ?? []).map((address) => ({
-            client: { id: client.id, name: client.name },
-            address,
-          })),
-        );
-        setOptimistic({ type: "select-client", value: query, cuts: flatCuts });
-      } else {
-        setOptimistic({ type: "update-search", value: query });
-      }
-      setInputValue(query);
-
-      const params = new URLSearchParams(searchParams);
-      params.delete("clientId");
-      if (query) {
-        params.set("search", query);
-      } else {
-        params.delete("search");
-      }
-      router.push(`/clients-service?${params.toString()}`);
-    });
-    setIsFocused(false);
-  };
-
   return (
     <div className="relative w-full max-w-md z-40" ref={containerRef}>
       <div className="relative flex items-center">
@@ -138,7 +61,15 @@ export function ServiceSearchBar({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              handleSearch(inputValue);
+              handleServiceSearch({
+                query: inputValue,
+                defaultData,
+                setOptimistic,
+                setInputValue,
+                setIsFocused,
+                searchParams,
+                router,
+              });
             }
           }}
           placeholder="Search this route..."
@@ -152,7 +83,15 @@ export function ServiceSearchBar({
             onClick={() => {
               setInputValue("");
               setIsFocused(true);
-              handleSearch("");
+              handleServiceSearch({
+                query: "",
+                defaultData,
+                setOptimistic,
+                setInputValue,
+                setIsFocused,
+                searchParams,
+                router,
+              });
             }}
           >
             <X className="h-4 w-4" />
@@ -168,7 +107,17 @@ export function ServiceSearchBar({
                 <button
                   type="button"
                   key={item.address.id}
-                  onClick={() => handleSelect(item)}
+                  onClick={() =>
+                    handleServiceSelect({
+                      item,
+                      items,
+                      setOptimistic,
+                      setInputValue,
+                      setIsFocused,
+                      searchParams,
+                      router,
+                    })
+                  }
                   className="w-full text-left flex flex-col p-2 hover:bg-accent hover:text-accent-foreground rounded-sm transition-colors"
                 >
                   <span className="font-medium text-sm">

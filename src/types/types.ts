@@ -296,3 +296,10 @@ export type UserMonthlyStatRow = {
   completed: number;
   scheduled: number;
 };
+export interface ServiceSearchBarProps {
+  items: CutListItem[];
+  optimisticValue: string;
+  setOptimistic: (action: OptimisticServiceAction) => void;
+  date: Date;
+  userId?: string | null;
+}
