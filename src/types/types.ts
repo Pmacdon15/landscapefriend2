@@ -111,21 +111,25 @@ export interface CompletionPhotoRow {
 }
 
 export type OptimisticAction =
+  | { type: "search-submitted"; query: string; clients: Client[] }
+  | { type: "select-client"; client: Client }
+  | { type: "add-client"; client: Client }
+  | { type: "edit-client"; client: Client }
+  | { type: "delete-client"; clientId: string; defaultClients?: Client[] }
   | { type: "update-assignee"; addressId: string; userId: string | null }
   | {
       type: "update-schedule";
       addressId: string;
       frequency: string;
-      firstCutDate: Date;
-      notes?: string | null;
+      firstCutDate: string;
+      notes?: string;
     }
   | { type: "delete-schedule"; addressId: string }
-  | { type: "add-client"; client: Client }
-  | { type: "edit-client"; client: Client }
-  | { type: "delete-client"; clientId: string; defaultClients?: Client[] }
-  | { type: "optimistic-search"; clients: Client[] }
-  | { type: "select-client"; client: Client }
-  | { type: "add-one-time-service"; addressId: string; service: OneTimeService }
+  | { 
+    type: "add-one-time-service"; 
+    addressId: string; 
+    service: OneTimeService; 
+  }
   | { type: "delete-one-time-service"; addressId: string; serviceId: string };
 
 export type OptimisticServiceAction =

@@ -1,11 +1,18 @@
 "use client";
 
 import { useDebouncedValue } from "@tanstack/react-pacer";
-import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  useClientSearch,
+  useDefaultClientSearch,
+} from "@/hooks/use-client-search";
 import type { Client, OptimisticAction } from "@/types/types";
+import {
+  handleSearch as utilHandleSearch,
+  handleSelectClient as utilHandleSelectClient,
+} from "@/utils/client-search-utils";
 import { Button } from "../ui/button";
 
 export function ClientSearchBar({
@@ -25,35 +32,10 @@ export function ClientSearchBar({
   const [debouncedValue] = useDebouncedValue(inputValue, { wait: 300 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data, isFetching } = useQuery<{ clients: Client[] }>({
-    queryKey: ["client-search", debouncedValue],
-    queryFn: async () => {
-      if (!debouncedValue) return { clients: [] };
-      const res = await fetch(
-        `/api/clients/search?q=${encodeURIComponent(debouncedValue)}`,
-      );
-      if (!res.ok) throw new Error("Network response was not ok");
-      return res.json();
-    },
-    enabled: debouncedValue.length > 0,
-  });
-
-  const { data: defaultData } = useQuery<{ clients: Client[] }>({
-    queryKey: ["client-search", ""],
-    queryFn: async () => {
-      const res = await fetch(`/api/clients/search?q=`);
-      if (!res.ok) throw new Error("Network response was not ok");
-      return res.json();
-    },
-  });
+  const { data, isFetching } = useClientSearch(debouncedValue);
+  const { defaultData } = useDefaultClientSearch();
 
   const clients = data?.clients || [];
-
-  useEffect(() => {
-    if (!isFocused) {
-      setInputValue(optimisticValue);
-    }
-  }, [optimisticValue, isFocused]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -69,48 +51,27 @@ export function ClientSearchBar({
   }, []);
 
   const handleSearch = (query: string, immediateClients?: Client[]) => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("clientId");
-    setInputValue(query);
-    startTransition(() => {
-      setOptimistic({ type: "update-search", value: query });
-
-      if (immediateClients && query) {
-        setOptimistic({
-          type: "optimistic-search",
-          clients: immediateClients.slice(0, 6),
-        });
-      } else if (!query && defaultData?.clients) {
-        setOptimistic({
-          type: "optimistic-search",
-          clients: defaultData.clients,
-        });
-      }
+    utilHandleSearch({
+      query,
+      immediateClients,
+      defaultData,
+      searchParams,
+      router,
+      setInputValue,
+      setIsFocused,
+      setOptimistic,
     });
-
-    if (query) {
-      params.set("search", query);
-      params.set("page", "1");
-    } else {
-      params.delete("search");
-      params.delete("page");
-    }
-    router.push(`?${params.toString()}`);
-    setIsFocused(false);
   };
 
   const handleSelectClient = (client: Client) => {
-    startTransition(() => {
-      setInputValue(client.name);
-      setOptimistic({ type: "select-client", client });
+    utilHandleSelectClient({
+      client,
+      searchParams,
+      router,
+      setInputValue,
+      setIsFocused,
+      setOptimistic,
     });
-
-    const params = new URLSearchParams(searchParams);
-    params.delete("search");
-    params.set("clientId", client.id);
-    params.set("page", "1");
-    router.push(`?${params.toString()}`);
-    setIsFocused(false);
   };
 
   return (
