@@ -92,6 +92,7 @@ export function InvoicesSearchBar({
             clientId: null,
             invoice: null,
             invoiceId: null,
+            date: null,
           });
         } else {
           updateSearchParams({
@@ -100,6 +101,7 @@ export function InvoicesSearchBar({
             clientId: null,
             invoice: null,
             invoiceId: null,
+            date: null,
           });
         }
         setIsFocused(false);
@@ -114,6 +116,7 @@ export function InvoicesSearchBar({
           clientId: invoice.client_id,
           search: null,
           page: null,
+          date: null,
         });
         setIsFocused(false);
       }}

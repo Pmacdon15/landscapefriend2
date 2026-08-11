@@ -25,7 +25,8 @@ export default function InvoicesPage(props: PageProps<"/admin/invoices">) {
       parseParams(params.search) ||
         parseParams(params.invoice) ||
         parseParams(params.invoiceId) ||
-        parseParams(params.clientId),
+        parseParams(params.clientId) ||
+        parseParams(params.date),
       parseParams(params.status),
     ),
   );
@@ -51,6 +52,7 @@ export default function InvoicesPage(props: PageProps<"/admin/invoices">) {
                   parseParams(params.invoice) ||
                   parseParams(params.invoiceId) ||
                   parseParams(params.clientId) ||
+                  parseParams(params.date) ||
                   "",
               )}
               invoiceIdPromise={props.searchParams.then(

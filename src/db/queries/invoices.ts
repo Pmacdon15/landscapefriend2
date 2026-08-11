@@ -87,7 +87,9 @@ export async function getInvoicesDb(
         a.street ILIKE ${searchPattern} OR
         a.city ILIKE ${searchPattern} OR
         ii.description ILIKE ${searchPattern} OR
-        ii.service_type ILIKE ${searchPattern}
+        ii.service_type ILIKE ${searchPattern} OR
+        i.issue_date::text ILIKE ${searchPattern} OR
+        i.due_date::text ILIKE ${searchPattern}
       )
     ),
     total_count AS (

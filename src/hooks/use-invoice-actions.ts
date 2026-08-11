@@ -59,6 +59,7 @@ export function useInvoiceActions({
       clientId: null,
       invoice: null,
       invoiceId: null,
+      date: null,
     });
   };
 
@@ -82,6 +83,7 @@ export function useInvoiceActions({
       clientId: null,
       invoice: null,
       invoiceId: null,
+      date: null,
     });
   };
 
