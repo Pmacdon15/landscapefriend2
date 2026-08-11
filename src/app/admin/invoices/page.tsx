@@ -5,6 +5,7 @@ import InvoicesContainer from "@/components/invoices/InvoicesContainer";
 import { InvoicesSkeleton } from "@/components/invoices/invoices-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import PaginationButtons from "@/components/pagination-buttons";
+import {
   getInvoicesDal,
   getNextInvoiceNumberDal,
   getOrganizationInfoDal,
@@ -18,7 +19,6 @@ export const metadata: Metadata = {
 };
 
 export default function InvoicesPage(props: PageProps<"/admin/invoices">) {
- 
   const invoicesPromise = props.searchParams.then(async (params) =>
     getInvoicesDal(
       Number(parseParams(params.page) ?? 1),
@@ -48,6 +48,13 @@ export default function InvoicesPage(props: PageProps<"/admin/invoices">) {
               searchPromise={props.searchParams.then(
                 async (params) =>
                   parseParams(params.search) ||
+                  parseParams(params.invoice) ||
+                  parseParams(params.invoiceId) ||
+                  parseParams(params.clientId) ||
+                  "",
+              )}
+              invoiceIdPromise={props.searchParams.then(
+                async (params) =>                  
                   parseParams(params.invoice) ||
                   parseParams(params.invoiceId) ||
                   "",

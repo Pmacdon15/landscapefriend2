@@ -80,6 +80,7 @@ export async function getInvoicesDb(
       AND (
         ${!searchQuery}::boolean OR
         i.id::text ILIKE ${searchPattern} OR
+        i.client_id::text ILIKE ${searchPattern} OR
         c.name ILIKE ${searchPattern} OR
         i.invoice_number ILIKE ${searchPattern} OR
         i.status ILIKE ${searchPattern} OR

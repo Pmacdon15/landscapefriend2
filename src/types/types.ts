@@ -1,3 +1,4 @@
+import type { DbInvoiceResult, RevenueStats } from "@/db/queries/invoices";
 import type {
   Address,
   Assignment,
@@ -302,4 +303,20 @@ export interface ServiceSearchBarProps {
   setOptimistic: (action: OptimisticServiceAction) => void;
   date: Date;
   userId?: string | null;
+}
+
+export interface OrgInfo {
+  name: string;
+  logoUrl: string | null;
+}
+
+export interface InvoicesContainerProps {
+  invoicesPromise: Promise<DbInvoiceResult[]>;
+  revenueStatsPromise: Promise<RevenueStats[]>;
+  nextInvoiceNumberPromise: Promise<string>;
+  organizationInfoPromise: Promise<OrgInfo | null>;
+  searchPromise: Promise<string>;
+  statusPromise: Promise<string>;
+  hasSendInvoicesPromise: Promise<boolean>;
+  invoiceIdPromise: Promise<string>;
 }

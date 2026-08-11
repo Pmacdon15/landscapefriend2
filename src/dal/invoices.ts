@@ -44,7 +44,7 @@ export async function getInvoicesDal(
       return {
         data: list,
         totalPages: Math.ceil(
-          list.length > 0 ? Number(list[0].total_count) : 0 / 10,
+          (list.length > 0 ? Number(list[0].total_count) : 0) / 10,
         ),
       };
     })

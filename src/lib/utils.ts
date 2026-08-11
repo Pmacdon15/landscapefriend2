@@ -132,3 +132,34 @@ const toBase64 = (str: string) =>
 
 export const getShimmerDataURL = (w: number, h: number) =>
   `data:image/svg+xml;base64,${toBase64(shimmer(w, h))}`;
+
+export const formatCurrency = (val: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(val);
+};
+
+export const formatStandardDate = (d: Date | string) => {
+  try {
+    return new Date(d).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return String(d);
+  }
+};
+
+export const formatLongDate = (d: Date | string) => {
+  try {
+    return new Date(d).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch {
+    return String(d);
+  }
+};

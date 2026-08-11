@@ -3,6 +3,7 @@
 import Image from "next/image";
 import * as React from "react";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
+import { formatCurrency, formatLongDate } from "@/lib/utils";
 
 export interface InvoicePDFViewProps {
   invoice: DbInvoiceResult;
@@ -14,24 +15,7 @@ export const InvoicePDFView = React.forwardRef<
   HTMLDivElement,
   InvoicePDFViewProps
 >(({ invoice, orgName, logoUrl }, ref) => {
-  const formattedDate = (d: Date | string) => {
-    try {
-      return new Date(d).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-    } catch {
-      return String(d);
-    }
-  };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  };
 
   const subtotal = invoice.items.reduce(
     (sum, item) => sum + Number(item.amount),
@@ -96,8 +80,8 @@ export const InvoicePDFView = React.forwardRef<
                   {invoice.status}
                 </span>
               </p>
-              {invoice.sent_at && <p>Sent: {formattedDate(invoice.sent_at)}</p>}
-              {invoice.paid_at && <p>Paid: {formattedDate(invoice.paid_at)}</p>}
+              {invoice.sent_at && <p>Sent: {formatLongDate(invoice.sent_at)}</p>}
+              {invoice.paid_at && <p>Paid: {formatLongDate(invoice.paid_at)}</p>}
             </div>
           </div>
         </div>
@@ -126,11 +110,11 @@ export const InvoicePDFView = React.forwardRef<
                 <span className="font-semibold text-slate-700">
                   Issue Date:
                 </span>{" "}
-                {formattedDate(invoice.issue_date)}
+                {formatLongDate(invoice.issue_date)}
               </p>
               <p>
                 <span className="font-semibold text-slate-700">Due Date:</span>{" "}
-                {formattedDate(invoice.due_date)}
+                {formatLongDate(invoice.due_date)}
               </p>
             </div>
           </div>

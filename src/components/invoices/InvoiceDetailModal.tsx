@@ -3,7 +3,7 @@
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 import { Download, Loader2, Mail, X } from "lucide-react";
-import { useState } from "react";
+import { SetStateAction, useState } from "react";
 import { toast } from "sonner";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { useSendInvoiceEmail } from "@/mutations/invoices";
@@ -12,7 +12,7 @@ import { InvoicePDFView } from "./InvoicePDFView";
 
 interface InvoiceDetailModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (value: SetStateAction<boolean>) => void;
   invoice: DbInvoiceResult | null;
   hasSendInvoices: boolean;
   organizationName: string;
@@ -32,7 +32,7 @@ export function InvoiceDetailModal({
 
   const sendEmailMutation = useSendInvoiceEmail();
 
-  if (!isOpen || !invoice) return null;
+  if (!isOpen || !invoice?.id) return null;
 
   const handleDownloadPDF = async () => {
     setIsExporting(true);
@@ -172,7 +172,7 @@ export function InvoiceDetailModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onClose(false)}
             className="absolute top-6 right-6 h-8 w-8 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
           >
             <X className="h-5 w-5" />

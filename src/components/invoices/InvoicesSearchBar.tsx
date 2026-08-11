@@ -2,7 +2,6 @@
 
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useState } from "react";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { GenericSearchBar } from "../ui/generic-search-bar";
@@ -11,28 +10,34 @@ export function InvoicesSearchBar({
   setOptimisticSearch,
   optimisticValue,
   activeInvoices,
+  updateSearchParams,
 }: {
-  setOptimisticSearch: (
-    action:
-      | { type: "update-search"; value: string }
-      | { type: "optimistic-search"; invoices: DbInvoiceResult[] },
-  ) => void;
+  setOptimisticSearch: (partialUpdate: Partial<{ invoices: DbInvoiceResult[], searchValue: string }>) => void;
   optimisticValue: string;
   activeInvoices: DbInvoiceResult[];
+  updateSearchParams: (updates: Record<string, string | null>) => void;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
   const matchedInvoice = activeInvoices.find(
     (inv) =>
-      inv.id === optimisticValue || inv.invoice_number === optimisticValue,
+      inv.id === optimisticValue ||
+      inv.invoice_number === optimisticValue ||
+      inv.client_id === optimisticValue,
   );
 
   const displaySearchValue = matchedInvoice
-    ? matchedInvoice.invoice_number
+    ? (optimisticValue === matchedInvoice.client_id
+        ? matchedInvoice.client_name
+        : matchedInvoice.invoice_number)
     : optimisticValue;
 
   const [parentInputValue, setParentInputValue] = useState(displaySearchValue);
+  const [prevOptimisticValue, setPrevOptimisticValue] = useState(optimisticValue);
+
+  if (optimisticValue !== prevOptimisticValue) {
+    setPrevOptimisticValue(optimisticValue);
+    setParentInputValue(displaySearchValue);
+  }
+
   const [debouncedValue] = useDebouncedValue(parentInputValue, { wait: 300 });
 
   const { data, isFetching } = useQuery<{ invoices: DbInvoiceResult[] }>({
@@ -70,52 +75,46 @@ export function InvoicesSearchBar({
       filterPredicate={() => true} // Server-side search handles filtering
       getItemKey={(inv) => inv.id}
       onSearch={(query, _, setInputValue, setIsFocused) => {
-        const params = new URLSearchParams(searchParams);
         setInputValue(query);
         startTransition(() => {
-          setOptimisticSearch({ type: "update-search", value: query });
+          const updates: Partial<{ invoices: DbInvoiceResult[], searchValue: string }> = { searchValue: query };
           if (query && invoicesList.length) {
-            setOptimisticSearch({
-              type: "optimistic-search",
-              invoices: invoicesList.slice(0, 10),
-            });
+            updates.invoices = invoicesList.slice(0, 10);
           } else if (!query && defaultData?.invoices) {
-            setOptimisticSearch({
-              type: "optimistic-search",
-              invoices: defaultData.invoices,
-            });
+            updates.invoices = defaultData.invoices;
           }
+          setOptimisticSearch(updates);
         });
         if (query) {
-          params.set("search", query);
-          params.set("page", "1");
-          params.delete("clientId");
-          params.delete("invoice");
-          params.delete("invoiceId");
+          updateSearchParams({
+            search: query,
+            page: "1",
+            clientId: null,
+            invoice: null,
+            invoiceId: null,
+          });
         } else {
-          params.delete("search");
-          params.delete("page");
-          params.delete("clientId");
-          params.delete("invoice");
-          params.delete("invoiceId");
+          updateSearchParams({
+            search: null,
+            page: null,
+            clientId: null,
+            invoice: null,
+            invoiceId: null,
+          });
         }
-        router.push(`?${params.toString()}`);
         setIsFocused(false);
       }}
       onSelect={(invoice, setInputValue, setIsFocused) => {
         startTransition(() => {
           setInputValue(invoice.invoice_number);
-          setOptimisticSearch({
-            type: "update-search",
-            value: invoice.invoice_number,
-          });
+          setOptimisticSearch({ searchValue: invoice.invoice_number });
         });
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("invoice", invoice.invoice_number);
-        params.set("clientId", invoice.client_id);
-        params.delete("search");
-        params.delete("page");
-        router.push(`?${params.toString()}`);
+        updateSearchParams({
+          invoice: invoice.invoice_number,
+          clientId: invoice.client_id,
+          search: null,
+          page: null,
+        });
         setIsFocused(false);
       }}
       renderItem={(invoice) => (

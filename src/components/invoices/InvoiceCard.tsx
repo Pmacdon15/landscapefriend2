@@ -1,7 +1,6 @@
 "use client";
 
-import html2canvas from "html2canvas-pro";
-import jsPDF from "jspdf";
+
 import {
   CheckCircle,
   Clock,
@@ -13,23 +12,16 @@ import {
   MoreVertical,
   Trash2,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+
 import { type MouseEvent, useState } from "react";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
+import { formatCurrency, formatStandardDate } from "@/lib/utils";
 import { useDeleteInvoice, useSendInvoiceEmail } from "@/mutations/invoices";
 import { Button } from "../ui/button";
+import { DeleteInvoiceDialog } from "./DeleteInvoiceDialog";
 import { InvoicePDFView } from "./InvoicePDFView";
+import { downloadInvoicePDF, sendInvoiceEmailPDF } from "@/lib/utils/invoice-pdf-utils";
 
 interface InvoiceCardProps {
   invoice: DbInvoiceResult;
@@ -38,6 +30,8 @@ interface InvoiceCardProps {
   onDeleteSuccess: (invoiceId: string) => void;
   orgName: string;
   logoUrl: string | null;
+  onOpenDetailsModal: (invoiceId: string) => void;
+  updateSearchParams: (updates: Record<string, string | null>) => void;
 }
 
 export function InvoiceCard({
@@ -47,6 +41,8 @@ export function InvoiceCard({
   onDeleteSuccess,
   orgName,
   logoUrl,
+  onOpenDetailsModal,
+  updateSearchParams,
 }: InvoiceCardProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -56,37 +52,32 @@ export function InvoiceCard({
   const deleteInvoiceMutation = useDeleteInvoice();
   const sendEmailMutation = useSendInvoiceEmail();
 
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
   const handleViewDetails = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("invoice", invoice.id);
-    params.set("clientId", invoice.client_id);
-    params.delete("search");
-    router.push(`?${params.toString()}`);
+    updateSearchParams({
+      invoiceId: invoice.id,
+      clientId: invoice.client_id,
+      search: null,
+    });
+    onOpenDetailsModal(invoice.id);
   };
 
   const handleClientClick = (e: MouseEvent) => {
     e.stopPropagation();
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("search", invoice.client_name);
-    params.set("page", "1");
-    params.delete("clientId");
-    params.delete("invoice");
-    params.delete("invoiceId");
-    router.push(`?${params.toString()}`);
+    updateSearchParams({
+      page: "1",
+      clientId: invoice.client_id,
+      invoiceId: null,
+    });
   };
 
   const handleInvoiceNumberClick = (e: MouseEvent) => {
     e.stopPropagation();
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("search", invoice.invoice_number);
-    params.set("page", "1");
-    params.delete("clientId");
-    params.delete("invoice");
-    params.delete("invoiceId");
-    router.push(`?${params.toString()}`);
+    updateSearchParams({
+      search: invoice.invoice_number,
+      page: "1",
+      clientId: null,
+      invoiceId: invoice.id,
+    });
   };
 
   const handleDeleteInvoice = async () => {
@@ -100,107 +91,31 @@ export function InvoiceCard({
 
   const handleDownloadPDF = async () => {
     setIsExporting(true);
-    setTimeout(async () => {
-      const element = document.getElementById(`invoice-print-${invoice.id}`);
-      if (!element) {
-        toast.error("Failed to render PDF container");
-        setIsExporting(false);
-        return;
-      }
-
-      try {
-        const canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: "#ffffff",
-        });
-
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("p", "mm", "a4");
-
-        const pdfWidth = 210;
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-        pdf.save(
-          `${invoice.invoice_number}-${invoice.client_name.replace(/\s+/g, "_")}.pdf`,
-        );
-        toast.success(`Downloaded ${invoice.invoice_number} successfully!`);
-      } catch (err) {
-        const error = err as Error;
-        console.error(error);
-        toast.error(`PDF generation failed: ${error.message}`);
-      } finally {
-        setIsExporting(false);
-      }
-    }, 400);
+    try {
+      await downloadInvoicePDF({
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoice_number,
+        clientName: invoice.client_name,
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSendEmail = async () => {
     setIsExporting(true);
-    toast.info("Generating invoice PDF & dispatching via email...");
-
-    setTimeout(async () => {
-      const element = document.getElementById(`invoice-print-${invoice.id}`);
-      if (!element) {
-        toast.error("Failed to render PDF container");
-        setIsExporting(false);
-        return;
-      }
-
-      try {
-        const canvas = await html2canvas(element, {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: "#ffffff",
-        });
-
-        const imgData = canvas.toDataURL("image/jpeg", 0.7);
-        const pdf = new jsPDF("p", "mm", "a4");
-
-        const pdfWidth = 210;
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
-
-        const pdfDataUri = pdf.output("datauristring");
-        const pdfBase64 = pdfDataUri.split(",")[1];
-        const filename = `${invoice.invoice_number}-${invoice.client_name.replace(/\s+/g, "_")}.pdf`;
-
-        await sendEmailMutation.mutateAsync({
-          invoiceId: invoice.id,
-          pdfBase64,
-          filename,
-        });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsExporting(false);
-      }
-    }, 400);
-  };
-
-  const formattedDate = (d: Date | string) => {
     try {
-      return new Date(d).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    } catch {
-      return String(d);
+      await sendInvoiceEmailPDF(
+        {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoice_number,
+          clientName: invoice.client_name,
+        },
+        sendEmailMutation
+      );
+    } finally {
+      setIsExporting(false);
     }
-  };
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(val);
   };
 
   const handleAction = async (name: string, fn: () => Promise<void>) => {
@@ -415,7 +330,7 @@ export function InvoiceCard({
                   Issued
                 </span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
-                  {formattedDate(invoice.issue_date)}
+                  {formatStandardDate(invoice.issue_date)}
                 </span>
               </div>
               <div>
@@ -423,7 +338,7 @@ export function InvoiceCard({
                   Due Date
                 </span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
-                  {formattedDate(invoice.due_date)}
+                  {formatStandardDate(invoice.due_date)}
                 </span>
               </div>
             </div>
@@ -462,32 +377,15 @@ export function InvoiceCard({
         </div>
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to permanently delete invoice{" "}
-              <span className="font-mono font-bold text-green-700 dark:text-green-400">
-                {invoice.invoice_number}
-              </span>
-              ? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                handleAction("delete", () => handleDeleteInvoice());
-              }}
-              variant="destructive"
-            >
-              Delete Invoice
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteInvoiceDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        invoice={invoice}
+        onDeleteConfirm={() => {
+          setDeleteDialogOpen(false);
+          handleAction("delete", () => handleDeleteInvoice());
+        }}
+      />
     </>
   );
 }
