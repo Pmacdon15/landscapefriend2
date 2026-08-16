@@ -1,10 +1,9 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import type { OptimisticInvoiceState } from "@/hooks/use-invoice-actions";
 import { Button } from "../ui/button";
 import { InvoicesSearchBar } from "./InvoicesSearchBar";
-import type { DbInvoiceResult } from "@/db/queries/invoices";
-import type { OptimisticInvoiceState } from "@/hooks/use-invoice-actions";
 
 interface InvoicesControlPanelProps {
   optimisticState: OptimisticInvoiceState;

@@ -56,7 +56,7 @@ export default function InvoicesPage(props: PageProps<"/admin/invoices">) {
                   "",
               )}
               invoiceIdPromise={props.searchParams.then(
-                async (params) =>                  
+                async (params) =>
                   parseParams(params.invoice) ||
                   parseParams(params.invoiceId) ||
                   "",

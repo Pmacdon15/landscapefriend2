@@ -168,7 +168,7 @@ export async function deleteScheduleDal(
 export async function completeJobDal(
   addressId: string,
   serviceType: string,
-  assignedTo?: string | null,
+  assignedMemberIds?: string[] | null,
   notes?: string | null,
   photoBlobPath?: string | null,
   capturedAt?: Date | null,
@@ -196,7 +196,7 @@ export async function completeJobDal(
           orgId,
           parsedServiceType.data,
           userId,
-          assignedTo,
+          assignedMemberIds,
           completedAt || new Date(),
           capturedAt || null,
           notes,
@@ -275,7 +275,7 @@ export async function upsertAssignmentDal(
 
 export async function updateAddressAssigneeDal(
   addressId: string,
-  userId: string | null,
+  userIds: string[] | null,
 ): Promise<Result<AddressRow, { reason: string }>> {
   try {
     const { orgId } = await auth.protect();
@@ -289,11 +289,13 @@ export async function updateAddressAssigneeDal(
     return ResultAsync.fromPromise(
       updateAddressAssigneeDb(
         parsedAddressId.data,
-        userId === "unassigned" ? null : userId,
+        userIds && userIds.length === 1 && userIds[0] === "unassigned"
+          ? null
+          : userIds,
       ),
       (error) => {
         console.error(
-          `Failed to update address assignee for address ${addressId} to user ${userId}:`,
+          `Failed to update address assignee for address ${addressId} to users ${userIds}:`,
           error,
         );
         return { reason: "Failed to update address assignee" };
@@ -301,7 +303,7 @@ export async function updateAddressAssigneeDal(
     );
   } catch (error) {
     console.error(
-      `Unexpected error in updateAddressAssigneeDal (addressId: ${addressId}, userId: ${userId}):`,
+      `Unexpected error in updateAddressAssigneeDal (addressId: ${addressId}, userIds: ${userIds}):`,
       error,
     );
     return errAsync({ reason: "An unexpected error occurred" });

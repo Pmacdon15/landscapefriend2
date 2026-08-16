@@ -38,10 +38,7 @@ export function DeleteInvoiceDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onDeleteConfirm}
-            variant="destructive"
-          >
+          <AlertDialogAction onClick={onDeleteConfirm} variant="destructive">
             Delete Invoice
           </AlertDialogAction>
         </AlertDialogFooter>

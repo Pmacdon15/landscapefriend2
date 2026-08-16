@@ -74,14 +74,14 @@ export function useUpdateAddressAssignee() {
   return useMutation({
     mutationFn: async ({
       addressId,
-      userId,
+      userIds,
     }: {
       addressId: string;
-      userId: string | null;
+      userIds: string[] | null;
     }) => {
       const { success, error } = await updateAddressAssigneeAction(
         addressId,
-        userId,
+        userIds,
       );
 
       if (!success) {

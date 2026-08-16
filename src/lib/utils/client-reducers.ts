@@ -66,16 +66,21 @@ export const clientInfoReducer = (
             if (address.id !== action.addressId) return address;
             return {
               ...address,
-              assigned_to: action.userId,
-              assignment: action.userId
-                ? {
-                    id: "optimistic",
-                    address_id: action.addressId,
-                    user_id: action.userId,
-                    org_id: client.org_id,
-                    scheduled_date: new Date().toISOString(),
-                  }
-                : null,
+              assigned_to:
+                action.userIds && action.userIds.length > 0
+                  ? action.userIds[0]
+                  : null,
+              assigned_member_ids: action.userIds || [],
+              assignment:
+                action.userIds && action.userIds.length > 0
+                  ? {
+                      id: "optimistic",
+                      address_id: action.addressId,
+                      user_ids: action.userIds,
+                      org_id: client.org_id,
+                      scheduled_date: new Date().toISOString(),
+                    }
+                  : null,
             };
           }),
         })),

@@ -7,7 +7,7 @@ export function useCompleteJob() {
     mutationFn: async ({
       addressId,
       serviceType,
-      assignedTo,
+      assignedMemberIds,
       notes,
       photoFile,
       capturedAt,
@@ -17,7 +17,7 @@ export function useCompleteJob() {
     }: {
       addressId: string;
       serviceType: string;
-      assignedTo?: string | null;
+      assignedMemberIds?: string[] | null;
       notes?: string | null;
       photoFile?: File;
       capturedAt?: Date | null;
@@ -28,7 +28,8 @@ export function useCompleteJob() {
       const formData = new FormData();
       formData.append("addressId", addressId);
       formData.append("serviceType", serviceType);
-      if (assignedTo) formData.append("assignedTo", assignedTo);
+      if (assignedMemberIds)
+        formData.append("assignedMemberIds", JSON.stringify(assignedMemberIds));
       if (notes) formData.append("notes", notes);
       if (photoFile) formData.append("photoFile", photoFile);
       if (capturedAt) formData.append("capturedAt", capturedAt.toISOString());

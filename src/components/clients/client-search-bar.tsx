@@ -33,7 +33,8 @@ export function ClientSearchBar({
         c.name.toLowerCase().includes(query.toLowerCase()) ||
         (c.addresses?.some((a) =>
           a.street.toLowerCase().includes(query.toLowerCase()),
-        ) ?? false)
+        ) ??
+          false)
       }
       getItemKey={(c) => c.id}
       onSearch={(query, filteredItems, setInputValue, setIsFocused) => {
@@ -64,10 +65,7 @@ export function ClientSearchBar({
           {client.addresses && client.addresses.length > 0 && (
             <div className="flex flex-col">
               {client.addresses.map((addr) => (
-                <span
-                  key={addr.id}
-                  className="text-xs text-muted-foreground"
-                >
+                <span key={addr.id} className="text-xs text-muted-foreground">
                   {addr.street}, {addr.city}
                 </span>
               ))}

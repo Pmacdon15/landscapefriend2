@@ -20,7 +20,8 @@ export const AssignmentSchema = z.object({
   id: z.uuid(),
   address_id: z.uuid(),
   org_id: z.string(),
-  user_id: z.string(),
+  user_id: z.string().optional(),
+  user_ids: z.array(z.string()).optional(),
   scheduled_date: z.string(),
   created_at: z.date().optional(),
   updated_at: z.date().optional(),
@@ -42,6 +43,7 @@ export const CompletedJobSchema = z.object({
     ...string[],
   ]),
   assigned_to: z.string().nullable().optional(),
+  assigned_member_ids: z.array(z.string()).optional(),
   completed_by: z.string().nullable().optional(),
   completed_at: z.date(),
   notes: z.string().nullable().optional(),
@@ -85,6 +87,7 @@ export const AddressSchema = z.object({
   zip: z.string().nullable().optional(),
   status: z.enum(["active", "disabled", "deleted"]).default("active"),
   assigned_to: z.string().nullable().optional(),
+  assigned_member_ids: z.array(z.string()).nullable().optional(),
   schedule: ScheduleSchema.optional().nullable(),
   sort_order: z.number().default(0),
   assignment: AssignmentSchema.optional().nullable(),
@@ -104,6 +107,7 @@ export const AddressInputSchema = z.object({
   zip: z.string().nullable().optional(),
   status: z.enum(["active", "disabled", "deleted"]).default("active"),
   assigned_to: z.string().nullable().optional(),
+  assigned_member_ids: z.array(z.string()).optional(),
 });
 
 export const ClientSchema = z.object({
@@ -168,7 +172,6 @@ export const CreateInvoiceInputSchema = z.object({
 });
 
 export type CreateInvoiceInput = z.infer<typeof CreateInvoiceInputSchema>;
-
 
 export const UpdateInvoiceStatusInputSchema = z.object({
   invoiceId: z.string().uuid("Invalid invoice ID"),

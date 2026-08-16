@@ -10,7 +10,12 @@ export async function completeJobAction(formData: FormData) {
   const { orgId } = await auth.protect();
   const addressId = formData.get("addressId") as string;
   const serviceType = formData.get("serviceType") as string;
-  const assignedTo = formData.get("assignedTo") as string | null;
+  const assignedMemberIdsStr = formData.get("assignedMemberIds") as
+    | string
+    | null;
+  const assignedMemberIds = assignedMemberIdsStr
+    ? JSON.parse(assignedMemberIdsStr)
+    : null;
   const notes = formData.get("notes") as string | null;
   const photoFile = formData.get("photoFile") as File | null;
   const capturedAtRaw = formData.get("capturedAt") as string | null;
@@ -41,7 +46,7 @@ export async function completeJobAction(formData: FormData) {
   const result = await completeJobDal(
     addressId,
     serviceType,
-    assignedTo,
+    assignedMemberIds,
     notes,
     photoBlobPath,
     capturedAt,

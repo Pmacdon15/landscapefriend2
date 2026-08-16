@@ -65,11 +65,11 @@ export async function insertAddressDb(
   state?: string | null,
   zip?: string | null,
   status: "active" | "disabled" | "deleted" = "active",
-  assignedTo?: string | null,
+  assignedMemberIds?: string[] | null,
 ): Promise<AddressRow> {
   const result = await sql`
-    INSERT INTO addresses (client_id, street, city, state, zip, status, assigned_to)
-    VALUES (${clientId}, ${street}, ${city}, ${state || null}, ${zip || null}, ${status}, ${assignedTo || null})
+    INSERT INTO addresses (client_id, street, city, state, zip, status, assigned_member_ids)
+    VALUES (${clientId}, ${street}, ${city}, ${state || null}, ${zip || null}, ${status}, ${assignedMemberIds || null})
     RETURNING *
   `;
   return result[0] as unknown as AddressRow;
@@ -83,11 +83,11 @@ export async function updateAddressDb(
   state?: string | null,
   zip?: string | null,
   status: "active" | "disabled" | "deleted" = "active",
-  assignedTo?: string | null,
+  assignedMemberIds?: string[] | null,
 ): Promise<AddressRow> {
   const result = await sql`
     UPDATE addresses
-    SET street = ${street}, city = ${city}, state = ${state || null}, zip = ${zip || null}, status = ${status}, assigned_to = ${assignedTo || null}, updated_at = CURRENT_TIMESTAMP
+    SET street = ${street}, city = ${city}, state = ${state || null}, zip = ${zip || null}, status = ${status}, assigned_member_ids = ${assignedMemberIds || null}, updated_at = CURRENT_TIMESTAMP
     WHERE id = ${addressId} AND client_id = ${clientId}
     RETURNING *
   `;
@@ -262,12 +262,12 @@ export async function updateRouteOrderDb(
 
 export async function updateAddressAssigneeDb(
   addressId: string,
-  assignedTo: string | null,
+  assignedMemberIds: string[] | null,
 ): Promise<AddressRow> {
   const [row] = (await sql`
     WITH updated AS (
       UPDATE addresses
-      SET assigned_to = ${assignedTo}, updated_at = CURRENT_TIMESTAMP
+      SET assigned_member_ids = ${assignedMemberIds}, updated_at = CURRENT_TIMESTAMP
       WHERE id = ${addressId}
       RETURNING *
     )
@@ -284,7 +284,7 @@ export async function insertCompletedJobDb(
   orgId: string,
   serviceType: string,
   completedBy?: string | null,
-  assignedTo?: string | null,
+  assignedMemberIds?: string[] | null,
   completedAt: Date = new Date(),
   capturedAt: Date | null = null,
   notes?: string | null,
@@ -292,8 +292,8 @@ export async function insertCompletedJobDb(
   oneTimeServiceId?: string | null,
 ): Promise<CompletedJobRow> {
   const result = await sql`
-    INSERT INTO completed_jobs (address_id, org_id, service_type, completed_by, assigned_to, completed_at, captured_at, notes, scheduled_date, one_time_service_id)
-    VALUES (${addressId}, ${orgId}, ${serviceType}, ${completedBy || null}, ${assignedTo || null}, ${completedAt}, ${capturedAt}, ${notes || null}, ${scheduledDate}, ${oneTimeServiceId || null})
+    INSERT INTO completed_jobs (address_id, org_id, service_type, completed_by, assigned_member_ids, completed_at, captured_at, notes, scheduled_date, one_time_service_id)
+    VALUES (${addressId}, ${orgId}, ${serviceType}, ${completedBy || null}, ${assignedMemberIds || null}, ${completedAt}, ${capturedAt}, ${notes || null}, ${scheduledDate}, ${oneTimeServiceId || null})
     RETURNING *
   `;
 
@@ -505,7 +505,7 @@ export async function searchClientsDb(
         a.street ILIKE ${searchPattern} OR
         a.city ILIKE ${searchPattern} OR
         a.zip ILIKE ${searchPattern} OR
-        (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[])) OR
+        (${hasAssignees}::boolean AND a.assigned_member_ids && ${matchedAssigneeIds}::text[]) OR
         (nd.next_date IS NOT NULL AND (
           to_char(nd.next_date, 'FMMonth') ILIKE ${searchPattern} OR
           to_char(nd.next_date, 'FMMonth FMDD') ILIKE ${searchPattern} OR
@@ -536,6 +536,7 @@ export async function searchClientsDb(
               a.zip,
               a.status,
               a.assigned_to,
+              a.assigned_member_ids,
               COALESCE((SELECT ro.sort_order FROM route_orders ro WHERE ro.address_id = a.id), 0)::float as sort_order,
               (
                 SELECT jsonb_build_object(
@@ -605,7 +606,7 @@ export async function searchClientsDb(
                   'address_id', cj.address_id,
                   'org_id', cj.org_id,
                   'service_type', cj.service_type,
-                  'assigned_to', cj.assigned_to,
+                  'assigned_to', cj.assigned_to, 'assigned_member_ids', cj.assigned_member_ids,
                   'completed_by', cj.completed_by,
                   'completed_at', to_char(cj.completed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
                   'notes', cj.notes,
@@ -687,9 +688,9 @@ export async function getClientsForCutListDb(
         s.first_cut_date,
         s.day_of_week as schedule_dow,
         ro.sort_order,
-        ass.user_id as assignment_user_id,
-        ass.id as assignment_id,
-        ass.scheduled_date as assignment_date,
+        ass.assignment_user_ids,
+        ass.assignment_id,
+        ass.assignment_date,
         COALESCE(ots.one_time_services_list, '[]'::jsonb) as active_one_times,
         (
           s.id IS NOT NULL AND s.first_cut_date <= ${date}::date AND (
@@ -703,7 +704,11 @@ export async function getClientsForCutListDb(
       JOIN clients c ON a.client_id = c.id
       LEFT JOIN schedules s ON a.id = s.address_id
       LEFT JOIN route_orders ro ON a.id = ro.address_id
-      LEFT JOIN assignments ass ON a.id = ass.address_id AND ass.scheduled_date = ${date}::date
+      LEFT JOIN LATERAL (
+        SELECT array_agg(user_id) as assignment_user_ids, (array_agg(id))[1] as assignment_id, (array_agg(scheduled_date))[1] as assignment_date
+        FROM assignments
+        WHERE address_id = a.id AND scheduled_date = ${date}::date
+      ) ass ON true
       LEFT JOIN LATERAL (
         SELECT jsonb_agg(
           jsonb_build_object(
@@ -722,7 +727,7 @@ export async function getClientsForCutListDb(
                 'address_id', cj.address_id,
                 'org_id', cj.org_id,
                 'service_type', cj.service_type,
-                'assigned_to', cj.assigned_to,
+                'assigned_to', cj.assigned_to, 'assigned_member_ids', cj.assigned_member_ids,
                 'completed_by', cj.completed_by,
                 'completed_at', to_char(cj.completed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
                 'notes', cj.notes,
@@ -779,7 +784,8 @@ export async function getClientsForCutListDb(
       SELECT * FROM scheduled_addresses
       WHERE 
         ${showAll}::boolean OR 
-        COALESCE(assignment_user_id, assigned_to) = ${targetUserId || null} OR
+        (assignment_user_ids IS NOT NULL AND ${targetUserId || null} = ANY(assignment_user_ids)) OR
+        (assignment_user_ids IS NULL AND (${targetUserId || null} = ANY(assigned_member_ids) OR assigned_to = ${targetUserId || null})) OR
         EXISTS (
           SELECT 1 FROM jsonb_to_recordset(active_one_times) AS x(assigned_member_ids text[])
           WHERE ${targetUserId || null} = ANY(x.assigned_member_ids)
@@ -805,13 +811,14 @@ export async function getClientsForCutListDb(
               fa.zip,
               fa.status,
               fa.assigned_to,
+              fa.assigned_member_ids,
               fa.is_recurring_due,
               COALESCE(fa.sort_order, 0)::float as sort_order,
               (
                 SELECT jsonb_build_object(
                   'id', fa.assignment_id,
                   'address_id', fa.id,
-                  'user_id', fa.assignment_user_id,
+                  'user_ids', fa.assignment_user_ids,
                   'scheduled_date', to_char(fa.assignment_date, 'YYYY-MM-DD')
                 )
                 WHERE fa.assignment_id IS NOT NULL
@@ -853,7 +860,7 @@ export async function getClientsForCutListDb(
                   'address_id', cj.address_id,
                   'org_id', cj.org_id,
                   'service_type', cj.service_type,
-                  'assigned_to', cj.assigned_to,
+                  'assigned_to', cj.assigned_to, 'assigned_member_ids', cj.assigned_member_ids,
                   'completed_by', cj.completed_by,
                   'completed_at', to_char(cj.completed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
                   'notes', cj.notes,
@@ -949,7 +956,7 @@ export async function getClientsForInfoDb(
         a.street ILIKE ${searchPattern} OR
         a.city ILIKE ${searchPattern} OR
         a.zip ILIKE ${searchPattern} OR
-        (${hasAssignees}::boolean AND a.assigned_to = ANY(${matchedAssigneeIds}::text[])) OR
+        (${hasAssignees}::boolean AND a.assigned_member_ids && ${matchedAssigneeIds}::text[]) OR
         (nd.next_date IS NOT NULL AND (
           to_char(nd.next_date, 'FMMonth') ILIKE ${searchPattern} OR
           to_char(nd.next_date, 'FMMonth FMDD') ILIKE ${searchPattern} OR
@@ -988,6 +995,7 @@ export async function getClientsForInfoDb(
               a.zip,
               a.status,
               a.assigned_to,
+              a.assigned_member_ids,
               COALESCE((SELECT ro.sort_order FROM route_orders ro WHERE ro.address_id = a.id), 0)::float as sort_order,
               (
                 SELECT jsonb_build_object(
@@ -1057,7 +1065,7 @@ export async function getClientsForInfoDb(
                   'address_id', cj.address_id,
                   'org_id', cj.org_id,
                   'service_type', cj.service_type,
-                  'assigned_to', cj.assigned_to,
+                  'assigned_to', cj.assigned_to, 'assigned_member_ids', cj.assigned_member_ids,
                   'completed_by', cj.completed_by,
                   'completed_at', to_char(cj.completed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
                   'notes', cj.notes,

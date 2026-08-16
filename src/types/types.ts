@@ -28,6 +28,7 @@ export interface AddressRow {
   zip: string | null;
   status: "active" | "disabled" | "deleted";
   assigned_to: string | null;
+  assigned_member_ids: string[] | null;
   created_at: Date;
   updated_at: Date;
   org_id?: string;
@@ -71,7 +72,8 @@ export interface AssignmentRow {
   id: string;
   address_id: string;
   org_id: string;
-  user_id: string;
+  user_id?: string;
+  user_ids?: string[];
   scheduled_date: string;
   created_at: Date;
   updated_at: Date;
@@ -83,6 +85,7 @@ export interface CompletedJobRow {
   org_id: string;
   service_type: "grass" | "snow";
   assigned_to: string | null;
+  assigned_member_ids: string[] | null;
   completed_by: string | null;
   completed_at: Date;
   scheduled_date: Date | null;
@@ -117,7 +120,7 @@ export type OptimisticAction =
   | { type: "add-client"; client: Client }
   | { type: "edit-client"; client: Client }
   | { type: "delete-client"; clientId: string; defaultClients?: Client[] }
-  | { type: "update-assignee"; addressId: string; userId: string | null }
+  | { type: "update-assignee"; addressId: string; userIds: string[] | null }
   | {
       type: "update-schedule";
       addressId: string;
@@ -206,6 +209,7 @@ export interface AddressFormValue {
   state: string;
   zip: string;
   assigned_to: string;
+  assigned_member_ids?: string[];
 }
 
 export interface PastServicesStats {

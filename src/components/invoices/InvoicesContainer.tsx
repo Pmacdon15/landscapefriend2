@@ -1,17 +1,15 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useOptimistic, useState } from "react";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
-
+import { useInvoiceActions } from "@/hooks/use-invoice-actions";
 import type { InvoicesContainerProps } from "@/types/types";
 import { CreateInvoiceModal } from "./CreateInvoiceModal";
 import { InvoiceDetailModal } from "./InvoiceDetailModal";
-import InvoicesRevenueGraph from "./InvoicesRevenueGraph";
-import { useInvoiceActions } from "@/hooks/use-invoice-actions";
 import { InvoicesControlPanel } from "./InvoicesControlPanel";
 import { InvoicesGrid } from "./InvoicesGrid";
+import InvoicesRevenueGraph from "./InvoicesRevenueGraph";
 
 export default function InvoicesContainer({
   invoicesPromise,
@@ -86,7 +84,7 @@ export default function InvoicesContainer({
     setOptimistic,
     updateSearchParams,
     setDetailModalOpen,
-  }); 
+  });
 
   return (
     <div className="w-full flex flex-col gap-6 p-1 md:p-4">
@@ -126,7 +124,7 @@ export default function InvoicesContainer({
 
       <InvoiceDetailModal
         isOpen={detailModalOpen}
-        onClose={()=> setDetailModalOpen(false)}
+        onClose={() => setDetailModalOpen(false)}
         invoice={
           optimisticState.invoices.find(
             (invoice) => invoice.id === optimisticState.selectedInvoiceId,

@@ -1,6 +1,5 @@
 "use client";
 
-
 import {
   CheckCircle,
   Clock,
@@ -17,11 +16,14 @@ import { type MouseEvent, useState } from "react";
 import { toast } from "sonner";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { formatCurrency, formatStandardDate } from "@/lib/utils";
+import {
+  downloadInvoicePDF,
+  sendInvoiceEmailPDF,
+} from "@/lib/utils/invoice-pdf-utils";
 import { useDeleteInvoice, useSendInvoiceEmail } from "@/mutations/invoices";
 import { Button } from "../ui/button";
 import { DeleteInvoiceDialog } from "./DeleteInvoiceDialog";
 import { InvoicePDFView } from "./InvoicePDFView";
-import { downloadInvoicePDF, sendInvoiceEmailPDF } from "@/lib/utils/invoice-pdf-utils";
 
 interface InvoiceCardProps {
   invoice: DbInvoiceResult;
@@ -111,7 +113,7 @@ export function InvoiceCard({
           invoiceNumber: invoice.invoice_number,
           clientName: invoice.client_name,
         },
-        sendEmailMutation
+        sendEmailMutation,
       );
     } finally {
       setIsExporting(false);

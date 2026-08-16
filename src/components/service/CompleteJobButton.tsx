@@ -72,7 +72,10 @@ export function CompleteJobButton({
       completeJob({
         addressId: address.id,
         serviceType: serviceType,
-        assignedTo: address.assignment?.user_id || address.assigned_to || null,
+        assignedMemberIds:
+          address.assignment?.user_ids ||
+          address.assigned_member_ids ||
+          (address.assigned_to ? [address.assigned_to] : null),
         photoFile: fileToUpload as File,
         capturedAt: timestamp,
         completedAt: timestamp,

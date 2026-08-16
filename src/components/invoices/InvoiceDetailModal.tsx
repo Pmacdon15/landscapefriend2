@@ -3,7 +3,7 @@
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 import { Download, Loader2, Mail, X } from "lucide-react";
-import { SetStateAction, useState } from "react";
+import { type SetStateAction, useState } from "react";
 import { toast } from "sonner";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 import { useSendInvoiceEmail } from "@/mutations/invoices";

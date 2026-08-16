@@ -577,10 +577,7 @@ export function CreateInvoiceModal({
               </Button>
               <Button
                 type="submit"
-                disabled={
-                  createInvoiceMutation.isPending ||
-                  !selectedClient
-                }
+                disabled={createInvoiceMutation.isPending || !selectedClient}
                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-lg shadow-green-600/20 px-8 h-10"
               >
                 {createInvoiceMutation.isPending ? (

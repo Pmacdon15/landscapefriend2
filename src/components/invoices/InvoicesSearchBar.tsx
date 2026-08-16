@@ -12,7 +12,12 @@ export function InvoicesSearchBar({
   activeInvoices,
   updateSearchParams,
 }: {
-  setOptimisticSearch: (partialUpdate: Partial<{ invoices: DbInvoiceResult[], searchValue: string }>) => void;
+  setOptimisticSearch: (
+    partialUpdate: Partial<{
+      invoices: DbInvoiceResult[];
+      searchValue: string;
+    }>,
+  ) => void;
   optimisticValue: string;
   activeInvoices: DbInvoiceResult[];
   updateSearchParams: (updates: Record<string, string | null>) => void;
@@ -25,13 +30,14 @@ export function InvoicesSearchBar({
   );
 
   const displaySearchValue = matchedInvoice
-    ? (optimisticValue === matchedInvoice.client_id
-        ? matchedInvoice.client_name
-        : matchedInvoice.invoice_number)
+    ? optimisticValue === matchedInvoice.client_id
+      ? matchedInvoice.client_name
+      : matchedInvoice.invoice_number
     : optimisticValue;
 
   const [parentInputValue, setParentInputValue] = useState(displaySearchValue);
-  const [prevOptimisticValue, setPrevOptimisticValue] = useState(optimisticValue);
+  const [prevOptimisticValue, setPrevOptimisticValue] =
+    useState(optimisticValue);
 
   if (optimisticValue !== prevOptimisticValue) {
     setPrevOptimisticValue(optimisticValue);
@@ -77,7 +83,10 @@ export function InvoicesSearchBar({
       onSearch={(query, _, setInputValue, setIsFocused) => {
         setInputValue(query);
         startTransition(() => {
-          const updates: Partial<{ invoices: DbInvoiceResult[], searchValue: string }> = { searchValue: query };
+          const updates: Partial<{
+            invoices: DbInvoiceResult[];
+            searchValue: string;
+          }> = { searchValue: query };
           if (query && invoicesList.length) {
             updates.invoices = invoicesList.slice(0, 10);
           } else if (!query && defaultData?.invoices) {
@@ -123,7 +132,9 @@ export function InvoicesSearchBar({
       renderItem={(invoice) => (
         <div className="flex items-center justify-between w-full">
           <div>
-            <span className="font-semibold block text-left">{invoice.invoice_number}</span>
+            <span className="font-semibold block text-left">
+              {invoice.invoice_number}
+            </span>
             <span className="text-xs text-muted-foreground block text-left">
               {invoice.client_name}
             </span>
