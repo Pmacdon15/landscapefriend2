@@ -134,7 +134,7 @@ export function AddressItem({
                         type="checkbox"
                         checked={isChecked}
                         onChange={(e) => {
-                          let nextValues;
+                          let nextValues: string[];
                           if (e.target.checked) {
                             nextValues = [...currentValues, member.id];
                           } else {

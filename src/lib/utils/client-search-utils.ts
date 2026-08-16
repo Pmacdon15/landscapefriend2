@@ -1,12 +1,15 @@
+import type { ReadonlyURLSearchParams } from "next/navigation";
 import { startTransition } from "react";
 import type { Client, OptimisticAction } from "@/types/types";
+
+type AppRouterInstance = ReturnType<typeof import("next/navigation").useRouter>;
 
 interface HandleSearchArgs {
   query: string;
   immediateClients?: Client[];
   defaultData?: { clients: Client[] };
-  searchParams: any;
-  router: any;
+  searchParams: ReadonlyURLSearchParams;
+  router: AppRouterInstance;
   setInputValue: (value: string) => void;
   setIsFocused: (value: boolean) => void;
   setOptimistic: (action: OptimisticAction) => void;
@@ -57,8 +60,8 @@ export const handleSearch = ({
 
 interface HandleSelectClientArgs {
   client: Client;
-  searchParams: any;
-  router: any;
+  searchParams: ReadonlyURLSearchParams;
+  router: AppRouterInstance;
   setInputValue: (value: string) => void;
   setIsFocused: (value: boolean) => void;
   setOptimistic: (action: OptimisticAction) => void;
