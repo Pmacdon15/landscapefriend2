@@ -54,9 +54,9 @@ export const sendInvoiceEmailPDF = async (
   sendEmailMutation: {
     mutateAsync: (variables: {
       invoiceId: string;
-      pdfBase64: string;
-      filename: string;
-    }) => Promise<void>;
+      pdfBase64?: string;
+      filename?: string;
+    }) => Promise<string>;
   },
 ): Promise<void> => {
   toast.info("Generating invoice PDF & dispatching via email...");
