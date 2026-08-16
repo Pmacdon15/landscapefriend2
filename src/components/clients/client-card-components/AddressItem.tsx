@@ -14,13 +14,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   formatDateNaive,
   getGoogleMapsUrl,
   getNextCutDate,
@@ -99,41 +92,81 @@ export function AddressItem({
 
       <div className="flex items-center gap-2 pl-6 text-xs text-slate-500">
         <User className="h-3 w-3" />
-        <Select
-          disabled={clientStatus === "disabled"}
-          value={address.assigned_to || "unassigned"}
-          onValueChange={(val) => {
-            const userId = val === "unassigned" ? null : val;
-            startTransition(() => {
-              setOptimistic({
-                type: "update-assignee",
-                addressId: address.id,
-                userId: userId,
-              });
-              updateAssignee({
-                addressId: address.id,
-                userId: userId,
-              });
-            });
-          }}
-        >
-          <SelectTrigger className="h-7 w-fit text-[10px] bg-transparent border-none p-0 focus:ring-0">
-            <SelectValue placeholder="Assignee">
-              {members.find((m) => m.id === address.assigned_to)?.name ||
-                (address.assigned_to === "unassigned" || !address.assigned_to
-                  ? "Unassigned"
-                  : address.assigned_to)}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {members.map((member) => (
-              <SelectItem key={member.id} value={member.id}>
-                {member.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger
+            disabled={clientStatus === "disabled"}
+            className={buttonVariants({
+              variant: "ghost",
+              size: "sm",
+              className:
+                "h-7 w-fit text-[10px] bg-transparent border-none p-0 focus:ring-0 hover:bg-transparent",
+            })}
+          >
+            {(() => {
+              const assignedIds =
+                address.assigned_member_ids ||
+                (address.assigned_to ? [address.assigned_to] : []);
+              if (assignedIds.length === 0) return "Unassigned";
+              if (assignedIds.length === 1) {
+                return (
+                  members.find((m) => m.id === assignedIds[0])?.name ||
+                  "Unassigned"
+                );
+              }
+              return `${assignedIds.length} members`;
+            })()}
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" align="start">
+            <div className="space-y-2">
+              <h4 className="text-xs font-medium px-1">Assign Members</h4>
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {members.map((member) => {
+                  const currentValues =
+                    address.assigned_member_ids ||
+                    (address.assigned_to ? [address.assigned_to] : []);
+                  const isChecked = currentValues.includes(member.id);
+                  return (
+                    <label
+                      key={member.id}
+                      className="flex items-center gap-2 text-xs p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          let nextValues;
+                          if (e.target.checked) {
+                            nextValues = [...currentValues, member.id];
+                          } else {
+                            nextValues = currentValues.filter(
+                              (id) => id !== member.id,
+                            );
+                          }
+
+                          startTransition(() => {
+                            setOptimistic({
+                              type: "update-assignee",
+                              addressId: address.id,
+                              userIds:
+                                nextValues.length > 0 ? nextValues : null,
+                            });
+                            updateAssignee({
+                              addressId: address.id,
+                              userIds:
+                                nextValues.length > 0 ? nextValues : null,
+                            });
+                          });
+                        }}
+                        className="rounded border-slate-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span>{member.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="flex items-center justify-between pl-6">

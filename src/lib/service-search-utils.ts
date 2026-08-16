@@ -1,6 +1,10 @@
-import { startTransition } from "react";
 import type { ReadonlyURLSearchParams } from "next/navigation";
-import type { Client, CutListItem, OptimisticServiceAction } from "@/types/types";
+import { startTransition } from "react";
+import type {
+  Client,
+  CutListItem,
+  OptimisticServiceAction,
+} from "@/types/types";
 
 interface RouterPush {
   push: (href: string) => void;

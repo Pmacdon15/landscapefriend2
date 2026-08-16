@@ -14,13 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCreateClient } from "@/mutations/clients";
 import type {
   AddClientModalProps,
@@ -49,6 +42,7 @@ export function AddClientModal({
           state: "",
           zip: "",
           assigned_to: "unassigned",
+          assigned_member_ids: [],
         },
       ] as AddressFormValue[],
     },
@@ -63,6 +57,7 @@ export function AddClientModal({
           zip: addr.zip || null,
           assigned_to:
             addr.assigned_to === "unassigned" ? null : addr.assigned_to,
+          assigned_member_ids: addr.assigned_member_ids || [],
           status: "active" as const,
           sort_order: 0,
           schedule: null,
@@ -97,6 +92,7 @@ export function AddClientModal({
               zip: addr.zip || null,
               assigned_to:
                 addr.assigned_to === "unassigned" ? null : addr.assigned_to,
+              assigned_member_ids: addr.assigned_member_ids || [],
               status: "active" as const,
             })),
           });
@@ -213,6 +209,7 @@ export function AddClientModal({
                     state: "",
                     zip: "",
                     assigned_to: "unassigned",
+                    assigned_member_ids: [],
                   })
                 }
                 className="h-7 text-xs"
@@ -342,47 +339,54 @@ export function AddClientModal({
                           </div>
                         </div>
 
-                        <form.Field name={`addresses[${i}].assigned_to`}>
+                        <form.Field
+                          name={`addresses[${i}].assigned_member_ids`}
+                        >
                           {(subField) => (
                             <div className="grid gap-2">
-                              <Label htmlFor={subField.name}>
-                                Default Assignee
+                              <Label className="text-sm font-medium">
+                                Default Assignees
                               </Label>
-                              <Select
-                                value={subField.state.value}
-                                onValueChange={(val) =>
-                                  subField.handleChange(val as string)
-                                }
-                              >
-                                <SelectTrigger
-                                  id={subField.name}
-                                  onBlur={subField.handleBlur}
-                                >
-                                  <SelectValue placeholder="Select member">
-                                    {members.find(
-                                      (m) => m.id === subField.state.value,
-                                    )?.name ||
-                                      (subField.state.value === "unassigned"
-                                        ? "Unassigned"
-                                        : subField.state.value)}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="unassigned">
-                                    Unassigned
-                                  </SelectItem>
-                                  {members.map(
-                                    (member: { id: string; name: string }) => (
-                                      <SelectItem
-                                        key={member.id}
-                                        value={member.id}
-                                      >
-                                        {member.name}
-                                      </SelectItem>
-                                    ),
-                                  )}
-                                </SelectContent>
-                              </Select>
+                              <div className="max-h-32 overflow-y-auto space-y-1.5 p-2 border border-slate-200 dark:border-slate-800 rounded-md bg-white dark:bg-slate-950">
+                                {members.map((member) => {
+                                  // assigned_member_ids might be undefined since we just added it to the form schema,
+                                  // make sure it falls back to empty array
+                                  const currentValues =
+                                    (subField.state.value as
+                                      | string[]
+                                      | undefined) || [];
+                                  const isChecked = currentValues.includes(
+                                    member.id,
+                                  );
+                                  return (
+                                    <label
+                                      key={member.id}
+                                      className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            subField.handleChange([
+                                              ...currentValues,
+                                              member.id,
+                                            ]);
+                                          } else {
+                                            subField.handleChange(
+                                              currentValues.filter(
+                                                (id) => id !== member.id,
+                                              ),
+                                            );
+                                          }
+                                        }}
+                                        className="rounded border-slate-300 dark:border-slate-800 text-primary focus:ring-primary h-3.5 w-3.5"
+                                      />
+                                      <span>{member.name}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
                             </div>
                           )}
                         </form.Field>

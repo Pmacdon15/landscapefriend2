@@ -52,7 +52,7 @@ export const downloadInvoicePDF = async ({
 export const sendInvoiceEmailPDF = async (
   { invoiceId, invoiceNumber, clientName }: PDFExportParams,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  sendEmailMutation: any
+  sendEmailMutation: any,
 ): Promise<void> => {
   toast.info("Generating invoice PDF & dispatching via email...");
 

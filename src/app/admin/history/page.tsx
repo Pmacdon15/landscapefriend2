@@ -15,7 +15,6 @@ export const metadata: Metadata = {
 };
 
 export default async function HistoryPage(props: PageProps<"/admin/history">) {
-  
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
       <PageHeader

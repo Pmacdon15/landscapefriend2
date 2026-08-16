@@ -48,7 +48,9 @@ export function useInvoiceActions({
   const handleDeleteSuccess = (invoiceId: string) => {
     startTransition(() => {
       setOptimistic({
-        invoices: optimisticState.invoices.filter((inv) => inv.id !== invoiceId),
+        invoices: optimisticState.invoices.filter(
+          (inv) => inv.id !== invoiceId,
+        ),
         searchValue: "",
         selectedInvoiceId: "",
       });

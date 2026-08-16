@@ -158,7 +158,7 @@ export async function createClientDal(
             addr.state,
             addr.zip,
             addr.status,
-            addr.assigned_to,
+            addr.assigned_member_ids || (addr.assigned_to ? [addr.assigned_to] : []),
           ),
         ),
       );
@@ -244,7 +244,7 @@ export async function updateClientDal(
               addr.state,
               addr.zip,
               addr.status,
-              addr.assigned_to,
+              addr.assigned_member_ids || (addr.assigned_to ? [addr.assigned_to] : []),
             );
             finalAddresses.push({
               ...updatedAddr,
@@ -262,7 +262,7 @@ export async function updateClientDal(
             addr.state,
             addr.zip,
             addr.status,
-            addr.assigned_to,
+            addr.assigned_member_ids || (addr.assigned_to ? [addr.assigned_to] : []),
           );
           finalAddresses.push({
             ...newAddr,

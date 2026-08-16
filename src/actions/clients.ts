@@ -41,6 +41,7 @@ export async function updateClientAction(
       zip?: string | null;
       status: "active" | "disabled" | "deleted";
       assigned_to?: string | null;
+      assigned_member_ids?: string[];
     }[];
   },
 ) {
@@ -63,9 +64,9 @@ export async function updateClientAction(
 
 export async function updateAddressAssigneeAction(
   addressId: string,
-  userId: string | null,
+  userIds: string[] | null,
 ) {
-  const result = await updateAddressAssigneeDal(addressId, userId);
+  const result = await updateAddressAssigneeDal(addressId, userIds);
 
   return result.match(
     (address) => {

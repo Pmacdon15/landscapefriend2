@@ -49,7 +49,13 @@ export async function getPastServicesListDal(
     return { data: [], totalPages: 0 };
   }
 
-  return await getPastServicesListDb(orgId, 10, (page - 1) * 10, clientId, search)
+  return await getPastServicesListDb(
+    orgId,
+    10,
+    (page - 1) * 10,
+    clientId,
+    search,
+  )
     .then((list) => {
       return {
         data: list as unknown as PastServiceItem[],

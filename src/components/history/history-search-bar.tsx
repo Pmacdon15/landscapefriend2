@@ -73,7 +73,7 @@ export function HistorySearchBar({
   const handleSearch = (
     query: string,
     setInputValue: (v: string) => void,
-    setIsFocused: (v: boolean) => void
+    setIsFocused: (v: boolean) => void,
   ) => {
     const params = new URLSearchParams(searchParams);
     params.delete("clientId");
@@ -105,7 +105,7 @@ export function HistorySearchBar({
   const handleSelectClient = (
     client: Client,
     setInputValue: (v: string) => void,
-    setIsFocused: (v: boolean) => void
+    setIsFocused: (v: boolean) => void,
   ) => {
     setInputValue(client.name);
     setParentInputValue(client.name);
@@ -150,13 +150,18 @@ export function HistorySearchBar({
         if (filteredItems.length === 0) {
           return (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              No clients or team members found matching &quot;{parentInputValue}&quot;
+              No clients or team members found matching &quot;{parentInputValue}
+              &quot;
             </div>
           );
         }
 
-        const clientItems = filteredItems.filter((i) => i.type === "client") as { type: "client"; data: Client }[];
-        const memberItems = filteredItems.filter((i) => i.type === "member") as { type: "member"; data: { id: string; name: string } }[];
+        const clientItems = filteredItems.filter(
+          (i) => i.type === "client",
+        ) as { type: "client"; data: Client }[];
+        const memberItems = filteredItems.filter(
+          (i) => i.type === "member",
+        ) as { type: "member"; data: { id: string; name: string } }[];
 
         return (
           <div className="p-2 space-y-2">
@@ -169,7 +174,9 @@ export function HistorySearchBar({
                   <button
                     type="button"
                     key={c.data.id}
-                    onClick={() => handleSelectClient(c.data, setInputValue, setIsFocused)}
+                    onClick={() =>
+                      handleSelectClient(c.data, setInputValue, setIsFocused)
+                    }
                     className="w-full text-left flex flex-col p-3 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg transition-colors group"
                   >
                     <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors">
@@ -201,7 +208,9 @@ export function HistorySearchBar({
                   <button
                     type="button"
                     key={m.data.id}
-                    onClick={() => handleSearch(m.data.name, setInputValue, setIsFocused)}
+                    onClick={() =>
+                      handleSearch(m.data.name, setInputValue, setIsFocused)
+                    }
                     className="w-full text-left flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg transition-colors group"
                   >
                     <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">

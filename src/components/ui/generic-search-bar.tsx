@@ -13,25 +13,25 @@ export interface GenericSearchBarProps<T> {
   renderItem: (item: T) => React.ReactNode;
   /** Extract a unique key for each item */
   getItemKey: (item: T) => string;
-  
+
   /** Called when the user presses Enter or clears the search */
   onSearch: (
-    query: string, 
+    query: string,
     filteredItems: T[],
     setInputValue: (val: string) => void,
-    setIsFocused: (val: boolean) => void
+    setIsFocused: (val: boolean) => void,
   ) => void;
-  
+
   /** Called when the user clicks an item in the dropdown */
   onSelect: (
     item: T,
     setInputValue: (val: string) => void,
-    setIsFocused: (val: boolean) => void
+    setIsFocused: (val: boolean) => void,
   ) => void;
-  
+
   /** Called whenever the input value changes */
   onInputChange?: (value: string) => void;
-  
+
   /** Advanced usage: Completely override the dropdown rendering. */
   renderDropdown?: (props: {
     filteredItems: T[];
@@ -39,7 +39,7 @@ export interface GenericSearchBarProps<T> {
     setInputValue: (val: string) => void;
     setIsFocused: (val: boolean) => void;
   }) => React.ReactNode;
-  
+
   optimisticValue?: string;
   placeholder?: string;
   emptyMessage?: string;
@@ -77,7 +77,9 @@ export function GenericSearchBar<T>({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredItems = items.filter((item) => filterPredicate(item, inputValue));
+  const filteredItems = items.filter((item) =>
+    filterPredicate(item, inputValue),
+  );
 
   return (
     <div className="relative w-full max-w-md z-40" ref={containerRef}>
@@ -125,7 +127,12 @@ export function GenericSearchBar<T>({
               Searching...
             </div>
           ) : renderDropdown ? (
-            renderDropdown({ filteredItems, inputValue, setInputValue, setIsFocused })
+            renderDropdown({
+              filteredItems,
+              inputValue,
+              setInputValue,
+              setIsFocused,
+            })
           ) : filteredItems.length > 0 ? (
             <div className="p-1">
               {filteredItems.map((item) => (

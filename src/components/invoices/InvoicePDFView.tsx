@@ -15,8 +15,6 @@ export const InvoicePDFView = React.forwardRef<
   HTMLDivElement,
   InvoicePDFViewProps
 >(({ invoice, orgName, logoUrl }, ref) => {
-
-
   const subtotal = invoice.items.reduce(
     (sum, item) => sum + Number(item.amount),
     0,
@@ -80,8 +78,12 @@ export const InvoicePDFView = React.forwardRef<
                   {invoice.status}
                 </span>
               </p>
-              {invoice.sent_at && <p>Sent: {formatLongDate(invoice.sent_at)}</p>}
-              {invoice.paid_at && <p>Paid: {formatLongDate(invoice.paid_at)}</p>}
+              {invoice.sent_at && (
+                <p>Sent: {formatLongDate(invoice.sent_at)}</p>
+              )}
+              {invoice.paid_at && (
+                <p>Paid: {formatLongDate(invoice.paid_at)}</p>
+              )}
             </div>
           </div>
         </div>

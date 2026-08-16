@@ -1,11 +1,5 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import {
-  err,
-  errAsync,
-  okAsync,
-  type Result,
-  type ResultAsync,
-} from "neverthrow";
+import { err, errAsync, okAsync, type ResultAsync } from "neverthrow";
 import { connection } from "next/server";
 import {
   type CreateInvoiceInput,
@@ -304,5 +298,3 @@ export async function sendInvoiceEmailDal(
       } as const);
     });
 }
-
-

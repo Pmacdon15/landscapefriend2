@@ -339,5 +339,3 @@ export async function getNextInvoiceNumberDb(orgId: string): Promise<string> {
 
   return `INV-${Date.now()}`;
 }
-
-

@@ -20,7 +20,7 @@ export function ServiceSearchBar({
   const searchParams = useSearchParams();
 
   const { data: defaultData } = useServiceSearchQuery(date, userId ?? "");
-//TODO: Fix invoice search
+  //TODO: Fix invoice search
   return (
     <GenericSearchBar<CutListItem>
       items={items}
@@ -32,7 +32,7 @@ export function ServiceSearchBar({
         item.address.street.toLowerCase().includes(query.toLowerCase())
       }
       getItemKey={(item) => item.address.id}
-      onSearch={(query, filteredItems, setInputValue, setIsFocused) => {
+      onSearch={(query, _filteredItems, setInputValue, setIsFocused) => {
         handleServiceSearch({
           query,
           defaultData,
@@ -56,9 +56,7 @@ export function ServiceSearchBar({
       }}
       renderItem={(item) => (
         <>
-          <span className="font-medium text-sm">
-            {item.client.name}
-          </span>
+          <span className="font-medium text-sm">{item.client.name}</span>
           <span className="text-xs text-muted-foreground">
             {item.address.street}, {item.address.city}
           </span>

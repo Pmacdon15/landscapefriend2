@@ -256,48 +256,60 @@ export function ServiceListItem({
                       </a>
 
                       {/* Render Crew/Assignees */}
-                      {isOts
-                        ? ots.assigned_member_ids &&
-                          ots.assigned_member_ids.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1.5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-fit">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
-                                <User className="h-3.5 w-3.5 text-violet-500" />{" "}
-                                Crew:
-                              </span>
-                              <div className="flex flex-wrap gap-1">
-                                {ots.assigned_member_ids.map((memberId) => {
-                                  const memberName =
-                                    members.find((m) => m.id === memberId)
-                                      ?.name || "Unknown Worker";
-                                  return (
-                                    <span
-                                      key={memberId}
-                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border border-violet-100 dark:border-violet-900/50"
-                                    >
-                                      {memberName}
-                                    </span>
-                                  );
-                                })}
-                              </div>
+                      {isOts ? (
+                        ots.assigned_member_ids &&
+                        ots.assigned_member_ids.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-fit">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
+                              <User className="h-3.5 w-3.5 text-violet-500" />{" "}
+                              Crew:
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {ots.assigned_member_ids.map((memberId) => {
+                                const memberName =
+                                  members.find((m) => m.id === memberId)
+                                    ?.name || "Unknown Worker";
+                                return (
+                                  <span
+                                    key={memberId}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border border-violet-100 dark:border-violet-900/50"
+                                  >
+                                    {memberName}
+                                  </span>
+                                );
+                              })}
                             </div>
-                          )
-                        : (address.assignment?.user_id ||
-                            address.assigned_to) && (
-                            <div className="flex flex-wrap items-center gap-1.5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-fit">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
-                                <User className="h-3.5 w-3.5 text-primary" />{" "}
-                                Assignee:
-                              </span>
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                                {members.find(
-                                  (m) =>
-                                    m.id ===
-                                    (address.assignment?.user_id ||
-                                      address.assigned_to),
-                                )?.name || "Assigned"}
-                              </span>
-                            </div>
-                          )}
+                          </div>
+                        )
+                      ) : address.assignment?.user_ids?.length ||
+                        address.assigned_member_ids?.length ||
+                        address.assigned_to ? (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-fit">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
+                            <User className="h-3.5 w-3.5 text-primary" />{" "}
+                            Assignees:
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {(
+                              address.assignment?.user_ids ||
+                              address.assigned_member_ids ||
+                              (address.assigned_to ? [address.assigned_to] : [])
+                            ).map((memberId) => {
+                              const memberName =
+                                members.find((m) => m.id === memberId)?.name ||
+                                "Assigned";
+                              return (
+                                <span
+                                  key={memberId}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                >
+                                  {memberName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
                     {/* Render Notes */}
