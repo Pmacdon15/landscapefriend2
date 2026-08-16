@@ -80,13 +80,16 @@ export async function getInvoicesDb(
       AND (
         ${!searchQuery}::boolean OR
         i.id::text ILIKE ${searchPattern} OR
+        i.client_id::text ILIKE ${searchPattern} OR
         c.name ILIKE ${searchPattern} OR
         i.invoice_number ILIKE ${searchPattern} OR
         i.status ILIKE ${searchPattern} OR
         a.street ILIKE ${searchPattern} OR
         a.city ILIKE ${searchPattern} OR
         ii.description ILIKE ${searchPattern} OR
-        ii.service_type ILIKE ${searchPattern}
+        ii.service_type ILIKE ${searchPattern} OR
+        i.issue_date::text ILIKE ${searchPattern} OR
+        i.due_date::text ILIKE ${searchPattern}
       )
     ),
     total_count AS (
@@ -337,16 +340,4 @@ export async function getNextInvoiceNumberDb(orgId: string): Promise<string> {
   return `INV-${Date.now()}`;
 }
 
-export async function getExistingInvoiceNumbersDb(
-  orgId: string,
-): Promise<string[]> {
-  "use cache";
-  cacheTag(`invoices-existing-numbers-${orgId}`);
 
-  const result = await sql`
-    SELECT invoice_number 
-    FROM invoices
-    WHERE org_id = ${orgId}
-  `;
-  return result.map((r) => r.invoice_number);
-}

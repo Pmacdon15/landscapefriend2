@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import PaginationButtons from "@/components/pagination-buttons";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForInfoDal } from "@/dal/clients";
+import { parseParams } from "@/lib/utils/search-params-util";
 
 export const metadata: Metadata = {
   title: "Client Roster",
@@ -17,43 +18,12 @@ export const metadata: Metadata = {
 export default async function ClientInfoListPage(
   props: PageProps<"/client-info-list">,
 ) {
-  const isAdminPromise = auth
-    .protect()
-    .then((authData) => authData.has({ role: "org:admin" }));
   const clientsPromise = props.searchParams.then((params) =>
     getClientsForInfoDal(
-      Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
-      Array.isArray(params.search)
-        ? params.search[0]
-        : (params.search ?? undefined),
-      Array.isArray(params.clientId)
-        ? params.clientId[0]
-        : (params.clientId ?? undefined),
-    ).then((data) => data.clients),
-  );
-  const membersPromise = getOrganizationMembersDal();
-  const pagePromise = props.searchParams.then((params) =>
-    Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
-  );
-
-  const searchPromise = props.searchParams.then((p) =>
-    String((Array.isArray(p.search) ? p.search[0] : p.search) ?? ""),
-  );
-
-  const clientIdPromise = props.searchParams.then((p) =>
-    String((Array.isArray(p.clientId) ? p.clientId[0] : p.clientId) ?? ""),
-  );
-
-  const totalPagesPromise = props.searchParams.then((params) =>
-    getClientsForInfoDal(
-      Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
-      Array.isArray(params.search)
-        ? params.search[0]
-        : (params.search ?? undefined),
-      Array.isArray(params.clientId)
-        ? params.clientId[0]
-        : (params.clientId ?? undefined),
-    ).then((data) => data.totalPages),
+      Number(parseParams(params.page) ?? 1),
+      parseParams(params.search),
+      parseParams(params.clientId),
+    ),
   );
 
   return (
@@ -66,19 +36,27 @@ export default async function ClientInfoListPage(
       <Suspense fallback={<ClientsSkeleton />}>
         <div id="client-list">
           <ClientInfoContainer
-            isAdminPromise={isAdminPromise}
-            clientsPromise={clientsPromise}
-            membersPromise={membersPromise}
-            searchPromise={searchPromise}
-            clientIdPromise={clientIdPromise}
+            isAdminPromise={auth
+              .protect()
+              .then((authData) => authData.has({ role: "org:admin" }))}
+            clientsPromise={clientsPromise.then((data) => data.clients)}
+            membersPromise={getOrganizationMembersDal()}
+            searchPromise={props.searchParams.then(
+              (p) => parseParams(p.search) ?? "",
+            )}
+            clientIdPromise={props.searchParams.then(
+              (p) => parseParams(p.clientId) ?? "",
+            )}
           />
         </div>
       </Suspense>
 
       <Suspense>
         <PaginationButtons
-          pagePromise={pagePromise}
-          totalPagesPromise={totalPagesPromise}
+          pagePromise={props.searchParams.then((params) =>
+            Number(parseParams(params.page) ?? 1),
+          )}
+          totalPagesPromise={clientsPromise.then((data) => data.totalPages)}
           hash="client-list"
         />
       </Suspense>

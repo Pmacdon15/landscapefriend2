@@ -32,7 +32,6 @@ interface CreateInvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   nextInvoiceNumber: string;
-  existingInvoiceNumbers: string[];
   onInvoiceCreated: (invoice: DbInvoiceResult) => void;
 }
 
@@ -40,7 +39,6 @@ export function CreateInvoiceModal({
   isOpen,
   onClose,
   nextInvoiceNumber,
-  existingInvoiceNumbers,
   onInvoiceCreated,
 }: CreateInvoiceModalProps) {
   const [invoiceNo, setInvoiceNo] = useState(nextInvoiceNumber);
@@ -62,26 +60,9 @@ export function CreateInvoiceModal({
   const [invoiceNotes, setInvoiceNotes] = useState("");
   const [taxRate, setTaxRate] = useState<number>(0);
 
-  // Validate duplicate invoice numbers
-  const invoiceNumberExists = existingInvoiceNumbers.includes(invoiceNo.trim());
-
-  // Keep suggestion unique and updated
   useEffect(() => {
-    let suggested = nextInvoiceNumber;
-    let count = 1;
-    while (existingInvoiceNumbers.includes(suggested)) {
-      const match = nextInvoiceNumber.match(/INV-(\d+)/);
-      if (match) {
-        const nextNum = parseInt(match[1], 10) + count;
-        suggested = `INV-${String(nextNum).padStart(4, "0")}`;
-      } else {
-        suggested = `INV-${Date.now()}`;
-        break;
-      }
-      count++;
-    }
-    setInvoiceNo(suggested);
-  }, [nextInvoiceNumber, existingInvoiceNumbers]);
+    setInvoiceNo(nextInvoiceNumber);
+  }, [nextInvoiceNumber]);
   const [lineItems, setLineItems] = useState<TempLineItem[]>([
     {
       id: "initial-0",
@@ -184,9 +165,6 @@ export function CreateInvoiceModal({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (invoiceNumberExists) {
-      return;
-    }
     if (!selectedClient) {
       return;
     }
@@ -275,13 +253,8 @@ export function CreateInvoiceModal({
                 value={invoiceNo}
                 onChange={(e) => setInvoiceNo(e.target.value)}
                 required
-                className={`mt-2 font-mono ${invoiceNumberExists ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                className="mt-2 font-mono"
               />
-              {invoiceNumberExists && (
-                <p className="mt-1 text-[10px] text-red-500 font-semibold leading-none">
-                  Invoice number already in use.
-                </p>
-              )}
             </div>
 
             <div>
@@ -606,8 +579,7 @@ export function CreateInvoiceModal({
                 type="submit"
                 disabled={
                   createInvoiceMutation.isPending ||
-                  !selectedClient ||
-                  invoiceNumberExists
+                  !selectedClient
                 }
                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-lg shadow-green-600/20 px-8 h-10"
               >

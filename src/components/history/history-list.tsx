@@ -23,8 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { PastServiceItem } from "@/dal/admin";
-import type { Client } from "@/types/types";
+
+import type { Client, PastServiceItem } from "@/types/types";
 import type { SiteMap } from "@/zod/schemas";
 
 interface HistoryListProps {

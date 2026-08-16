@@ -1,3 +1,4 @@
+import type { DbInvoiceResult, RevenueStats } from "@/db/queries/invoices";
 import type {
   Address,
   Assignment,
@@ -111,21 +112,25 @@ export interface CompletionPhotoRow {
 }
 
 export type OptimisticAction =
+  | { type: "search-submitted"; query: string; clients: Client[] }
+  | { type: "select-client"; client: Client }
+  | { type: "add-client"; client: Client }
+  | { type: "edit-client"; client: Client }
+  | { type: "delete-client"; clientId: string; defaultClients?: Client[] }
   | { type: "update-assignee"; addressId: string; userId: string | null }
   | {
       type: "update-schedule";
       addressId: string;
       frequency: string;
-      firstCutDate: Date;
-      notes?: string | null;
+      firstCutDate: string;
+      notes?: string;
     }
   | { type: "delete-schedule"; addressId: string }
-  | { type: "add-client"; client: Client }
-  | { type: "edit-client"; client: Client }
-  | { type: "delete-client"; clientId: string; defaultClients?: Client[] }
-  | { type: "optimistic-search"; clients: Client[] }
-  | { type: "select-client"; client: Client }
-  | { type: "add-one-time-service"; addressId: string; service: OneTimeService }
+  | {
+      type: "add-one-time-service";
+      addressId: string;
+      service: OneTimeService;
+    }
   | { type: "delete-one-time-service"; addressId: string; serviceId: string };
 
 export type OptimisticServiceAction =
@@ -201,4 +206,117 @@ export interface AddressFormValue {
   state: string;
   zip: string;
   assigned_to: string;
+}
+
+export interface PastServicesStats {
+  totalCuts: number;
+  cutsByUser: {
+    user_name: string;
+    user_id: string | null;
+    count: number;
+  }[];
+  cutsByServiceType: {
+    service_type: string;
+    count: number;
+  }[];
+  cutsByDay: {
+    date: Date;
+    count: number;
+  }[];
+}
+
+export interface PastServiceItem extends CompletedJobRow {
+  client_name: string;
+  client_id: string;
+  street: string;
+  city: string;
+  completed_by_name: string | null;
+  assigned_to_name: string | null;
+  photos: {
+    id: string;
+    blob_path: string;
+    created_at: Date;
+  }[];
+}
+
+export interface MonthlyStats {
+  monthName: string;
+  totalCompleted: number;
+  userStats: {
+    id: string;
+    name: string;
+    completed: number;
+    scheduled: number;
+  }[];
+}
+
+export interface PastServicesStats {
+  totalCuts: number;
+  cutsByUser: {
+    user_name: string;
+    user_id: string | null;
+    count: number;
+  }[];
+  cutsByServiceType: {
+    service_type: string;
+    count: number;
+  }[];
+  cutsByDay: {
+    date: Date;
+    count: number;
+  }[];
+}
+
+export interface PastServiceItem extends CompletedJobRow {
+  client_name: string;
+  client_id: string;
+  street: string;
+  city: string;
+  completed_by_name: string | null;
+  assigned_to_name: string | null;
+  photos: {
+    id: string;
+    blob_path: string;
+    created_at: Date;
+  }[];
+}
+
+export interface MonthlyStats {
+  monthName: string;
+  totalCompleted: number;
+  userStats: {
+    id: string;
+    name: string;
+    completed: number;
+    scheduled: number;
+  }[];
+}
+export type UserMonthlyStatRow = {
+  id: string;
+  name: string;
+  completed: number;
+  scheduled: number;
+};
+export interface ServiceSearchBarProps {
+  items: CutListItem[];
+  optimisticValue: string;
+  setOptimistic: (action: OptimisticServiceAction) => void;
+  date: Date;
+  userId?: string | null;
+}
+
+export interface OrgInfo {
+  name: string;
+  logoUrl: string | null;
+}
+
+export interface InvoicesContainerProps {
+  invoicesPromise: Promise<DbInvoiceResult[]>;
+  revenueStatsPromise: Promise<RevenueStats[]>;
+  nextInvoiceNumberPromise: Promise<string>;
+  organizationInfoPromise: Promise<OrgInfo | null>;
+  searchPromise: Promise<string>;
+  statusPromise: Promise<string>;
+  hasSendInvoicesPromise: Promise<boolean>;
+  invoiceIdPromise: Promise<string>;
 }

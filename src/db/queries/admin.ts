@@ -1,4 +1,5 @@
 import { cacheTag } from "next/cache";
+import type { UserMonthlyStatRow } from "@/types/types";
 import { sql } from "../client";
 export async function getPastServicesStatsDb(orgId: string) {
   "use cache";
@@ -141,76 +142,92 @@ export async function getPastServicesListDb(
   return result;
 }
 
-export async function getMonthlyStatsRawDb(
+export async function getMonthlyStatsDb(
   orgId: string,
-  startDate: Date,
-  endDate: Date,
-) {
-  "use cache";
-  cacheTag(`monthly-stats-${orgId}`, `job-history-${orgId}`);
+  start: Date,
+  end: Date,
+): Promise<UserMonthlyStatRow[]> {
+  const startDateStr = start.toISOString().split("T")[0];
+  const endDateStr = end.toISOString().split("T")[0];
 
-  // Convert dates to ISO strings for the assignments table filter consistency
-  const startIsoStr = startDate.toISOString().split("T")[0];
-  const endIsoStr = endDate.toISOString().split("T")[0];
-
-  const [result] = await sql`
-    WITH 
-    -- 1. Completed Jobs Aggregation
-    completed_jobs_cte AS (
-      SELECT COALESCE(json_agg(t), '[]'::json) as completed_jobs
-      FROM (
-        SELECT cj.*, u.full_name as completed_by_name
-        FROM completed_jobs cj
-        LEFT JOIN users u ON cj.completed_by = u.user_id
-        WHERE cj.org_id = ${orgId} 
-          AND cj.completed_at >= ${startDate} 
-          AND cj.completed_at <= ${endDate}
-      ) t
+  const result = (await sql`
+    WITH month_days AS (
+      -- Generate every day for the target month
+      SELECT generate_series(
+        ${startDateStr}::date, 
+        ${endDateStr}::date, 
+        '1 day'::interval
+      )::date AS day
     ),
-
-    -- 2. Schedules Aggregation
-    schedules_cte AS (
-      SELECT COALESCE(json_agg(t), '[]'::json) as schedules
-      FROM (
-        SELECT s.*, a.assigned_to, u.full_name as assigned_to_name
-        FROM schedules s
-        JOIN addresses a ON s.address_id = a.id
-        JOIN clients c ON a.client_id = c.id
-        LEFT JOIN users u ON a.assigned_to = u.user_id
-        WHERE c.org_id = ${orgId} AND a.status != 'deleted'
-      ) t
+    active_days AS (
+      -- Filter to only today or future days in the month
+      SELECT day 
+      FROM month_days 
+      WHERE day >= CURRENT_DATE
     ),
-
-    -- 3. Assignments Aggregation
-    assignments_cte AS (
-      SELECT COALESCE(json_agg(t), '[]'::json) as assignments
-      FROM (
-        SELECT ass.*, u.full_name as user_name
-        FROM assignments ass
-        LEFT JOIN users u ON ass.user_id = u.user_id
-        WHERE ass.org_id = ${orgId} 
-          AND ass.scheduled_date >= ${startIsoStr}
-          AND ass.scheduled_date <= ${endIsoStr}
-      ) t
+    projected_schedules AS (
+      -- Project recurring schedules onto generated days
+      SELECT 
+        d.day,
+        s.address_id,
+        addr.assigned_to
+      FROM active_days d
+      CROSS JOIN schedules s
+      JOIN addresses addr ON s.address_id = addr.id
+      JOIN clients cl ON addr.client_id = cl.id
+      WHERE cl.org_id = ${orgId}
+        AND d.day >= s.first_cut_date::date
+        AND (
+          (LOWER(s.frequency) = 'weekly' AND (d.day - s.first_cut_date::date) % 7 = 0) OR
+          (LOWER(s.frequency) = 'bi-weekly' AND (d.day - s.first_cut_date::date) % 14 = 0) OR
+          (LOWER(s.frequency) = 'monthly' AND EXTRACT(DAY FROM d.day) = EXTRACT(DAY FROM s.first_cut_date::date))
+        )
+    ),
+    uncompleted_schedules AS (
+      -- Exclude instances that were already completed on that date
+      SELECT ps.*
+      FROM projected_schedules ps
+      LEFT JOIN completed_jobs c 
+        ON c.address_id = ps.address_id 
+       AND (
+         c.scheduled_date::date = ps.day 
+         OR (c.scheduled_date IS NULL AND c.completed_at::date = ps.day)
+       )
+      WHERE c.id IS NULL
+    ),
+    scheduled_counts AS (
+      -- Resolve final assigned user (prefer explicit day assignment over default)
+      SELECT 
+        COALESCE(a.user_id, us.assigned_to, 'unassigned') AS user_id,
+        COUNT(*)::int AS scheduled_count
+      FROM uncompleted_schedules us
+      LEFT JOIN assignments a 
+        ON a.address_id = us.address_id 
+       AND a.scheduled_date = us.day
+      GROUP BY 1
+    ),
+    completed_counts AS (
+      -- Aggregate actual completed jobs by user for the month
+      SELECT 
+        COALESCE(completed_by, 'unassigned') AS user_id,
+        COUNT(*)::int AS completed_count
+      FROM completed_jobs
+      WHERE org_id = ${orgId}
+        AND completed_at >= ${start}
+        AND completed_at <= ${end}
+      GROUP BY 1
     )
-
-    -- Combine into a single payload row
+    -- Full outer join completed vs scheduled to assemble final stats per user
     SELECT 
-      cj.completed_jobs,
-      s.schedules,
-      a.assignments
-    FROM completed_jobs_cte cj
-    CROSS JOIN schedules_cte s
-    CROSS JOIN assignments_cte a;
-  `;
+      COALESCE(c.user_id, s.user_id) AS id,
+      COALESCE(u.full_name, 'Unassigned') AS name,
+      COALESCE(c.completed_count, 0)::int AS completed,
+      COALESCE(s.scheduled_count, 0)::int AS scheduled
+    FROM completed_counts c
+    FULL OUTER JOIN scheduled_counts s ON c.user_id = s.user_id
+    LEFT JOIN users u ON u.user_id = COALESCE(c.user_id, s.user_id)
+    ORDER BY completed DESC;
+  `) as UserMonthlyStatRow[];
 
-  if (!result) {
-    return { completedJobs: [], schedules: [], assignments: [] };
-  }
-
-  return {
-    completedJobs: result.completed_jobs,
-    schedules: result.schedules,
-    assignments: result.assignments,
-  };
+  return result;
 }

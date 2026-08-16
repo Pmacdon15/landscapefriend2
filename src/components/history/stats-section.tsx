@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { PastServicesStats } from "@/dal/admin";
+import type { PastServicesStats } from "@/types/types";
 
 export async function StatsSection({
   statsPromise,

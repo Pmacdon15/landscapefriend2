@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { MonthlyStats } from "@/dal/admin";
+import type { MonthlyStats } from "@/types/types";
 
 export async function MonthlySection({
   dataPromise,

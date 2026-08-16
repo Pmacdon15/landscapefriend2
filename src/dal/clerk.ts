@@ -12,35 +12,29 @@ export async function getOrganizationMembersDal(): Promise<
     return [];
   }
 
-  const client = await clerkClient();
-  const members = await client.organizations.getOrganizationMembershipList({
-    organizationId: orgId,
-  });
-  try {
-    return members.data.map((m) => {
-      const publicData = m.publicUserData;
-      const firstName = publicData?.firstName || "";
-      const lastName = publicData?.lastName || "";
-      const identifier = publicData?.identifier;
+  return clerkClient().then((client) =>
+    client.organizations
+      .getOrganizationMembershipList({
+        organizationId: orgId,
+      })
+      .then((members) =>
+        members.data.map((m) => {
+          const publicData = m.publicUserData;
+          const firstName = publicData?.firstName || "";
+          const lastName = publicData?.lastName || "";
+          const identifier = publicData?.identifier;
 
-      const fullName = `${firstName} ${lastName}`.trim();
+          const fullName = `${firstName} ${lastName}`.trim();
 
-      return {
-        id: publicData?.userId || "",
-        name: fullName || identifier || "Unknown Member",
-      };
-    });
-  } catch (error) {
-    // const isAborted =
-    //   error instanceof Error && error.message?.includes("aborted");
-    // if (isAborted) {
-    //   console.warn(
-    //     "Clerk request was aborted (possibly due to navigation or revalidation)",
-    //   );
-    // } else {
-    console.error("Failed to fetch organization members from Clerk:", error);
-    // }
-
-    return [];
-  }
+          return {
+            id: publicData?.userId || "",
+            name: fullName || identifier || "Unknown Member",
+          };
+        }),
+      )
+      .catch((e) => {
+        console.error("Failed to fetch organization members from Clerk:", e);
+        return [];
+      }),
+  );
 }

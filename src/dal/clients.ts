@@ -28,46 +28,45 @@ export async function getClientsForInfoDal(
   searchQuery?: string,
   clientId?: string,
 ): Promise<{ clients: Client[]; totalPages: number }> {
-  try {
-    const { orgId, orgRole } = await auth.protect();
-    const isAdmin = orgRole === "org:admin";
+  const [{ orgId, orgRole }, members] = await Promise.all([
+    auth.protect(),
+    getOrganizationMembersDal(),
+  ]);
 
-    if (!orgId || !isAdmin) {
-      throw new Error("Unauthorized");
-    }
-
-    let matchedAssigneeIds: string[] = [];
-    if (searchQuery) {
-      const members = await getOrganizationMembersDal();
-      matchedAssigneeIds = members
-        .filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        .map((m) => m.id);
-    }
-
-    const pageSize = 6;
-    const offset = (page - 1) * pageSize;
-
-    const results = await getClientsForInfoDb(
-      orgId,
-      pageSize,
-      offset,
-      searchQuery,
-      matchedAssigneeIds,
-      clientId,
-    );
-
-    if (results.length === 0) {
-      return { clients: [], totalPages: 1 };
-    }
-
-    const totalCount = results[0].total_count;
-    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
-    return { clients: results, totalPages };
-  } catch (error) {
-    console.error("Error in getClientsForInfoDal:", error);
+  if (!orgId || orgRole !== "org:admin") {
+    console.error("Unauthorized");
     return { clients: [], totalPages: 0 };
   }
+
+  let matchedAssigneeIds: string[] = [];
+  if (searchQuery) {
+    matchedAssigneeIds = members
+      .filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .map((m) => m.id);
+  }
+
+  return getClientsForInfoDb(
+    orgId,
+    6,
+    (page - 1) * 6,
+    searchQuery,
+    matchedAssigneeIds,
+    clientId,
+  )
+    .then((results) => {
+      if (!results || results.length === 0) {
+        return { clients: [], totalPages: 1 };
+      }
+
+      return {
+        clients: results,
+        totalPages: Math.max(1, Math.ceil(results[0].total_count / 6)),
+      };
+    })
+    .catch((error) => {
+      console.error("Error in getClientsForInfoDal:", error);
+      return { clients: [], totalPages: 0 };
+    });
 }
 
 export async function getClientsForCutListDal(
@@ -76,38 +75,36 @@ export async function getClientsForCutListDal(
   userIdOverride?: string,
   clientId?: string,
 ): Promise<Client[]> {
-  try {
-    if (date === "") return [];
-    const { orgId, userId, orgRole } = await auth.protect();
-    if (!orgId || !userId) throw new Error("Unauthorized");
-
-    // Check organization member limit!
-    const memberLimitCheck = await checkOrgMemberLimit(orgId);
-    if (memberLimitCheck.isErr()) {
-      console.warn(
-        `[getClientsForCutListDal] Org ${orgId} has exceeded its member limit: ${memberLimitCheck.error.reason}`,
-      );
-      return []; // Return empty array to disable pulling up clients on schedule
-    }
-
-    const isAdmin = orgRole === "org:admin";
-    const targetUserId = isAdmin && userIdOverride ? userIdOverride : userId;
-    const showAll = isAdmin && userIdOverride === "all";
-
-    const results = await getClientsForCutListDb(
-      orgId,
-      date,
-      targetUserId,
-      showAll,
-      searchQuery,
-      clientId,
-    );
-
-    return results;
-  } catch (error) {
-    console.error("DAL Error:", error);
+  if (date === "") return [];
+  const { orgId, userId, orgRole } = await auth.protect();
+  if (!orgId || !userId) {
+    console.error("Unauthorized");
     return [];
   }
+
+  const memberLimitCheck = await checkOrgMemberLimit(orgId);
+  if (memberLimitCheck.isErr()) {
+    console.warn(
+      `[getClientsForCutListDal] Org ${orgId} has exceeded its member limit: ${memberLimitCheck.error.reason}`,
+    );
+    return [];
+  }
+
+  const targetUserId =
+    orgRole === "org:admin" && userIdOverride ? userIdOverride : userId;
+  const showAll = orgRole === "org:admin" && userIdOverride === "all";
+
+  return await getClientsForCutListDb(
+    orgId,
+    date,
+    targetUserId,
+    showAll,
+    searchQuery,
+    clientId,
+  ).catch((e) => {
+    console.error("DAL Error:", e);
+    return [];
+  });
 }
 
 export async function createClientDal(

@@ -53,7 +53,7 @@ export function ScheduleForm({
     },
     onSubmit: async ({ value }) => {
       if (setOptimistic) {
-        startTransition(() => {
+        startTransition(async () => {
           const dateStr = format(value.firstCutDate, "yyyy-MM-dd");
           const utcMidnight = new Date(`${dateStr}T00:00:00Z`);
 
@@ -61,11 +61,11 @@ export function ScheduleForm({
             type: "update-schedule",
             addressId,
             frequency: value.frequency,
-            firstCutDate: utcMidnight,
+            firstCutDate: utcMidnight.toISOString(),
             notes: value.notes,
           });
 
-          upsertSchedule({
+          await upsertSchedule({
             addressId,
             frequency: value.frequency,
             firstCutDate: dateStr,
@@ -79,13 +79,13 @@ export function ScheduleForm({
 
   const handleDelete = async () => {
     if (setOptimistic) {
-      startTransition(() => {
+      startTransition(async () => {
         setOptimistic({
           type: "delete-schedule",
           addressId,
         });
 
-        deleteSchedule(addressId);
+        await deleteSchedule(addressId);
       });
     }
     onSuccess?.();

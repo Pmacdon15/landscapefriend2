@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { getPastServicesListDal } from "@/dal/admin";
 import { getOrganizationMembersDal } from "@/dal/clerk";
 import { getClientsForInfoDal } from "@/dal/clients";
+import { parseParams } from "@/lib/utils/search-params-util";
 import { HistoryContainer } from "../../../components/history/history-container";
 import { HistorySkeleton } from "../../../components/history/history-skeletons";
 
@@ -13,48 +14,8 @@ export const metadata: Metadata = {
     "View and analyze historical landscaping service data, team performance, and lifetime statistics.",
 };
 
-export default async function HistoryPage(props: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const pagePromise = props.searchParams.then((params) =>
-    Number(Array.isArray(params.page) ? params.page[0] : (params.page ?? 1)),
-  );
-
-  const clientIdPromise = props.searchParams.then((params) =>
-    String(
-      (Array.isArray(params.clientId) ? params.clientId[0] : params.clientId) ??
-        "",
-    ),
-  );
-
-  const searchPromise = props.searchParams.then((params) =>
-    String(
-      (Array.isArray(params.search) ? params.search[0] : params.search) ?? "",
-    ),
-  );
-
-  const historyPromise = props.searchParams.then((params) => {
-    const page = Number(
-      Array.isArray(params.page) ? params.page[0] : (params.page ?? 1),
-    );
-    const clientId = Array.isArray(params.clientId)
-      ? params.clientId[0]
-      : (params.clientId ?? undefined);
-    const search = Array.isArray(params.search)
-      ? params.search[0]
-      : (params.search ?? undefined);
-    return getPastServicesListDal(page, clientId, search);
-  });
-
-  const clientPromise = clientIdPromise.then((clientId) => {
-    if (!clientId) return null;
-    return getClientsForInfoDal(1, undefined, clientId).then(
-      (data) => data.clients.find((c) => c.id === clientId) || null,
-    );
-  });
-
-  const membersPromise = getOrganizationMembersDal();
-
+export default async function HistoryPage(props: PageProps<"/admin/history">) {
+  
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
       <PageHeader
@@ -64,11 +25,28 @@ export default async function HistoryPage(props: {
 
       <Suspense fallback={<HistorySkeleton />}>
         <HistoryContainer
-          historyPromise={historyPromise}
-          pagePromise={pagePromise}
-          clientPromise={clientPromise}
-          searchPromise={searchPromise}
-          membersPromise={membersPromise}
+          historyPromise={props.searchParams.then((params) =>
+            getPastServicesListDal(
+              Number(parseParams(params.page) ?? 1),
+              parseParams(params.clientId),
+              parseParams(params.search),
+            ),
+          )}
+          pagePromise={props.searchParams.then((params) =>
+            Number(parseParams(params.page) ?? 1),
+          )}
+          clientPromise={props.searchParams
+            .then((params) => parseParams(params.clientId) ?? "")
+            .then((clientId) => {
+              if (!clientId) return null;
+              return getClientsForInfoDal(1, undefined, clientId).then(
+                (data) => data.clients.find((c) => c.id === clientId) ?? null,
+              );
+            })}
+          searchPromise={props.searchParams.then(
+            (params) => parseParams(params.search) ?? "",
+          )}
+          membersPromise={getOrganizationMembersDal()}
         />
       </Suspense>
     </div>

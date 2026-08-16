@@ -146,3 +146,37 @@ export const SiteMapWithOrg = SiteMapSchema.extend({
   org_id: z.string(),
 });
 export type SiteMapWithOrgSchema = z.infer<typeof SiteMapWithOrg>;
+
+export const CreateInvoiceItemSchema = z.object({
+  service_type: z.string().min(1, "Service type is required"),
+  address_id: z.uuid().nullable(),
+  description: z.string().nullable(),
+  quantity: z.number().positive("Quantity must be greater than 0"),
+  unit_price: z.number().min(0, "Unit price cannot be negative"),
+});
+
+export const CreateInvoiceInputSchema = z.object({
+  clientId: z.uuid("Invalid client ID"),
+  invoiceNumber: z.string().min(1, "Invoice number is required"),
+  issueDate: z.string().min(1, "Issue date is required"),
+  dueDate: z.string().min(1, "Due date is required"),
+  notes: z.string().nullable(),
+  taxRate: z.number().min(0, "Tax rate cannot be negative"),
+  items: z
+    .array(CreateInvoiceItemSchema)
+    .min(1, "Invoice must have at least one line item"),
+});
+
+export type CreateInvoiceInput = z.infer<typeof CreateInvoiceInputSchema>;
+
+
+export const UpdateInvoiceStatusInputSchema = z.object({
+  invoiceId: z.string().uuid("Invalid invoice ID"),
+  status: z.enum(["draft", "sent", "paid", "void", "overdue"], {
+    message: "Invalid status value",
+  }),
+});
+
+export type UpdateInvoiceStatusInput = z.infer<
+  typeof UpdateInvoiceStatusInputSchema
+>;
