@@ -90,11 +90,14 @@ export function ServiceListContent({
       const hasRecurringDue = !!address.is_recurring_due;
 
       if (hasRecurringDue) {
-        const recurringAssignee =
-          address.assignment?.user_id || address.assigned_to || null;
+        const hasOverride = !!address.assignment?.user_ids;
         const isUserAssigned =
           isFilterAll ||
-          (activeFilterUserId && recurringAssignee === activeFilterUserId);
+          (activeFilterUserId &&
+            (hasOverride
+              ? address.assignment?.user_ids?.includes(activeFilterUserId)
+              : address.assigned_member_ids?.includes(activeFilterUserId) ||
+                address.assigned_to === activeFilterUserId));
 
         if (isUserAssigned) {
           flatCuts.push({

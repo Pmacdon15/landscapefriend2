@@ -505,7 +505,7 @@ export async function searchClientsDb(
         a.street ILIKE ${searchPattern} OR
         a.city ILIKE ${searchPattern} OR
         a.zip ILIKE ${searchPattern} OR
-        (${hasAssignees}::boolean AND a.assigned_member_ids && ${matchedAssigneeIds}::text[]) OR
+        (${hasAssignees}::boolean AND (a.assigned_member_ids && ${matchedAssigneeIds}::text[] OR a.assigned_to = ANY(${matchedAssigneeIds}::text[]))) OR
         (nd.next_date IS NOT NULL AND (
           to_char(nd.next_date, 'FMMonth') ILIKE ${searchPattern} OR
           to_char(nd.next_date, 'FMMonth FMDD') ILIKE ${searchPattern} OR
@@ -956,7 +956,7 @@ export async function getClientsForInfoDb(
         a.street ILIKE ${searchPattern} OR
         a.city ILIKE ${searchPattern} OR
         a.zip ILIKE ${searchPattern} OR
-        (${hasAssignees}::boolean AND a.assigned_member_ids && ${matchedAssigneeIds}::text[]) OR
+        (${hasAssignees}::boolean AND (a.assigned_member_ids && ${matchedAssigneeIds}::text[] OR a.assigned_to = ANY(${matchedAssigneeIds}::text[]))) OR
         (nd.next_date IS NOT NULL AND (
           to_char(nd.next_date, 'FMMonth') ILIKE ${searchPattern} OR
           to_char(nd.next_date, 'FMMonth FMDD') ILIKE ${searchPattern} OR
