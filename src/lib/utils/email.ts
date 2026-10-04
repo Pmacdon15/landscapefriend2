@@ -104,9 +104,7 @@ export async function sendEmailWithSes(params: SendEmailParams): Promise<void> {
  * Escapes text so it can be placed safely inside HTML content or a quoted
  * attribute. Use it for every value that comes from users or the database.
  */
-export function escapeHtml(
-  value: string | number | null | undefined,
-): string {
+export function escapeHtml(value: string | number | null | undefined): string {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
