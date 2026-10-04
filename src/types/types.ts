@@ -115,7 +115,7 @@ export interface CompletionPhotoRow {
 }
 
 export type OptimisticAction =
-  | { type: "search-submitted"; query: string; clients: Client[] }
+  | { type: "search-submitted"; query: string; clients?: Client[] }
   | { type: "select-client"; client: Client }
   | { type: "add-client"; client: Client }
   | { type: "edit-client"; client: Client }

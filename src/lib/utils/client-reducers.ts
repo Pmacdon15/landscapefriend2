@@ -14,7 +14,9 @@ export const clientInfoReducer = (
       return {
         ...state,
         searchValue: action.query,
-        clients: action.clients,
+        // When no results are known yet, keep showing the current list until
+        // the server responds instead of flashing "No clients found".
+        clients: action.clients ?? state.clients,
       };
 
     case "select-client":

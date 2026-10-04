@@ -6,7 +6,9 @@ type AppRouterInstance = ReturnType<typeof import("next/navigation").useRouter>;
 
 interface HandleSearchArgs {
   query: string;
-  immediateClients?: Client[];
+  /** Server search results for `query`, if they have already been fetched. */
+  searchResults?: Client[];
+  /** The default first page of clients (used when the search is cleared). */
   defaultData?: { clients: Client[] };
   searchParams: ReadonlyURLSearchParams;
   router: AppRouterInstance;
@@ -17,7 +19,7 @@ interface HandleSearchArgs {
 
 export const handleSearch = ({
   query,
-  immediateClients,
+  searchResults,
   defaultData,
   searchParams,
   router,
@@ -27,9 +29,12 @@ export const handleSearch = ({
 }: HandleSearchArgs) => {
   const trimmedQuery = query.trim();
 
-  let optimisticClients: Client[] = [];
-  if (trimmedQuery && immediateClients?.length) {
-    optimisticClients = immediateClients.slice(0, 6);
+  // Optimistically show what we already know: the server results for this
+  // query (first page) or the cached default list when clearing. If neither is
+  // available yet, leave the current list in place until the page reloads.
+  let optimisticClients: Client[] | undefined;
+  if (trimmedQuery && searchResults) {
+    optimisticClients = searchResults.slice(0, 6);
   } else if (!trimmedQuery && defaultData?.clients) {
     optimisticClients = defaultData.clients;
   }
