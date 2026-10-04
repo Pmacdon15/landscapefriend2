@@ -97,9 +97,13 @@ export function getNextCutDate(startDate: Date | string, frequency: string) {
     }
 
     if (freq === "monthly" || freq === "every month") {
-      let next = start;
+      // Always step from the original start date so a month-end schedule
+      // (e.g. the 31st) clamps per month instead of drifting to the 28th.
+      let monthsAhead = 1;
+      let next = addMonths(start, monthsAhead);
       while (isBefore(next, today)) {
-        next = addMonths(next, 1);
+        monthsAhead += 1;
+        next = addMonths(start, monthsAhead);
       }
       return next;
     }

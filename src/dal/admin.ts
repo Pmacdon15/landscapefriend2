@@ -62,9 +62,9 @@ export async function getPastServicesListDal(
         totalPages: Math.max(
           1,
           Math.ceil(
-            list.length > 0
+            (list.length > 0
               ? Number((list[0] as { total_count: number }).total_count)
-              : 0 / 10,
+              : 0) / 10,
           ),
         ),
       };

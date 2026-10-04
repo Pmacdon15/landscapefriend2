@@ -101,6 +101,21 @@ export async function sendEmailWithSes(params: SendEmailParams): Promise<void> {
 }
 
 /**
+ * Escapes text so it can be placed safely inside HTML content or a quoted
+ * attribute. Use it for every value that comes from users or the database.
+ */
+export function escapeHtml(
+  value: string | number | null | undefined,
+): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
  * Generates the rich HTML template body for the client invoice email.
  */
 export function generateInvoiceEmailHtml(
@@ -113,6 +128,7 @@ export function generateInvoiceEmailHtml(
     0,
   );
   const taxRate = Number(invoice.tax_rate || 0);
+  const safeOrgName = escapeHtml(orgName);
   const taxAmount = subtotal * (taxRate / 100);
 
   const formatCurrency = (val: number) => {
@@ -130,14 +146,14 @@ export function generateInvoiceEmailHtml(
   const locationsHtmlRows = invoice.items
     .map((item) => {
       const addressText = item.street
-        ? `<div style="font-weight: 600; color: #334155;">${item.street}</div><div style="font-size: 0.85em; color: #64748b;">${item.city || ""}</div>`
+        ? `<div style="font-weight: 600; color: #334155;">${escapeHtml(item.street)}</div><div style="font-size: 0.85em; color: #64748b;">${escapeHtml(item.city || "")}</div>`
         : `<span style="color: #94a3b8; font-style: italic; font-size: 0.85em;">N/A</span>`;
 
       return `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0f172a; text-transform: capitalize; border-right: 1px solid #e2e8f0;">${item.service_type}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0f172a; text-transform: capitalize; border-right: 1px solid #e2e8f0;">${escapeHtml(item.service_type)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #475569; border-right: 1px solid #e2e8f0;">${addressText}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #64748b;">${item.description || "-"}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #64748b;">${escapeHtml(item.description || "-")}</td>
       </tr>
     `;
     })
@@ -148,7 +164,7 @@ export function generateInvoiceEmailHtml(
     .map((item) => {
       return `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0f172a; text-transform: capitalize; border-right: 1px solid #e2e8f0;">${item.service_type}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0f172a; text-transform: capitalize; border-right: 1px solid #e2e8f0;">${escapeHtml(item.service_type)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #475569; border-right: 1px solid #e2e8f0;">${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.unit_price)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: 600; color: #334155; border-right: 1px solid #e2e8f0;">${item.quantity}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #0f172a;">${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.amount)}</td>
@@ -160,20 +176,20 @@ export function generateInvoiceEmailHtml(
   return `
     <div style="font-family: sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; border-bottom: 2px solid #15803d; padding-bottom: 15px;">
-        ${orgLogo ? `<img src="${orgLogo}" alt="${orgName}" style="max-height: 50px; max-width: 150px; object-fit: contain;" />` : `<div style="height: 40px; width: 40px; background-color: #15803d; color: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; margin-right: 10px;">${orgName.charAt(0).toUpperCase()}</div>`}
+        ${orgLogo ? `<img src="${escapeHtml(orgLogo)}" alt="${safeOrgName}" style="max-height: 50px; max-width: 150px; object-fit: contain;" />` : `<div style="height: 40px; width: 40px; background-color: #15803d; color: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; margin-right: 10px;">${escapeHtml(orgName.charAt(0).toUpperCase())}</div>`}
         <div>
-          <h2 style="color: #0f172a; margin: 0; font-size: 1.4em;">${orgName}</h2>
+          <h2 style="color: #0f172a; margin: 0; font-size: 1.4em;">${safeOrgName}</h2>
           <p style="color: #64748b; margin: 2px 0 0 0; font-size: 0.85em;">New Billing Invoice</p>
         </div>
       </div>
 
-      <p style="font-size: 1em; color: #334155;">Dear ${invoice.client_name},</p>
+      <p style="font-size: 1em; color: #334155;">Dear ${escapeHtml(invoice.client_name)},</p>
       <p style="font-size: 1em; color: #334155;">A new invoice has been generated for your recent landscaping services. Please find the details below and the fully compiled official invoice PDF attached to this email.</p>
       
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9;">
         <tr>
           <td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Invoice Number</td>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 600; color: #0f172a;">${invoice.invoice_number}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 600; color: #0f172a;">${escapeHtml(invoice.invoice_number)}</td>
         </tr>
         <tr>
           <td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Issue Date</td>
@@ -227,10 +243,10 @@ export function generateInvoiceEmailHtml(
       </table>
       
       <p style="font-size: 0.95em; color: #334155; margin-top: 20px;">Please view or download the attached official invoice PDF version to complete your payment.</p>
-      ${invoice.notes ? `<div style="background-color: #f8fafc; border-left: 4px solid #64748b; padding: 12px; margin: 20px 0; border-radius: 0 6px 6px 0;"><strong>Notes:</strong> ${invoice.notes}</div>` : ""}
+      ${invoice.notes ? `<div style="background-color: #f8fafc; border-left: 4px solid #64748b; padding: 12px; margin: 20px 0; border-radius: 0 6px 6px 0;"><strong>Notes:</strong> ${escapeHtml(invoice.notes)}</div>` : ""}
       
       <p style="margin-top: 35px; font-size: 0.9em; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-        Thank you for choosing ${orgName}!<br/>
+        Thank you for choosing ${safeOrgName}!<br/>
         If you have any questions, please contact us.
       </p>
     </div>
