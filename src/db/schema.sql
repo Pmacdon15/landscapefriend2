@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS addresses (
     zip TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     assigned_to TEXT REFERENCES users(user_id) ON DELETE SET NULL, -- The Foreign Key
+    assigned_member_ids TEXT[] DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS schedules (
     frequency TEXT NOT NULL, -- 'weekly', 'bi-weekly', 'monthly'
     first_cut_date DATE NOT NULL,
     notes TEXT,
+    assigned_member_ids TEXT[] DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -93,6 +95,7 @@ CREATE TABLE IF NOT EXISTS completed_jobs (
     org_id TEXT NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
     service_type TEXT NOT NULL,
     assigned_to TEXT REFERENCES users(user_id) ON DELETE SET NULL,
+    assigned_member_ids TEXT[] DEFAULT '{}',
     completed_by TEXT REFERENCES users(user_id) ON DELETE SET NULL,
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     scheduled_date DATE,
