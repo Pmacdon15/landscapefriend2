@@ -240,6 +240,7 @@ export async function insertInvoiceDb(
 
 export async function updateInvoiceStatusDb(
   invoiceId: string,
+  orgId: string,
   status: string,
 ): Promise<DbInvoiceResult | null> {
   let result: DbInvoiceRow[] = [];
@@ -249,21 +250,21 @@ export async function updateInvoiceStatusDb(
     result = (await sql`
       UPDATE invoices
       SET status = ${status}, sent_at = ${now}, updated_at = ${now}
-      WHERE id = ${invoiceId}
+      WHERE id = ${invoiceId} AND org_id = ${orgId}
       RETURNING *
     `) as unknown as DbInvoiceRow[];
   } else if (status === "paid") {
     result = (await sql`
       UPDATE invoices
       SET status = ${status}, paid_at = ${now}, updated_at = ${now}
-      WHERE id = ${invoiceId}
+      WHERE id = ${invoiceId} AND org_id = ${orgId}
       RETURNING *
     `) as unknown as DbInvoiceRow[];
   } else {
     result = (await sql`
       UPDATE invoices
       SET status = ${status}, updated_at = ${now}
-      WHERE id = ${invoiceId}
+      WHERE id = ${invoiceId} AND org_id = ${orgId}
       RETURNING *
     `) as unknown as DbInvoiceRow[];
   }
@@ -274,10 +275,11 @@ export async function updateInvoiceStatusDb(
 
 export async function deleteInvoiceDb(
   invoiceId: string,
+  orgId: string,
 ): Promise<DbInvoiceResult | null> {
   const result = await sql`
     DELETE FROM invoices
-    WHERE id = ${invoiceId}
+    WHERE id = ${invoiceId} AND org_id = ${orgId}
     RETURNING *
   `;
 

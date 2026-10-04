@@ -3,6 +3,7 @@ import { errAsync, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
 import { checkOrgMemberLimit } from "@/db/queries/clerk";
 import {
+  addressBelongsToOrgDb,
   deleteAssignmentDb,
   deleteOneTimeServiceDb,
   deleteScheduleDb,
@@ -39,6 +40,9 @@ export async function updateRouteOrderDal(
     const parsedSortOrder = z.number().safeParse(newSortOrder);
     if (!parsedSortOrder.success)
       return errAsync({ reason: "Invalid sort order" });
+
+    if (!(await addressBelongsToOrgDb(parsedAddressId.data, orgId)))
+      return errAsync({ reason: "Address not found" });
 
     return ResultAsync.fromPromise(
       updateRouteOrderDb(parsedAddressId.data, orgId, parsedSortOrder.data),
@@ -88,7 +92,12 @@ export async function upsertScheduleDal(
         WHERE a.id = ${parsedAddressId.data} AND c.org_id = ${orgId}
       `) as unknown as { status: string }[];
 
-      if (clientStatus?.status === "disabled") {
+      // No row means the address does not exist or belongs to another org.
+      if (!clientStatus) {
+        return errAsync({ reason: "Address not found" });
+      }
+
+      if (clientStatus.status === "disabled") {
         return errAsync({
           reason:
             "This client is disabled due to plan limits. Please upgrade your plan.",
@@ -138,7 +147,12 @@ export async function deleteScheduleDal(
         WHERE a.id = ${parsedAddressId.data} AND c.org_id = ${orgId}
       `) as unknown as { status: string }[];
 
-      if (clientStatus?.status === "disabled") {
+      // No row means the address does not exist or belongs to another org.
+      if (!clientStatus) {
+        return errAsync({ reason: "Address not found" });
+      }
+
+      if (clientStatus.status === "disabled") {
         return errAsync({
           reason:
             "This client is disabled due to plan limits. Please upgrade your plan.",
@@ -153,7 +167,7 @@ export async function deleteScheduleDal(
     }
 
     return ResultAsync.fromPromise(
-      deleteScheduleDb(parsedAddressId.data).then((row) => {
+      deleteScheduleDb(parsedAddressId.data, orgId).then((row) => {
         if (!row) throw new Error("Schedule not found");
         return { ...row, org_id: orgId } as ScheduleWithOrgSchema;
       }),
@@ -188,6 +202,9 @@ export async function completeJobDal(
     const parsedServiceType = z.string().min(1).safeParse(serviceType);
     if (!parsedServiceType.success)
       return errAsync({ reason: "Invalid service type" });
+
+    if (!(await addressBelongsToOrgDb(parsedAddressId.data, orgId)))
+      return errAsync({ reason: "Address not found" });
 
     return ResultAsync.fromPromise(
       (async () => {
@@ -236,9 +253,12 @@ export async function upsertAssignmentDal(
     if (!parsedAddressId.success)
       return errAsync({ reason: "Invalid address ID" });
 
+    if (!(await addressBelongsToOrgDb(parsedAddressId.data, orgId)))
+      return errAsync({ reason: "Address not found" });
+
     if (!userId || userId === "unassigned") {
       return ResultAsync.fromPromise(
-        deleteAssignmentDb(parsedAddressId.data, date).then(() => null),
+        deleteAssignmentDb(parsedAddressId.data, orgId, date).then(() => null),
         (error) => {
           console.error(
             `Failed to delete assignment for address ${addressId} on date ${date}:`,
@@ -289,10 +309,14 @@ export async function updateAddressAssigneeDal(
     return ResultAsync.fromPromise(
       updateAddressAssigneeDb(
         parsedAddressId.data,
+        orgId,
         userIds && userIds.length === 1 && userIds[0] === "unassigned"
           ? null
           : userIds,
-      ),
+      ).then((row) => {
+        if (!row) throw new Error("Address not found");
+        return row;
+      }),
       (error) => {
         console.error(
           `Failed to update address assignee for address ${addressId} to users ${userIds}:`,
@@ -347,6 +371,9 @@ export async function insertOneTimeServiceDal(
       .safeParse(assignedMemberIds);
     if (!parsedAssignedMembers.success)
       return errAsync({ reason: "Invalid assigned members" });
+
+    if (!(await addressBelongsToOrgDb(parsedAddressId.data, orgId)))
+      return errAsync({ reason: "Address not found" });
 
     return ResultAsync.fromPromise(
       insertOneTimeServiceDb(

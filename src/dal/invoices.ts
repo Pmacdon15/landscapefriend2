@@ -7,6 +7,10 @@ import {
   UpdateInvoiceStatusInputSchema,
 } from "@/zod/schemas";
 import {
+  addressesBelongToOrgDb,
+  clientBelongsToOrgDb,
+} from "../db/queries/clients";
+import {
   type DbInvoiceResult,
   deleteInvoiceDb,
   getInvoiceByIdDb,
@@ -148,6 +152,29 @@ export async function createInvoiceDal(
   }
 
   const validatedData = parseResult.data;
+
+  // The client and every line-item address must belong to this org.
+  const addressIds = validatedData.items
+    .map((item) => item.address_id)
+    .filter((id): id is string => Boolean(id));
+
+  const ownership = await Promise.all([
+    clientBelongsToOrgDb(validatedData.clientId, orgId),
+    addressesBelongToOrgDb(addressIds, orgId),
+  ]).catch((e: Error) => {
+    console.error("Error verifying invoice ownership:", e.cause, e.message);
+    return null;
+  });
+
+  if (!ownership) {
+    return errAsync({ reason: "Failed to verify invoice ownership" } as const);
+  }
+
+  const [clientOwned, addressesOwned] = ownership;
+  if (!clientOwned) return errAsync({ reason: "Client not found" } as const);
+  if (!addressesOwned)
+    return errAsync({ reason: "Invalid service address" } as const);
+
   return insertInvoiceDb(
     orgId,
     validatedData.clientId,
@@ -191,7 +218,7 @@ export async function updateInvoiceStatusDal(
 
   const { invoiceId: validId, status: validStatus } = parseResult.data;
 
-  return await updateInvoiceStatusDb(validId, validStatus)
+  return await updateInvoiceStatusDb(validId, orgId, validStatus)
     .then(async (updated) => {
       if (updated) return okAsync(updated);
       return errAsync({ reason: "Invoice not updated" } as const);
@@ -212,7 +239,7 @@ export async function deleteInvoiceDal(
     return errAsync({ reason: "Unauthorized" } as const);
   }
 
-  return await deleteInvoiceDb(invoiceId)
+  return await deleteInvoiceDb(invoiceId, orgId)
     .then(async (deleted) => {
       if (!deleted) {
         return errAsync({
@@ -278,7 +305,7 @@ export async function sendInvoiceEmailDal(
     pdfBase64,
     filename,
   })
-    .then(() => updateInvoiceStatusDb(invoiceId, "sent"))
+    .then(() => updateInvoiceStatusDb(invoiceId, orgId, "sent"))
     .then(async (updated) => {
       if (!updated) {
         return errAsync({

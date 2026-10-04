@@ -196,11 +196,16 @@ export async function upsertScheduleDb(
 
 export async function deleteScheduleDb(
   addressId: string,
+  orgId: string,
 ): Promise<ScheduleRow | undefined> {
   const [row] = (await sql`
-    DELETE FROM schedules
-    WHERE address_id = ${addressId}
-    RETURNING *
+    DELETE FROM schedules s
+    USING addresses a
+    JOIN clients c ON c.id = a.client_id
+    WHERE s.address_id = ${addressId}
+      AND a.id = s.address_id
+      AND c.org_id = ${orgId}
+    RETURNING s.*
   `) as unknown as ScheduleRow[];
   return row;
 }
@@ -231,6 +236,7 @@ export async function upsertAssignmentDb(
     DO UPDATE SET 
       user_id = EXCLUDED.user_id,
       updated_at = CURRENT_TIMESTAMP
+    WHERE assignments.org_id = EXCLUDED.org_id
     RETURNING *
   `;
   return result[0] as unknown as AssignmentRow;
@@ -238,11 +244,14 @@ export async function upsertAssignmentDb(
 
 export async function deleteAssignmentDb(
   addressId: string,
+  orgId: string,
   date: string,
 ): Promise<void> {
   await sql`
     DELETE FROM assignments
-    WHERE address_id = ${addressId} AND scheduled_date = ${date}
+    WHERE address_id = ${addressId}
+      AND org_id = ${orgId}
+      AND scheduled_date = ${date}
   `;
 }
 
@@ -255,6 +264,7 @@ export async function updateRouteOrderDb(
     INSERT INTO route_orders (address_id, org_id, sort_order)
     VALUES (${addressId}, ${orgId}, ${newSortOrder})
     ON CONFLICT (address_id) DO UPDATE SET sort_order = EXCLUDED.sort_order, updated_at = CURRENT_TIMESTAMP
+    WHERE route_orders.org_id = EXCLUDED.org_id
     RETURNING *
   `) as unknown as RouteOrderRow[];
   return result[0];
@@ -262,18 +272,17 @@ export async function updateRouteOrderDb(
 
 export async function updateAddressAssigneeDb(
   addressId: string,
+  orgId: string,
   assignedMemberIds: string[] | null,
-): Promise<AddressRow> {
+): Promise<AddressRow | undefined> {
   const [row] = (await sql`
-    WITH updated AS (
-      UPDATE addresses
-      SET assigned_member_ids = ${assignedMemberIds}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${addressId}
-      RETURNING *
-    )
-    SELECT u.*, c.org_id
-    FROM updated u
-    JOIN clients c ON u.client_id = c.id
+    UPDATE addresses a
+    SET assigned_member_ids = ${assignedMemberIds}, updated_at = CURRENT_TIMESTAMP
+    FROM clients c
+    WHERE a.id = ${addressId}
+      AND c.id = a.client_id
+      AND c.org_id = ${orgId}
+    RETURNING a.*, c.org_id
   `) as unknown as AddressRow[];
 
   return row;
@@ -301,7 +310,7 @@ export async function insertCompletedJobDb(
     await sql`
       UPDATE one_time_services
       SET completed_job_id = ${result[0].id}
-      WHERE id = ${oneTimeServiceId}
+      WHERE id = ${oneTimeServiceId} AND org_id = ${orgId}
     `;
   }
 
@@ -391,46 +400,42 @@ export async function insertSiteMapDb(
 
 export async function updateSiteMapDb(
   siteMapId: string,
+  orgId: string,
   name: string | null,
   notes: string | null,
   mapData: Record<string, unknown> | null,
-): Promise<SiteMapWithOrgSchema> {
+): Promise<SiteMapWithOrgSchema | undefined> {
   const jsonMapData = mapData ? JSON.stringify(mapData) : null;
 
   const [row] = (await sql`
-    UPDATE site_maps
+    UPDATE site_maps sm
     SET name = ${name}, notes = ${notes}, map_data = ${jsonMapData}, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ${siteMapId}
-    RETURNING *
-  `) as unknown as SiteMapRow[];
-
-  const [orgRow] = (await sql`
-    SELECT c.org_id FROM site_maps sm
-    JOIN addresses a ON sm.address_id = a.id
-    JOIN clients c ON a.client_id = c.id
+    FROM addresses a
+    JOIN clients c ON c.id = a.client_id
     WHERE sm.id = ${siteMapId}
-  `) as unknown as { org_id: string }[];
+      AND a.id = sm.address_id
+      AND c.org_id = ${orgId}
+    RETURNING sm.*, c.org_id
+  `) as unknown as (SiteMapRow & { org_id: string })[];
 
-  return { ...row, org_id: orgRow.org_id };
+  return row;
 }
 
 export async function deleteSiteMapDb(
   siteMapId: string,
-): Promise<SiteMapWithOrgSchema> {
-  const [info] = (await sql`
-    SELECT c.org_id FROM site_maps sm
-    JOIN addresses a ON sm.address_id = a.id
-    JOIN clients c ON a.client_id = c.id
-    WHERE sm.id = ${siteMapId}
-  `) as unknown as { org_id: string }[];
-
+  orgId: string,
+): Promise<SiteMapWithOrgSchema | undefined> {
   const [row] = (await sql`
-    DELETE FROM site_maps
-    WHERE id = ${siteMapId}
-    RETURNING *
-  `) as unknown as SiteMapRow[];
+    DELETE FROM site_maps sm
+    USING addresses a
+    JOIN clients c ON c.id = a.client_id
+    WHERE sm.id = ${siteMapId}
+      AND a.id = sm.address_id
+      AND c.org_id = ${orgId}
+    RETURNING sm.*, c.org_id
+  `) as unknown as (SiteMapRow & { org_id: string })[];
 
-  return { ...row, org_id: info?.org_id };
+  return row;
 }
 
 export async function getSiteMapWithOrgDb(
@@ -1183,4 +1188,52 @@ export async function deleteOneTimeServiceDb(
     RETURNING *
   `) as unknown as OneTimeServiceRow[];
   return row;
+}
+
+// ---------------------------------------------------------------------------
+// Tenant ownership checks
+// Every write that takes an ID from the client must confirm the row belongs to
+// the caller's organization before touching it.
+// ---------------------------------------------------------------------------
+
+export async function addressBelongsToOrgDb(
+  addressId: string,
+  orgId: string,
+): Promise<boolean> {
+  const rows = await sql`
+    SELECT 1 FROM addresses a
+    JOIN clients c ON c.id = a.client_id
+    WHERE a.id = ${addressId} AND c.org_id = ${orgId}
+    LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
+export async function clientBelongsToOrgDb(
+  clientId: string,
+  orgId: string,
+): Promise<boolean> {
+  const rows = await sql`
+    SELECT 1 FROM clients
+    WHERE id = ${clientId} AND org_id = ${orgId}
+    LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
+export async function addressesBelongToOrgDb(
+  addressIds: string[],
+  orgId: string,
+): Promise<boolean> {
+  const uniqueIds = [...new Set(addressIds)];
+  if (uniqueIds.length === 0) return true;
+
+  const rows = (await sql`
+    SELECT COUNT(DISTINCT a.id)::int AS count
+    FROM addresses a
+    JOIN clients c ON c.id = a.client_id
+    WHERE a.id = ANY(${uniqueIds}) AND c.org_id = ${orgId}
+  `) as unknown as { count: number }[];
+
+  return Number(rows[0]?.count ?? 0) === uniqueIds.length;
 }
