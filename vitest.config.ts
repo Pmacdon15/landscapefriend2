@@ -11,6 +11,7 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
     setupFiles: ["./tests/setup.ts"],
+    clearMocks: true,
     restoreMocks: true,
     unstubEnvs: true,
     coverage: {
