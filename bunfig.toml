@@ -1,0 +1,5 @@
+# `bun test` starts Bun's built-in test runner, which can't run this repo's
+# Vitest tests. This guard stops it early with a clear message.
+# Use `bun run test` (Vitest) instead.
+[test]
+preload = ["./tests/bun-test-guard.ts"]
