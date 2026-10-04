@@ -1,7 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Client } from "@/types/types";
 
-export function useClientSearch(query: string) {
+/**
+ * Fetches clients from `/api/clients/search`.
+ *
+ * - With an empty `query`, the API returns the default first page (6 clients),
+ *   which is used for instant/optimistic clearing of the search.
+ * - With a non-empty `query`, the API performs a full server-side search across
+ *   all clients (name, email, phone, address, assignee, next service date).
+ */
+export function useClientSearch(
+  query: string,
+  options: { enabled?: boolean } = {},
+) {
   return useQuery<{ clients: Client[] }>({
     queryKey: ["client-search", query],
     queryFn: async () => {
@@ -15,5 +26,6 @@ export function useClientSearch(query: string) {
         },
       );
     },
+    enabled: options.enabled ?? true,
   });
 }

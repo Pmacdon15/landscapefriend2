@@ -460,6 +460,9 @@ export async function getCompletionPhotoWithOrgDb(
   return (result[0] as { id: string; blob_path: string }) || null;
 }
 
+// Max number of clients returned to search dropdowns (client list + history).
+const SEARCH_RESULTS_LIMIT = 10;
+
 export async function searchClientsDb(
   orgId: string,
   query: string,
@@ -514,6 +517,8 @@ export async function searchClientsDb(
           to_char(nd.next_date, 'FMMonth FMDDth') ILIKE ${searchPattern}
         ))
       )
+      ORDER BY c.name ASC
+      LIMIT ${SEARCH_RESULTS_LIMIT}
     )
     SELECT 
       fc.id,
