@@ -50,12 +50,21 @@ export function ClientSchedulesCard({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {activeAddresses.map((address) => {
               const schedule = address.schedule;
-              const currentAssignees = address.assigned_member_ids?.length 
-                ? address.assigned_member_ids 
-                : address.assigned_to ? [address.assigned_to] : [];
-              const assigneeName = currentAssignees.length > 0
-                ? currentAssignees.map(id => members.find(m => m.id === id)?.name || "Unknown Assignee").join(", ")
-                : "Unassigned";
+              const currentAssignees = address.assigned_member_ids?.length
+                ? address.assigned_member_ids
+                : address.assigned_to
+                  ? [address.assigned_to]
+                  : [];
+              const assigneeName =
+                currentAssignees.length > 0
+                  ? currentAssignees
+                      .map(
+                        (id) =>
+                          members.find((m) => m.id === id)?.name ||
+                          "Unknown Assignee",
+                      )
+                      .join(", ")
+                  : "Unassigned";
 
               const nextCut = schedule
                 ? getNextCutDate(schedule.first_cut_date, schedule.frequency)
