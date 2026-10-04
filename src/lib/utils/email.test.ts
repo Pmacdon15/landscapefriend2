@@ -125,9 +125,8 @@ describe("generateInvoiceEmailHtml", () => {
     expect(html).toContain("$0.00");
   });
 
-  // Known issue: user-entered text is inserted into the HTML without escaping.
-  // When escaping is added, change `it.fails` to `it`.
-  it.fails("escapes HTML in client-entered fields", () => {
+  // Regression (#59): user-entered text used to be inserted without escaping.
+  it("escapes HTML in client-entered fields", () => {
     const html = generateInvoiceEmailHtml(
       makeInvoice({ client_name: '<script>alert("x")</script>' }),
       "Green Co",

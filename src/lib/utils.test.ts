@@ -153,10 +153,8 @@ describe("getNextCutDate", () => {
     expect(ymd(getNextCutDate(start, frequency))).toBe(expected);
   });
 
-  // Known bug: stepping one month at a time keeps the clamped day, so a
-  // Jan 31 start becomes Feb 28 and then stays on the 28th forever.
-  // When this is fixed, change `it.fails` to `it`.
-  it.fails("monthly: keeps month-end schedules on the original day", () => {
+  // Regression (#59): a Jan 31 start used to drift to the 28th after February.
+  it("monthly: keeps month-end schedules on the original day", () => {
     expect(ymd(getNextCutDate("2026-01-31", "monthly"))).toBe("2026-06-30");
   });
 

@@ -91,9 +91,8 @@ describe("getPastServicesListDal", () => {
     expect(await getPastServicesListDal()).toEqual({ data: [], totalPages: 1 });
   });
 
-  // Known bug: `Math.ceil(count : 0 / 10)` divides only the 0, so totalPages
-  // equals the row count. When fixed, change `it.fails` to `it`.
-  it.fails("computes total pages from the total row count", async () => {
+  // Regression (#59): totalPages used to equal the row count.
+  it("computes total pages from the total row count", async () => {
     protect.mockResolvedValue(admin(["history"]));
     vi.mocked(getPastServicesListDb).mockResolvedValue([
       { id: "j1", total_count: 45 },
