@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
 import {
+  addressBelongsToOrgDb,
   deleteSiteMapDb,
   insertSiteMapDb,
   updateSiteMapDb,
@@ -23,6 +24,9 @@ export async function saveSiteMapDal(
     const parsedAddressId = z.uuid().safeParse(addressId);
     if (!parsedAddressId.success)
       return errAsync({ reason: "Invalid address ID" });
+
+    if (!(await addressBelongsToOrgDb(parsedAddressId.data, orgId)))
+      return errAsync({ reason: "Address not found" });
 
     return ResultAsync.fromPromise(
       insertSiteMapDb(
@@ -56,12 +60,12 @@ export async function updateSiteMapDal(
       return errAsync({ reason: "Invalid site map ID" });
 
     return ResultAsync.fromPromise(
-      updateSiteMapDb(
-        parsedSiteMapId.data,
-        name,
-        notes,
-        mapData,
-      ) as Promise<SiteMapWithOrgSchema>,
+      updateSiteMapDb(parsedSiteMapId.data, orgId, name, notes, mapData).then(
+        (row) => {
+          if (!row) throw new Error("Site map not found");
+          return row;
+        },
+      ),
       () => ({ reason: "Failed to update site map" }),
     );
   } catch (error) {
@@ -83,7 +87,10 @@ export async function deleteSiteMapDal(
       return errAsync({ reason: "Invalid site map ID" });
 
     return ResultAsync.fromPromise(
-      deleteSiteMapDb(parsedSiteMapId.data),
+      deleteSiteMapDb(parsedSiteMapId.data, orgId).then((row) => {
+        if (!row) throw new Error("Site map not found");
+        return row;
+      }),
       () => ({
         reason: "Failed to delete site map",
       }),
