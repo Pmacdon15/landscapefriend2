@@ -125,15 +125,46 @@ describe("generateInvoiceEmailHtml", () => {
     expect(html).toContain("$0.00");
   });
 
-  // Known issue: user-entered text is inserted into the HTML without escaping.
-  // When escaping is added, change `it.fails` to `it`.
-  it.fails("escapes HTML in client-entered fields", () => {
+  // Regression (#59): user-entered text used to be inserted without escaping.
+  it("escapes HTML in client-entered fields", () => {
     const html = generateInvoiceEmailHtml(
       makeInvoice({ client_name: '<script>alert("x")</script>' }),
       "Green Co",
       null,
     );
     expect(html).not.toContain("<script>");
+  });
+
+  // Added for #59: the test above would also pass if the text were dropped,
+  // so this one checks that each field is still shown, but escaped.
+  it("keeps user-entered text visible but escaped in every field", () => {
+    const base = makeInvoice();
+    const html = generateInvoiceEmailHtml(
+      makeInvoice({
+        client_name: "Tom & Jerry <b>",
+        notes: "Gate code <1234>",
+        items: [
+          {
+            ...base.items[0],
+            description: 'Mow "front" & back',
+            street: "<i>12 Elm</i>",
+            city: "A&B",
+          },
+        ],
+      }),
+      'Green & <Co> "Lawn"',
+      'https://x.test/logo.png" onerror="alert(1)',
+    );
+
+    expect(html).toContain("Dear Tom &amp; Jerry &lt;b&gt;,");
+    expect(html).toContain("Gate code &lt;1234&gt;");
+    expect(html).toContain("Mow &quot;front&quot; &amp; back");
+    expect(html).toContain("&lt;i&gt;12 Elm&lt;/i&gt;");
+    expect(html).toContain("A&amp;B");
+    expect(html).toContain("Green &amp; &lt;Co&gt; &quot;Lawn&quot;");
+    expect(html).not.toContain('" onerror="');
+    expect(html).not.toContain("<b>");
+    expect(html).not.toContain("<i>");
   });
 });
 
