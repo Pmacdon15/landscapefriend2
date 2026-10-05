@@ -9,7 +9,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
+    // Component tests (*.test.tsx) opt into jsdom with a
+    // `// @vitest-environment jsdom` comment at the top of the file.
+    include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.ts"],
     setupFiles: ["./tests/setup.ts"],
     clearMocks: true,
     restoreMocks: true,
@@ -17,7 +19,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/components/ui/**", "src/**/*.test.ts"],
+      exclude: ["src/components/ui/**", "src/**/*.test.{ts,tsx}"],
     },
   },
 });

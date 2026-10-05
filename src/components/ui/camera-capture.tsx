@@ -121,6 +121,7 @@ export function CameraCapture({
         <Button
           variant="ghost"
           size="icon"
+          aria-label="Close camera"
           onClick={onClose}
           className="text-white hover:bg-white/20 h-12 w-12 rounded-full"
         >
@@ -171,6 +172,7 @@ export function CameraCapture({
                   className="h-16 w-16 rounded-full bg-white/10 text-white hover:bg-white/20 border-2 border-white"
                   onClick={handleRetake}
                   disabled={isPending}
+                  aria-label="Retake photo"
                 >
                   <RotateCcw className="h-8 w-8" />
                 </Button>
@@ -179,6 +181,7 @@ export function CameraCapture({
                   className="h-20 w-20 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 border-4 border-white"
                   onClick={handleConfirm}
                   disabled={isPending}
+                  aria-label="Use photo"
                 >
                   {isPending ? (
                     <span className="text-xs font-bold">Saving...</span>
@@ -193,6 +196,7 @@ export function CameraCapture({
                 className="h-20 w-20 rounded-full bg-white text-black hover:bg-slate-200 border-4 border-slate-300"
                 onClick={takePhoto}
                 disabled={!isVideoReady}
+                aria-label="Take photo"
               >
                 <div className="h-14 w-14 rounded-full border-2 border-black" />
               </Button>

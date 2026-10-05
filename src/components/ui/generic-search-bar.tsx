@@ -107,6 +107,7 @@ export function GenericSearchBar<T>({
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Clear search"
             className="absolute right-1 h-8 w-8"
             onClick={() => {
               setInputValue("");
