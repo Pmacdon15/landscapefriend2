@@ -406,10 +406,10 @@ export async function deleteOneTimeServiceDal(
       return errAsync({ reason: "Invalid service ID" });
 
     return ResultAsync.fromPromise(
-      deleteOneTimeServiceDb(
-        parsedServiceId.data,
-        orgId,
-      ) as Promise<OneTimeService>,
+      deleteOneTimeServiceDb(parsedServiceId.data, orgId).then((row) => {
+        if (!row) throw new Error("One-time service not found");
+        return row as OneTimeService;
+      }),
       () => ({ reason: "Failed to delete one-time service" }),
     );
   } catch (error) {
