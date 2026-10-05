@@ -40,13 +40,13 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        case "subscriptionItem.active": {
-          const data = evt.data;
-          const orgId = data.id;
-          const status = data.status;
+        case "subscriptionItem.active":
+        case "subscriptionItem.ended": {
+          // data.id is the subscription item; the org is the payer.
+          const orgId = evt.data.payer?.organization_id;
 
           console.log(
-            `[Clerk Webhook] Received subscription event ${evt.type} for org ${orgId}. Status: ${status}`,
+            `[Clerk Webhook] ${evt.type} for subscription item ${evt.data.id}, org ${orgId ?? "none"}. Status: ${evt.data.status}`,
           );
 
           if (orgId) {
