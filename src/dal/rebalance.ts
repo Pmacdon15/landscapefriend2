@@ -1,6 +1,7 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { revalidateTag } from "next/cache";
 import { sql } from "@/db/client";
+import { clientLimitFor, DEFAULT_CLIENT_LIMIT } from "@/lib/plan-limits";
 
 /**
  * Rebalances clients for a given organization based on their subscription tier in Clerk.
@@ -8,10 +9,8 @@ import { sql } from "@/db/client";
  * active and newer clients are disabled. If they have upgraded, disabled clients are re-enabled
  * up to the new limit.
  *
- * Limit tier structure:
- * - "200-clients" feature -> 200 clients
- * - "100-clients" feature -> 100 clients
- * - Default -> 3 clients (set to 3 for testing as requested)
+ * Limits come from `clientLimitFor` (src/lib/plan-limits.ts): 50 by default,
+ * 100 or 200 with the matching plan feature.
  */
 export async function rebalanceClientsForOrg(orgId: string): Promise<{
   success: boolean;
@@ -20,7 +19,7 @@ export async function rebalanceClientsForOrg(orgId: string): Promise<{
   activatedCount: number;
   disabledCount: number;
 }> {
-  let limit = 50;
+  let limit = DEFAULT_CLIENT_LIMIT;
 
   try {
     const client = await clerkClient();
@@ -50,38 +49,20 @@ export async function rebalanceClientsForOrg(orgId: string): Promise<{
       );
       limit = 0; // Exceeded member limit, disable all schedules by setting limit to 0
     } else {
-      // Check organization features / public metadata for limits
+      // The tier can come from the org's public metadata or its billing
+      // subscription. The cron has no session, so Clerk's has() isn't available.
       const metadata = org.publicMetadata as
         | { features?: string[] }
         | undefined;
       const features = metadata?.features || [];
+      const subscriptionStr = subscription
+        ? JSON.stringify(subscription).toLowerCase()
+        : "";
 
-      if (
-        features.includes("200-clients") ||
-        features.includes("200_clients")
-      ) {
-        limit = 200;
-      } else if (
-        features.includes("100-clients") ||
-        features.includes("100_clients")
-      ) {
-        limit = 100;
-      }
-
-      if (subscription) {
-        const subscriptionStr = JSON.stringify(subscription).toLowerCase();
-        if (
-          subscriptionStr.includes("200-clients") ||
-          subscriptionStr.includes("200_clients")
-        ) {
-          limit = 200;
-        } else if (
-          subscriptionStr.includes("100-clients") ||
-          subscriptionStr.includes("100_clients")
-        ) {
-          limit = 100;
-        }
-      }
+      limit = clientLimitFor(
+        (feature) =>
+          features.includes(feature) || subscriptionStr.includes(feature),
+      );
     }
   } catch (error) {
     console.error(
