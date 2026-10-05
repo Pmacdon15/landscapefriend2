@@ -494,14 +494,13 @@ export async function searchClientsDb(
           WHEN s.frequency = 'bi-weekly' THEN
             s.first_cut_date + (14 * CEIL(GREATEST(0, (CURRENT_DATE - s.first_cut_date)::int)::numeric / 14))::int * INTERVAL '1 day'
           WHEN s.frequency = 'monthly' THEN
-            (
-              date_trunc('month', CURRENT_DATE) + 
-              (EXTRACT(DAY FROM s.first_cut_date) - 1) * INTERVAL '1 day' +
-              CASE 
-                WHEN EXTRACT(DAY FROM CURRENT_DATE) > EXTRACT(DAY FROM s.first_cut_date) THEN INTERVAL '1 month' 
-                ELSE INTERVAL '0' 
-              END
-            )::date
+            -- This month's cut (day clamped to the month's length), or next
+            -- month's if that has already passed.
+            CASE
+              WHEN EXTRACT(DAY FROM CURRENT_DATE) <= LEAST(EXTRACT(DAY FROM s.first_cut_date), EXTRACT(DAY FROM date_trunc('month', CURRENT_DATE) + INTERVAL '1 month - 1 day'))
+              THEN date_trunc('month', CURRENT_DATE) + (LEAST(EXTRACT(DAY FROM s.first_cut_date), EXTRACT(DAY FROM date_trunc('month', CURRENT_DATE) + INTERVAL '1 month - 1 day')) - 1) * INTERVAL '1 day'
+              ELSE date_trunc('month', CURRENT_DATE) + INTERVAL '1 month' + (LEAST(EXTRACT(DAY FROM s.first_cut_date), EXTRACT(DAY FROM date_trunc('month', CURRENT_DATE) + INTERVAL '2 month - 1 day')) - 1) * INTERVAL '1 day'
+            END::date
           ELSE NULL
         END::date AS next_date
       ) nd ON true
@@ -707,7 +706,7 @@ export async function getClientsForCutListDb(
             s.frequency = 'daily' OR
             (s.frequency = 'weekly' AND ((${date}::date - s.first_cut_date) % 7) = 0) OR
             (s.frequency = 'bi-weekly' AND ((${date}::date - s.first_cut_date) % 14) = 0) OR
-            (s.frequency = 'monthly' AND EXTRACT(DAY FROM s.first_cut_date) = EXTRACT(DAY FROM ${date}::date))
+            (s.frequency = 'monthly' AND EXTRACT(DAY FROM ${date}::date) = LEAST(EXTRACT(DAY FROM s.first_cut_date), EXTRACT(DAY FROM date_trunc('month', ${date}::date) + INTERVAL '1 month - 1 day')))
           )
         )::boolean as is_recurring_due
       FROM addresses a
@@ -774,7 +773,7 @@ export async function getClientsForCutListDb(
             s.frequency = 'daily' OR
             (s.frequency = 'weekly' AND ((${date}::date - s.first_cut_date) % 7) = 0) OR
             (s.frequency = 'bi-weekly' AND ((${date}::date - s.first_cut_date) % 14) = 0) OR
-            (s.frequency = 'monthly' AND EXTRACT(DAY FROM s.first_cut_date) = EXTRACT(DAY FROM ${date}::date))
+            (s.frequency = 'monthly' AND EXTRACT(DAY FROM ${date}::date) = LEAST(EXTRACT(DAY FROM s.first_cut_date), EXTRACT(DAY FROM date_trunc('month', ${date}::date) + INTERVAL '1 month - 1 day')))
           ))
           OR
           -- OR has a one-off/one-time service scheduled for this date
@@ -943,14 +942,13 @@ export async function getClientsForInfoDb(
           WHEN s.frequency = 'bi-weekly' THEN
             s.first_cut_date + (14 * CEIL(GREATEST(0, (CURRENT_DATE - s.first_cut_date)::int)::numeric / 14))::int * INTERVAL '1 day'
           WHEN s.frequency = 'monthly' THEN
-            (
-              date_trunc('month', CURRENT_DATE) + 
-              (EXTRACT(DAY FROM s.first_cut_date) - 1) * INTERVAL '1 day' +
-              CASE 
-                WHEN EXTRACT(DAY FROM CURRENT_DATE) > EXTRACT(DAY FROM s.first_cut_date) THEN INTERVAL '1 month' 
-                ELSE INTERVAL '0' 
-              END
-            )::date
+            -- This month's cut (day clamped to the month's length), or next
+            -- month's if that has already passed.
+            CASE
+              WHEN EXTRACT(DAY FROM CURRENT_DATE) <= LEAST(EXTRACT(DAY FROM s.first_cut_date), EXTRACT(DAY FROM date_trunc('month', CURRENT_DATE) + INTERVAL '1 month - 1 day'))
+              THEN date_trunc('month', CURRENT_DATE) + (LEAST(EXTRACT(DAY FROM s.first_cut_date), EXTRACT(DAY FROM date_trunc('month', CURRENT_DATE) + INTERVAL '1 month - 1 day')) - 1) * INTERVAL '1 day'
+              ELSE date_trunc('month', CURRENT_DATE) + INTERVAL '1 month' + (LEAST(EXTRACT(DAY FROM s.first_cut_date), EXTRACT(DAY FROM date_trunc('month', CURRENT_DATE) + INTERVAL '2 month - 1 day')) - 1) * INTERVAL '1 day'
+            END::date
           ELSE NULL
         END::date AS next_date
       ) nd ON true

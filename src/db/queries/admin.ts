@@ -180,7 +180,7 @@ export async function getMonthlyStatsDb(
         AND (
           (LOWER(s.frequency) = 'weekly' AND (d.day - s.first_cut_date::date) % 7 = 0) OR
           (LOWER(s.frequency) = 'bi-weekly' AND (d.day - s.first_cut_date::date) % 14 = 0) OR
-          (LOWER(s.frequency) = 'monthly' AND EXTRACT(DAY FROM d.day) = EXTRACT(DAY FROM s.first_cut_date::date))
+          (LOWER(s.frequency) = 'monthly' AND EXTRACT(DAY FROM d.day) = LEAST(EXTRACT(DAY FROM s.first_cut_date::date), EXTRACT(DAY FROM date_trunc('month', d.day) + INTERVAL '1 month - 1 day')))
         )
     ),
     uncompleted_schedules AS (

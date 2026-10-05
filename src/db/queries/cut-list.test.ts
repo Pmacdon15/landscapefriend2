@@ -72,12 +72,12 @@ describe("recurring schedules", () => {
   // Known bug: a monthly schedule on the 29th–31st is skipped in shorter
   // months, because the query compares the day of the month exactly.
   // getNextCutDate (fixed in #60) says the next cut is June 30. See #72.
-  it.fails("monthly on the 31st is due on the last day of a 30-day month", async () => {
+  it("monthly on the 31st is due on the last day of a 30-day month", async () => {
     await scheduled("Jane", "monthly", "2026-01-31");
     expect(await namesOn("2026-06-30")).toEqual(["Jane"]);
   });
 
-  it.fails("monthly on the 30th is due on Feb 28", async () => {
+  it("monthly on the 30th is due on Feb 28", async () => {
     await scheduled("Jane", "monthly", "2026-01-30");
     expect(await namesOn("2026-02-28")).toEqual(["Jane"]);
   });
