@@ -214,6 +214,53 @@ describe("sendEmailWithSes", () => {
     );
   });
 
+  // #65: header values come from the org name, invoice number and client
+  // name, so a line break must never start a new header.
+  const headerLines = (raw: string) =>
+    raw.slice(0, raw.indexOf("\n\n")).split("\n");
+
+  it.each([
+    ["subject", { subject: "Invoice 1\r\nBcc: attacker@example.com" }],
+    ["sender", { senderEmail: "Evil\nBcc: attacker@example.com <a@b.c>" }],
+    ["recipient", { recipientEmail: "jane@example.com\r\nBcc: x@y.z" }],
+  ])(
+    "does not let a line break in the %s add a header",
+    async (_field, override) => {
+      await sendEmailWithSes({
+        ...base,
+        ...override,
+        pdfBase64: "AAAA",
+        filename: "INV-1.pdf",
+      });
+      const raw = Buffer.from(
+        sesSend.mock.calls[0][0].input.RawMessage.Data,
+      ).toString("utf8");
+
+      expect(raw).not.toContain("\r");
+      expect(headerLines(raw).some((l) => /^bcc:/i.test(l))).toBe(false);
+    },
+  );
+
+  it("does not let the attachment filename break out of its header", async () => {
+    await sendEmailWithSes({
+      ...base,
+      pdfBase64: "AAAA",
+      filename: 'INV-1"\nBcc: x@y.z.pdf',
+    });
+    const raw = Buffer.from(
+      sesSend.mock.calls[0][0].input.RawMessage.Data,
+    ).toString("utf8");
+
+    expect(raw.split("\n").some((l) => /^bcc:/i.test(l))).toBe(false);
+    expect(raw).not.toContain('filename="INV-1""');
+  });
+
+  it("strips line breaks from the simple (non-attachment) email too", async () => {
+    await sendEmailWithSes({ ...base, subject: "Invoice 1\r\nBcc: x@y.z" });
+    const input = sesSend.mock.calls[0][0].input;
+    expect(input.Message.Subject.Data).not.toMatch(/[\r\n]/);
+  });
+
   it("propagates SES failures", async () => {
     sesSend.mockRejectedValueOnce(new Error("rejected"));
     await expect(sendEmailWithSes(base)).rejects.toThrow("rejected");
