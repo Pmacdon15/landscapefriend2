@@ -33,3 +33,48 @@ jobs:
 
       - name: Test
         run: bun run test
+
+  e2e:
+    # Needs a Clerk dev instance and a throwaway database (see
+    # tests/e2e/README.md). Skipped until those secrets are added.
+    runs-on: ubuntu-latest
+    needs: check
+    env:
+      DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.E2E_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.E2E_CLERK_SECRET_KEY }}
+      E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
+      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+      E2E_CLERK_ORG_ID: ${{ secrets.E2E_CLERK_ORG_ID }}
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.E2E_BLOB_READ_WRITE_TOKEN }}
+    steps:
+      - name: Check for E2E secrets
+        id: secrets
+        run: |
+          if [ -n "$CLERK_SECRET_KEY" ] && [ -n "$DATABASE_URL" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::E2E secrets not set; skipping Playwright tests."
+          fi
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/checkout@v5
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: oven-sh/setup-bun@v2
+
+      - if: steps.secrets.outputs.ready == 'true'
+        run: bun install
+
+      - if: steps.secrets.outputs.ready == 'true'
+        run: bunx playwright install --with-deps chromium
+
+      - if: steps.secrets.outputs.ready == 'true'
+        run: bun run test:e2e
+
+      - if: failure() && steps.secrets.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
