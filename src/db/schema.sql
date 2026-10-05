@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS schedules (
     frequency TEXT NOT NULL, -- 'weekly', 'bi-weekly', 'monthly'
     first_cut_date DATE NOT NULL,
     notes TEXT,
+    service_name TEXT,
+    service_type TEXT,
     assigned_member_ids TEXT[] DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
