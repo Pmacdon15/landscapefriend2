@@ -325,13 +325,12 @@ describe("sendInvoiceEmailDal", () => {
     expect(updateInvoiceStatusDb).not.toHaveBeenCalled();
   });
 
-  // Known bug: if loading the invoice throws, the error escapes instead of
-  // being returned as a Result like every other failure in this function.
+  // Regression (#70): this error used to escape instead of being returned.
   it("returns an error result when loading the invoice fails", async () => {
     protect.mockResolvedValue(canSend());
     vi.mocked(getInvoiceByIdDb).mockRejectedValue(new Error("db"));
     const result = await settle(sendInvoiceEmailDal(INVOICE));
-    expect(result.isErr()).toBe(true);
+    expect(result._unsafeUnwrapErr().reason).toBe("Failed to load invoice.");
   });
 });
 

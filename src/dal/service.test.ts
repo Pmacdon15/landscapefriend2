@@ -376,8 +376,7 @@ describe("deleteOneTimeServiceDal", () => {
     expect(deleteOneTimeServiceDb).toHaveBeenCalledWith(SERVICE, "org_1");
   });
 
-  // Known bug: when nothing is deleted (wrong id, or another org's service)
-  // the DAL still reports success. Schedules and site maps return an error.
+  // Regression (#70): this used to report success.
   it("fails when there was nothing to delete", async () => {
     vi.mocked(deleteOneTimeServiceDb).mockResolvedValue(undefined as never);
     const result = await deleteOneTimeServiceDal(SERVICE);

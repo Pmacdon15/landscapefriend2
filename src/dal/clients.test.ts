@@ -215,16 +215,15 @@ describe("updateClientDal", () => {
     expect(insertAddressDb).not.toHaveBeenCalled();
   });
 
-  // Known security bug: the status check finds no row for another org's
-  // client but carries on, and the address writes are scoped by client id
-  // only, so another org's addresses get changed.
+  // Regression (#70): another org's addresses used to be changed here.
   it("does not touch addresses of a client from another org", async () => {
     vi.mocked(sql).mockResolvedValue([] as never);
     vi.mocked(updateClientDb).mockResolvedValue(undefined as never);
 
     const result = await updateClientDal(CLIENT, data);
 
-    expect(result.isErr()).toBe(true);
+    expect(result._unsafeUnwrapErr().reason).toBe("Client not found");
+    expect(updateClientDb).not.toHaveBeenCalled();
     expect(updateAddressDb).not.toHaveBeenCalled();
     expect(insertAddressDb).not.toHaveBeenCalled();
     expect(deleteAddressDb).not.toHaveBeenCalled();

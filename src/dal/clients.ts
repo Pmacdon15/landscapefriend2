@@ -209,7 +209,13 @@ export async function updateClientDal(
       WHERE id = ${parsedClientId} AND org_id = ${orgId}
     `) as unknown as { status: string }[];
 
-    if (existingClient?.status === "disabled") {
+    // No row means the client doesn't exist or belongs to another org. Stop
+    // here: the address writes below are only scoped by client id.
+    if (!existingClient) {
+      return errAsync({ reason: "Client not found" });
+    }
+
+    if (existingClient.status === "disabled") {
       return errAsync({
         reason:
           "This client is disabled due to plan limits. Please upgrade your plan to edit.",

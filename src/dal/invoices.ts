@@ -273,10 +273,17 @@ export async function sendInvoiceEmailDal(
     });
   }
 
-  const [invoice, orgInfo] = await Promise.all([
+  const loaded = await Promise.all([
     getInvoiceByIdDb(invoiceId),
     getOrganizationInfoDal(),
-  ]);
+  ]).catch((e: Error) => {
+    console.error("Failed to load invoice for sending:", e.cause, e.message);
+    return null;
+  });
+
+  if (!loaded) return errAsync({ reason: "Failed to load invoice." });
+
+  const [invoice, orgInfo] = loaded;
 
   if (!invoice || invoice.org_id !== orgId)
     return errAsync({ reason: "Invoice not found." });
