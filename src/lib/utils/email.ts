@@ -10,18 +10,29 @@ interface SendEmailParams {
 }
 
 /**
+ * Removes line breaks so a value can't start a new email header.
+ */
+export function sanitizeHeaderValue(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").trim();
+}
+
+/**
+ * Makes a filename safe for a quoted MIME header parameter.
+ */
+function sanitizeFilename(value: string): string {
+  return sanitizeHeaderValue(value).replace(/["\\]/g, "");
+}
+
+/**
  * Sends a rich HTML email using AWS SES, automatically compiling a raw MIME message
  * to attach a PDF document if pdfBase64 and filename are provided.
  */
 export async function sendEmailWithSes(params: SendEmailParams): Promise<void> {
-  const {
-    senderEmail,
-    recipientEmail,
-    subject,
-    htmlBody,
-    pdfBase64,
-    filename,
-  } = params;
+  const { htmlBody, pdfBase64 } = params;
+  const senderEmail = sanitizeHeaderValue(params.senderEmail);
+  const recipientEmail = sanitizeHeaderValue(params.recipientEmail);
+  const subject = sanitizeHeaderValue(params.subject);
+  const filename = params.filename && sanitizeFilename(params.filename);
 
   if (pdfBase64 && filename) {
     const boundary = `NextPart_${Date.now().toString(16)}`;
