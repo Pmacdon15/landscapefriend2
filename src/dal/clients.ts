@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { errAsync, type Result, ResultAsync } from "neverthrow";
 import { z } from "zod";
 import { checkOrgMemberLimit } from "@/db/queries/clerk";
+import { clientLimitFor } from "@/lib/plan-limits";
 import type { Address, Client, ClientRow } from "@/types/types";
 import {
   type AddressInputSchema,
@@ -120,12 +121,7 @@ export async function createClientDal(
 
   const { name, email, phone, addresses } = result.data;
 
-  let limit = 3;
-  if (has({ feature: "200_clients" })) {
-    limit = 200;
-  } else if (has({ feature: "100_clients" })) {
-    limit = 100;
-  }
+  const limit = clientLimitFor((feature) => has({ feature }));
 
   const [limitCheck, orgMembershipCheck] = await Promise.all([
     checkClientLimit(orgId, limit),
