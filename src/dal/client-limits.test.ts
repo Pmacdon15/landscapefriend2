@@ -1,5 +1,5 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { okAsync } from "neverthrow";
+import { ok, okAsync } from "neverthrow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sql } from "@/db/client";
 import { checkOrgMemberLimit } from "@/db/queries/clerk";
@@ -35,7 +35,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.mocked(checkOrgMemberLimit).mockResolvedValue(okAsync(undefined));
-  vi.mocked(checkClientLimit).mockResolvedValue(okAsync(undefined) as never);
+  vi.mocked(checkClientLimit).mockResolvedValue(ok(undefined));
   vi.mocked(insertClientDb).mockResolvedValue({
     id: "c1",
     org_id: "org_1",
