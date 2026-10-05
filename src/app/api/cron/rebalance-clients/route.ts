@@ -1,15 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { rebalanceClientsForOrg } from "@/dal/rebalance";
 import { sql } from "@/db/client";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-
-  // Protect cron endpoint in production environment
-  if (
-    process.env.NODE_ENV === "production" &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (!isAuthorizedCronRequest(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

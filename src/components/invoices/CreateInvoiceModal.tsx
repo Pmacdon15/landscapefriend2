@@ -1,5 +1,6 @@
 "use client";
 
+import { addDays, format } from "date-fns";
 import { Loader2, PlusCircle, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
@@ -51,11 +52,13 @@ export function CreateInvoiceModal({
   );
   const [searchingClients, setSearchingClients] = useState(false);
 
-  const [issueDate, setIssueDate] = useState(
-    new Date().toISOString().split("T")[0],
+  // Local calendar dates: toISOString() would give tomorrow's UTC date in
+  // the evening west of UTC.
+  const [issueDate, setIssueDate] = useState(() =>
+    format(new Date(), "yyyy-MM-dd"),
   );
-  const [dueDate, setDueDate] = useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+  const [dueDate, setDueDate] = useState(() =>
+    format(addDays(new Date(), 30), "yyyy-MM-dd"),
   );
   const [invoiceNotes, setInvoiceNotes] = useState("");
   const [taxRate, setTaxRate] = useState<number>(0);
