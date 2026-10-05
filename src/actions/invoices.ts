@@ -60,29 +60,6 @@ export async function updateInvoiceStatusAction(
   );
 }
 
-export async function deleteInvoiceAction(invoiceId: string) {
-  const result = await deleteInvoiceDal(invoiceId);
-
-  return result.match(
-    (_deleted) => {
-      // Note: we can't easily read orgId from a deleted result directly,
-      // but the DAL checks orgId first. If we need to clear all, we can clear the client-side tag or rely on manual refresh.
-      // Actually, let's have deleteInvoiceDal return the deleted invoice's orgId in the ok result so we can revalidate!
-      // Wait, deleteInvoiceDal in dal returns ok(deleted), where deleted is boolean.
-      // Let's modify deleteInvoiceDal to return ok(existing.org_id) or similar, or we can just pass it or call updateTag if we know it.
-      // Let's check how deleteClientDal does it: it returns the client row on success so we can read org_id!
-      // Yes! Our deleteInvoiceDal can return ok(existing) on success so we have its org_id!
-      // Let's check deleteInvoiceDal in src/dal/invoices.ts: it deletes and returns ok(deleted) which is a boolean. Let's make it return ok(existing) instead!
-      // Let's see: yes! That is perfect.
-      return {
-        success: true,
-        error: null,
-      };
-    },
-    (err) => ({ success: false, error: err.reason }),
-  );
-}
-
 // Action wrapper for deleting invoice that receives invoice and clears cache
 export async function deleteInvoiceWithOrgAction(invoiceId: string) {
   const result = await deleteInvoiceDal(invoiceId);
