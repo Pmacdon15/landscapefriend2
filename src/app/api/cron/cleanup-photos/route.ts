@@ -2,16 +2,14 @@ import { del, list } from "@vercel/blob";
 import { revalidateTag } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 import {
+  deleteCompletionPhotosDb,
   getActiveCompletionPhotoUrlsDb,
   getExpiredCompletionPhotosDb,
 } from "@/db/queries/clients";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (
-    process.env.NODE_ENV === "production" &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (!isAuthorizedCronRequest(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -58,7 +56,7 @@ export async function GET(request: NextRequest) {
       url.startsWith("https://"),
     );
 
-    if (validUrlsToDelete.length === 0) {
+    if (validUrlsToDelete.length === 0 && expiredDbPhotos.length === 0) {
       return NextResponse.json({
         message:
           "No orphaned or 2-month-old completion blobs found to clean up.",
@@ -70,6 +68,10 @@ export async function GET(request: NextRequest) {
       await del(validUrlsToDelete.slice(i, i + 100));
     }
 
+    // The expired blobs are gone, so drop their rows too. Otherwise job
+    // history keeps linking to photos that no longer exist.
+    await deleteCompletionPhotosDb(expiredDbPhotos.map((photo) => photo.id));
+
     for (const orgId of affectedOrgIds) {
       revalidateTag(`job-history-${orgId}`, "max");
       revalidateTag(`clients-info-${orgId}`, "max");
@@ -80,6 +82,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       message: "Successfully cleaned up expired or unlinked completion blobs.",
       deletedBlobsCount: validUrlsToDelete.length,
+      deletedPhotoRecordsCount: expiredDbPhotos.length,
       affectedOrgs: Array.from(affectedOrgIds),
     });
   } catch (error) {

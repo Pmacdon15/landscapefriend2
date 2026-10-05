@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.1127.0",
@@ -47,14 +48,21 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
+    "@clerk/testing": "^2.0.0",
     "@electric-sql/pglite": "^0.3.0",
+    "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4.3.3",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.0",
     "@types/google.maps": "^3.66.2",
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitest/coverage-v8": "^4.0.0",
     "babel-plugin-react-compiler": "1.0.0",
+    "jsdom": "^27.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vitest": "^4.0.0"
