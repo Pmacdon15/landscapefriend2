@@ -218,7 +218,7 @@ describe("updateClientDal", () => {
   // Known security bug: the status check finds no row for another org's
   // client but carries on, and the address writes are scoped by client id
   // only, so another org's addresses get changed.
-  it.fails("does not touch addresses of a client from another org", async () => {
+  it("does not touch addresses of a client from another org", async () => {
     vi.mocked(sql).mockResolvedValue([] as never);
     vi.mocked(updateClientDb).mockResolvedValue(undefined as never);
 

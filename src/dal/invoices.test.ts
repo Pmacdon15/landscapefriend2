@@ -327,7 +327,7 @@ describe("sendInvoiceEmailDal", () => {
 
   // Known bug: if loading the invoice throws, the error escapes instead of
   // being returned as a Result like every other failure in this function.
-  it.fails("returns an error result when loading the invoice fails", async () => {
+  it("returns an error result when loading the invoice fails", async () => {
     protect.mockResolvedValue(canSend());
     vi.mocked(getInvoiceByIdDb).mockRejectedValue(new Error("db"));
     const result = await settle(sendInvoiceEmailDal(INVOICE));
