@@ -12,6 +12,8 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -20,11 +22,21 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      # TEMP: capture the regenerated lockfile so it can be committed.
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bun-lock
-          path: bun.lock
+      # TEMP: commit the regenerated lockfile back to the branch.
+      - name: Commit bun.lock
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if git diff --quiet bun.lock; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$HEAD_REF"
+          git checkout -B "$HEAD_REF" "origin/$HEAD_REF"
+          bun install
+          git add bun.lock
+          git commit -m "chore: update bun.lock for test dependencies"
+          git push origin "HEAD:$HEAD_REF"
 
       - name: Lint
         run: bunx biome ci .
@@ -38,7 +50,10 @@ jobs:
           exit 1
 
       - name: Test
-        run: bun run test
+        run: |
+          bun run test 2>&1 | tee test.log
+          echo "::notice::$(grep -E 'Test Files|Tests ' test.log | tr -s ' ' | tr '\n' ' ')"
+          exit "${PIPESTATUS[0]}"
 
   e2e:
     # Needs a Clerk dev instance and a throwaway database (see
