@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "Analyze historical landscaping service data, team performance metrics, and lifetime progress indicators.",
 };
 
-export default async function StatsPage(props: PageProps<"/admin/stats">) {
+export default function StatsPage(props: PageProps<"/admin/stats">) {
   const datePromise = props.searchParams.then((params) => {
     const dateVal = parseParams(params.date);
     if (dateVal) return dateVal;

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     "View your daily landscaping service lists and optimize your lawn care routes.",
 };
 
-export default async function ClientsServicePage(
+export default function ClientsServicePage(
   props: PageProps<"/clients-service">,
 ) {
   const authPromise = auth.protect();
