@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
+import { decodeBase64Strict } from "@/lib/utils/pdf-attachment";
 
 interface SendEmailParams {
   senderEmail: string;
@@ -35,10 +37,21 @@ export async function sendEmailWithSes(params: SendEmailParams): Promise<void> {
   const filename = params.filename && sanitizeFilename(params.filename);
 
   if (pdfBase64 && filename) {
-    const boundary = `NextPart_${Date.now().toString(16)}`;
+    // The attachment comes from the browser: only canonical base64 may reach
+    // the raw message, so it can never contain a boundary line or headers.
+    const decoded = decodeBase64Strict(pdfBase64);
+    if (!decoded) throw new Error("Attachment is not valid base64.");
+    const attachmentBase64 = decoded.toString("base64");
+
+    // Unpredictable boundary; base64 output can't contain "_" or "-", so the
+    // boundary can't appear inside the attachment body.
+    const boundary = `NextPart_${randomUUID()}`;
+    if (htmlBody.includes(boundary))
+      throw new Error("MIME boundary collision.");
 
     // Chunk base64 string every 76 characters to follow MIME specs
-    const chunkedBase64 = pdfBase64.match(/.{1,76}/g)?.join("\n") || pdfBase64;
+    const chunkedBase64 =
+      attachmentBase64.match(/.{1,76}/g)?.join("\n") || attachmentBase64;
 
     const rawMessage = [
       `From: ${senderEmail}`,
@@ -56,7 +69,7 @@ export async function sendEmailWithSes(params: SendEmailParams): Promise<void> {
       `--${boundary}`,
       `Content-Type: application/pdf; name="${filename}"`,
       `Content-Description: ${filename}`,
-      `Content-Disposition: attachment; filename="${filename}"; size=${Math.round(pdfBase64.length * 0.75)}`,
+      `Content-Disposition: attachment; filename="${filename}"; size=${decoded.length}`,
       "Content-Transfer-Encoding: base64",
       "",
       chunkedBase64,
