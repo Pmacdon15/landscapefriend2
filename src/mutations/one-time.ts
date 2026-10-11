@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
   deleteOneTimeServiceAction,
   insertOneTimeServiceAction,
+  updateOneTimeServiceAction,
 } from "@/actions/one-time";
 
 export function useInsertOneTimeService() {
@@ -38,6 +39,46 @@ export function useInsertOneTimeService() {
     },
     onSuccess: () => {
       toast.success("One-time service scheduled");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+export function useUpdateOneTimeService() {
+  return useMutation({
+    mutationFn: async ({
+      serviceId,
+      name,
+      serviceType,
+      serviceDate,
+      notes,
+      assignedMemberIds,
+    }: {
+      serviceId: string;
+      name: string;
+      serviceType: string;
+      serviceDate: string;
+      notes?: string | null;
+      assignedMemberIds?: string[] | null;
+    }) => {
+      const { success, service, error } = await updateOneTimeServiceAction(
+        serviceId,
+        name,
+        serviceType,
+        serviceDate,
+        notes,
+        assignedMemberIds,
+      );
+
+      if (!success || !service) {
+        throw new Error(error ?? "Failed to update one-time service");
+      }
+      return service;
+    },
+    onSuccess: () => {
+      toast.success("One-time service updated");
     },
     onError: (error: Error) => {
       toast.error(error.message);

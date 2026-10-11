@@ -212,6 +212,25 @@ describe("clientInfoReducer", () => {
       expect(next.clients[0].addresses?.[0].one_time_services).toEqual([s]);
     });
 
+    it("update-one-time-service replaces only that service", () => {
+      const keep = service("keep");
+      const edit = service("edit");
+      const target = makeAddress({ one_time_services: [keep, edit] });
+      const edited = { ...edit, service_type: "snow", notes: "Fixed" };
+      const next = clientInfoReducer(
+        stateWith(makeClient({ addresses: [target] })),
+        {
+          type: "update-one-time-service",
+          addressId: target.id,
+          service: edited,
+        },
+      );
+      expect(next.clients[0].addresses?.[0].one_time_services).toEqual([
+        keep,
+        edited,
+      ]);
+    });
+
     it("delete-one-time-service removes only that service", () => {
       const keep = service("keep");
       const drop = service("drop");

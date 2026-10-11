@@ -11,6 +11,7 @@ import {
   insertCompletedJobDb,
   insertCompletionPhotoDb,
   insertOneTimeServiceDb,
+  updateOneTimeServiceDb,
   updateAddressAssigneeDb,
   updateRouteOrderDb,
   upsertAssignmentDb,
@@ -22,6 +23,7 @@ import {
   deleteOneTimeServiceDal,
   deleteScheduleDal,
   insertOneTimeServiceDal,
+  updateOneTimeServiceDal,
   updateAddressAssigneeDal,
   updateRouteOrderDal,
   upsertAssignmentDal,
@@ -39,6 +41,7 @@ vi.mock("@/db/queries/clients", () => ({
   insertCompletedJobDb: vi.fn(),
   insertCompletionPhotoDb: vi.fn(),
   insertOneTimeServiceDb: vi.fn(),
+  updateOneTimeServiceDb: vi.fn(),
   updateAddressAssigneeDb: vi.fn(),
   updateRouteOrderDb: vi.fn(),
   upsertAssignmentDb: vi.fn(),
@@ -357,6 +360,56 @@ describe("insertOneTimeServiceDal", () => {
       "2026-06-20",
       "Front only",
       ["u1"],
+    );
+  });
+});
+
+describe("updateOneTimeServiceDal", () => {
+  it.each([
+    [["nope", "Aeration", "other", "2026-06-20"], "Invalid service ID"],
+    [[SERVICE, "", "other", "2026-06-20"], "Invalid name"],
+    [[SERVICE, "Aeration", "", "2026-06-20"], "Invalid service type"],
+    [[SERVICE, "Aeration", "other", ""], "Invalid date"],
+  ])("validates %j", async ([id, name, type, date], reason) => {
+    const result = await updateOneTimeServiceDal(id, name, type, date);
+    expect(result._unsafeUnwrapErr().reason).toBe(reason);
+    expect(updateOneTimeServiceDb).not.toHaveBeenCalled();
+  });
+
+  it("updates the service scoped to the org", async () => {
+    vi.mocked(updateOneTimeServiceDb).mockResolvedValue({
+      id: SERVICE,
+    } as never);
+    const result = await updateOneTimeServiceDal(
+      SERVICE,
+      "Snow Removal",
+      "snow",
+      "2026-12-01",
+      "Driveway only",
+      ["u2"],
+    );
+    expect(result._unsafeUnwrap()).toEqual({ id: SERVICE });
+    expect(updateOneTimeServiceDb).toHaveBeenCalledWith(
+      SERVICE,
+      "org_1",
+      "Snow Removal",
+      "snow",
+      "2026-12-01",
+      "Driveway only",
+      ["u2"],
+    );
+  });
+
+  it("fails when no pending service matched", async () => {
+    vi.mocked(updateOneTimeServiceDb).mockResolvedValue(undefined as never);
+    const result = await updateOneTimeServiceDal(
+      SERVICE,
+      "Aeration",
+      "other",
+      "2026-06-20",
+    );
+    expect(result._unsafeUnwrapErr().reason).toBe(
+      "Failed to update one-time service",
     );
   });
 });

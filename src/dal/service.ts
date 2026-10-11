@@ -10,6 +10,7 @@ import {
   insertCompletedJobDb,
   insertCompletionPhotoDb,
   insertOneTimeServiceDb,
+  updateOneTimeServiceDb,
   updateAddressAssigneeDb,
   updateRouteOrderDb,
   upsertAssignmentDb,
@@ -389,6 +390,65 @@ export async function insertOneTimeServiceDal(
     );
   } catch (error) {
     console.error("Error in insertOneTimeServiceDal:", error);
+    return errAsync({ reason: "An unexpected error occurred" });
+  }
+}
+
+export async function updateOneTimeServiceDal(
+  serviceId: string,
+  name: string,
+  serviceType: string,
+  serviceDate: string,
+  notes?: string | null,
+  assignedMemberIds?: string[] | null,
+): Promise<Result<OneTimeService, { reason: string }>> {
+  try {
+    const { orgId } = await auth.protect();
+
+    if (!orgId) return errAsync({ reason: "Unauthorized" });
+
+    const parsedServiceId = z.uuid().safeParse(serviceId);
+    if (!parsedServiceId.success)
+      return errAsync({ reason: "Invalid service ID" });
+
+    const parsedName = z.string().min(1).safeParse(name);
+    if (!parsedName.success) return errAsync({ reason: "Invalid name" });
+
+    const parsedServiceType = z.string().min(1).safeParse(serviceType);
+    if (!parsedServiceType.success)
+      return errAsync({ reason: "Invalid service type" });
+
+    const parsedDate = z.string().min(1).safeParse(serviceDate);
+    if (!parsedDate.success) return errAsync({ reason: "Invalid date" });
+
+    const parsedNotes = z.string().nullable().optional().safeParse(notes);
+    if (!parsedNotes.success) return errAsync({ reason: "Invalid notes" });
+
+    const parsedAssignedMembers = z
+      .array(z.string())
+      .nullable()
+      .optional()
+      .safeParse(assignedMemberIds);
+    if (!parsedAssignedMembers.success)
+      return errAsync({ reason: "Invalid assigned members" });
+
+    return ResultAsync.fromPromise(
+      updateOneTimeServiceDb(
+        parsedServiceId.data,
+        orgId,
+        parsedName.data,
+        parsedServiceType.data,
+        parsedDate.data,
+        parsedNotes.data,
+        parsedAssignedMembers.data,
+      ).then((row) => {
+        if (!row) throw new Error("One-time service not found");
+        return row as OneTimeService;
+      }),
+      () => ({ reason: "Failed to update one-time service" }),
+    );
+  } catch (error) {
+    console.error("Error in updateOneTimeServiceDal:", error);
     return errAsync({ reason: "An unexpected error occurred" });
   }
 }

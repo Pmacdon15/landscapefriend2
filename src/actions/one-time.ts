@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import {
   deleteOneTimeServiceDal,
   insertOneTimeServiceDal,
+  updateOneTimeServiceDal,
 } from "@/dal/service";
 
 export async function insertOneTimeServiceAction(
@@ -18,6 +19,36 @@ export async function insertOneTimeServiceAction(
   const { orgId } = await auth.protect();
   const result = await insertOneTimeServiceDal(
     addressId,
+    name,
+    serviceType,
+    serviceDate,
+    notes,
+    assignedMemberIds,
+  );
+
+  return result.match(
+    (service) => {
+      updateTag(`schedules-${orgId}`);
+      updateTag(`clients-info-${orgId}`);
+      updateTag(`clients-cutlist-${orgId}`);
+      updateTag(`clients-search-${orgId}`);
+      return { success: true, service, error: null };
+    },
+    (err) => ({ success: false, service: null, error: err.reason }),
+  );
+}
+
+export async function updateOneTimeServiceAction(
+  serviceId: string,
+  name: string,
+  serviceType: string,
+  serviceDate: string,
+  notes?: string | null,
+  assignedMemberIds?: string[] | null,
+) {
+  const { orgId } = await auth.protect();
+  const result = await updateOneTimeServiceDal(
+    serviceId,
     name,
     serviceType,
     serviceDate,

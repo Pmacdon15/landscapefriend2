@@ -25,6 +25,7 @@ import {
   insertCompletedJobDb,
   insertCompletionPhotoDb,
   insertOneTimeServiceDb,
+  updateOneTimeServiceDb,
   insertSiteMapDb,
   updateAddressAssigneeDb,
   updateClientDb,
@@ -162,6 +163,35 @@ describe("one-time services and completed jobs", () => {
     );
     expect(await deleteOneTimeServiceDb(service.id, "org_a")).toBeUndefined();
     expect(await countRows("one_time_services")).toBe(1);
+  });
+
+  it("updateOneTimeServiceDb can't edit another org's service", async () => {
+    const service = await insertOneTimeServiceDb(
+      seed.addressB.id,
+      "org_b",
+      "Aeration",
+      "other",
+      "2026-06-20",
+    );
+    expect(
+      await updateOneTimeServiceDb(
+        service.id,
+        "org_a",
+        "Snow Removal",
+        "snow",
+        "2026-12-01",
+      ),
+    ).toBeUndefined();
+    const own = await updateOneTimeServiceDb(
+      service.id,
+      "org_b",
+      "Snow Removal",
+      "snow",
+      "2026-12-01",
+      "Driveway",
+    );
+    expect(own.service_type).toBe("snow");
+    expect(own.notes).toBe("Driveway");
   });
 
   it("completing a job can't link another org's one-time service", async () => {

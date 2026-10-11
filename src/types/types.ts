@@ -134,6 +134,11 @@ export type OptimisticAction =
       addressId: string;
       service: OneTimeService;
     }
+  | {
+      type: "update-one-time-service";
+      addressId: string;
+      service: OneTimeService;
+    }
   | { type: "delete-one-time-service"; addressId: string; serviceId: string };
 
 export type OptimisticServiceAction =

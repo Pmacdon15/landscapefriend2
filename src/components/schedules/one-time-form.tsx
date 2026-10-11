@@ -4,13 +4,14 @@ import { useForm } from "@tanstack/react-form";
 import { format } from "date-fns";
 import {
   CalendarIcon,
+  Pencil,
   Snowflake,
   Sprout,
   Trash2,
   User,
   Wrench,
 } from "lucide-react";
-import { startTransition } from "react";
+import { startTransition, useRef, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
@@ -30,8 +31,25 @@ import { cn, formatDateNaive } from "@/lib/utils";
 import {
   useDeleteOneTimeService,
   useInsertOneTimeService,
+  useUpdateOneTimeService,
 } from "@/mutations/one-time";
 import type { OneTimeService, OptimisticAction } from "@/types/types";
+
+// Map serviceType to display name for the database name column
+const typeNames: Record<string, string> = {
+  grass: "Grass / Lawn Care",
+  snow: "Snow Removal",
+  "spring-fall-cleanup": "Spring / Fall Clean Up",
+  trimming: "Trimming",
+  other: "Other / General",
+};
+
+const emptyValues = () => ({
+  serviceType: "other",
+  serviceDate: new Date(),
+  notes: "",
+  assignedMemberIds: [] as string[],
+});
 
 interface OneTimeFormProps {
   addressId: string;
@@ -52,28 +70,57 @@ export function OneTimeForm({
     useInsertOneTimeService();
   const { mutateAsync: deleteService, isPending: isDeleting } =
     useDeleteOneTimeService();
+  const { mutateAsync: updateService, isPending: isUpdating } =
+    useUpdateOneTimeService();
+  const [editingService, setEditingService] = useState<OneTimeService | null>(
+    null,
+  );
+  // Ref mirrors state so the form's submit handler never reads a stale value.
+  const editingRef = useRef<OneTimeService | null>(null);
+  // Stable defaults so re-renders don't reset values loaded for editing.
+  const [defaultValues] = useState(emptyValues);
 
   const form = useForm({
-    defaultValues: {
-      serviceType: "other",
-      serviceDate: new Date(),
-      notes: "",
-      assignedMemberIds: [] as string[],
-    },
+    defaultValues,
     onSubmit: async ({ value }) => {
-      startTransition(async () => {
-        const dateStr = format(value.serviceDate, "yyyy-MM-dd");
+      const dateStr = format(value.serviceDate, "yyyy-MM-dd");
+      const nameVal = typeNames[value.serviceType] || "General Service";
 
-        // Map serviceType to display name for the database name column
-        const typeNames: Record<string, string> = {
-          grass: "Grass / Lawn Care",
-          snow: "Snow Removal",
-          "spring-fall-cleanup": "Spring / Fall Clean Up",
-          trimming: "Trimming",
-          other: "Other / General",
+      const original = editingRef.current;
+      if (original) {
+        const updated: OneTimeService = {
+          ...original,
+          name: nameVal,
+          service_type: value.serviceType,
+          service_date: dateStr,
+          notes: value.notes || null,
+          assigned_member_ids: value.assignedMemberIds,
         };
-        const nameVal = typeNames[value.serviceType] || "General Service";
+        startTransition(async () => {
+          setOptimistic?.({
+            type: "update-one-time-service",
+            addressId,
+            service: updated,
+          });
+          try {
+            await updateService({
+              serviceId: original.id,
+              name: nameVal,
+              serviceType: value.serviceType,
+              serviceDate: dateStr,
+              notes: value.notes,
+              assignedMemberIds: value.assignedMemberIds,
+            });
+            cancelEdit();
+          } catch (err) {
+            console.error(err);
+          }
+        });
+        onSuccess?.();
+        return;
+      }
 
+      startTransition(async () => {
         const optimisticService: OneTimeService = {
           id: `optimistic-${Math.random().toString()}`,
           address_id: addressId,
@@ -112,7 +159,25 @@ export function OneTimeForm({
     },
   });
 
+  const startEdit = (service: OneTimeService) => {
+    editingRef.current = service;
+    setEditingService(service);
+    form.reset({
+      serviceType: service.service_type,
+      serviceDate: new Date(`${service.service_date}T00:00:00`),
+      notes: service.notes ?? "",
+      assignedMemberIds: service.assigned_member_ids ?? [],
+    });
+  };
+
+  const cancelEdit = () => {
+    editingRef.current = null;
+    setEditingService(null);
+    form.reset(emptyValues());
+  };
+
   const handleDelete = async (serviceId: string) => {
+    if (editingService?.id === serviceId) cancelEdit();
     startTransition(async () => {
       if (setOptimistic) {
         setOptimistic({
@@ -143,7 +208,11 @@ export function OneTimeForm({
             {activeServices.map((service) => (
               <div
                 key={service.id}
-                className="flex items-start justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-xs gap-3"
+                className={cn(
+                  "flex items-start justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-xs gap-3",
+                  editingService?.id === service.id &&
+                    "border-primary ring-1 ring-primary",
+                )}
               >
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -212,15 +281,32 @@ export function OneTimeForm({
                       </div>
                     )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  disabled={isDeleting}
-                  className="h-7 w-7 text-slate-400 hover:text-destructive hover:bg-destructive/10 shrink-0"
-                  onClick={() => handleDelete(service.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex shrink-0 gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Edit one-time service"
+                    disabled={
+                      isDeleting ||
+                      isUpdating ||
+                      service.id.startsWith("optimistic-")
+                    }
+                    className="h-7 w-7 text-slate-400 hover:text-primary hover:bg-primary/10"
+                    onClick={() => startEdit(service)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Delete one-time service"
+                    disabled={isDeleting || isUpdating}
+                    className="h-7 w-7 text-slate-400 hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(service.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -230,7 +316,7 @@ export function OneTimeForm({
       {/* Add New One-Off Form */}
       <div className="space-y-4">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-          Schedule New One-Off
+          {editingService ? "Edit One-Off" : "Schedule New One-Off"}
         </h4>
         <form
           onSubmit={(e) => {
@@ -361,13 +447,34 @@ export function OneTimeForm({
             )}
           </form.Field>
 
-          <Button
-            type="submit"
-            className="w-full text-xs h-9"
-            disabled={isSubmitting || isDeleting}
-          >
-            {isSubmitting ? "Scheduling..." : "Schedule One-Off"}
-          </Button>
+          {editingService ? (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 text-xs h-9"
+                disabled={isUpdating}
+                onClick={cancelEdit}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 text-xs h-9"
+                disabled={isUpdating || isDeleting}
+              >
+                {isUpdating ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="submit"
+              className="w-full text-xs h-9"
+              disabled={isSubmitting || isDeleting}
+            >
+              {isSubmitting ? "Scheduling..." : "Schedule One-Off"}
+            </Button>
+          )}
         </form>
       </div>
     </div>
