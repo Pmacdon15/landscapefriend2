@@ -472,9 +472,7 @@ describe("saveSiteMapAction", () => {
       new Error("NEXT_HTTP_ERROR_FALLBACK;404"),
     );
     await expect(
-      saveSiteMapAction(
-        formData({ addressId: ADDRESS, file: pngFile() }),
-      ),
+      saveSiteMapAction(formData({ addressId: ADDRESS, file: pngFile() })),
     ).rejects.toThrow();
     expect(put).not.toHaveBeenCalled();
   });
