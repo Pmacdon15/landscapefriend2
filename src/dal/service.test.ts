@@ -95,6 +95,13 @@ describe("updateRouteOrderDal", () => {
 });
 
 describe("upsertScheduleDal", () => {
+  // Admin-only write (#80).
+  beforeEach(() => {
+    protect.mockResolvedValue(
+      mockAuth({ orgId: "org_1", userId: "user_1", orgRole: "org:admin" }),
+    );
+  });
+
   it("is blocked when the org is over its member limit", async () => {
     vi.mocked(checkOrgMemberLimit).mockResolvedValue(
       err({ reason: "Too many members" }),
@@ -154,6 +161,13 @@ describe("upsertScheduleDal", () => {
 });
 
 describe("deleteScheduleDal", () => {
+  // Admin-only write (#80).
+  beforeEach(() => {
+    protect.mockResolvedValue(
+      mockAuth({ orgId: "org_1", userId: "user_1", orgRole: "org:admin" }),
+    );
+  });
+
   it("returns not found for addresses in another org", async () => {
     clientStatus(null);
     const result = await deleteScheduleDal(ADDRESS);
@@ -241,6 +255,13 @@ describe("completeJobDal", () => {
 });
 
 describe("upsertAssignmentDal", () => {
+  // Admin-only write (#80).
+  beforeEach(() => {
+    protect.mockResolvedValue(
+      mockAuth({ orgId: "org_1", userId: "user_1", orgRole: "org:admin" }),
+    );
+  });
+
   it("rejects addresses from another org", async () => {
     vi.mocked(addressBelongsToOrgDb).mockResolvedValue(false);
     const result = await upsertAssignmentDal(ADDRESS, "user_2", "2026-06-15");
@@ -276,6 +297,13 @@ describe("upsertAssignmentDal", () => {
 });
 
 describe("updateAddressAssigneeDal", () => {
+  // Admin-only write (#80).
+  beforeEach(() => {
+    protect.mockResolvedValue(
+      mockAuth({ orgId: "org_1", userId: "user_1", orgRole: "org:admin" }),
+    );
+  });
+
   it("clears the assignees for ['unassigned']", async () => {
     vi.mocked(updateAddressAssigneeDb).mockResolvedValue({
       id: ADDRESS,
@@ -310,6 +338,13 @@ describe("updateAddressAssigneeDal", () => {
 });
 
 describe("insertOneTimeServiceDal", () => {
+  // Admin-only write (#80).
+  beforeEach(() => {
+    protect.mockResolvedValue(
+      mockAuth({ orgId: "org_1", userId: "user_1", orgRole: "org:admin" }),
+    );
+  });
+
   it.each([
     [["nope", "Aeration", "other"], "Invalid address ID"],
     [[ADDRESS, "", "other"], "Invalid name"],
@@ -362,6 +397,13 @@ describe("insertOneTimeServiceDal", () => {
 });
 
 describe("deleteOneTimeServiceDal", () => {
+  // Admin-only write (#80).
+  beforeEach(() => {
+    protect.mockResolvedValue(
+      mockAuth({ orgId: "org_1", userId: "user_1", orgRole: "org:admin" }),
+    );
+  });
+
   it("rejects an invalid id", async () => {
     const result = await deleteOneTimeServiceDal("nope");
     expect(result._unsafeUnwrapErr().reason).toBe("Invalid service ID");
@@ -381,5 +423,51 @@ describe("deleteOneTimeServiceDal", () => {
     vi.mocked(deleteOneTimeServiceDb).mockResolvedValue(undefined as never);
     const result = await deleteOneTimeServiceDal(SERVICE);
     expect(result.isErr()).toBe(true);
+  });
+});
+
+// Security (#80): these writes are only offered on the admin-only client info
+// page, but server actions can be posted directly by any signed-in member.
+describe("admin-only service writes (#80)", () => {
+  const adminOnly = [
+    {
+      name: "upsertScheduleDal",
+      run: () => upsertScheduleDal(ADDRESS, "weekly", "2026-06-01"),
+      db: upsertScheduleDb,
+    },
+    {
+      name: "deleteScheduleDal",
+      run: () => deleteScheduleDal(ADDRESS),
+      db: deleteScheduleDb,
+    },
+    {
+      name: "upsertAssignmentDal",
+      run: () => upsertAssignmentDal(ADDRESS, "user_2", "2026-06-01"),
+      db: upsertAssignmentDb,
+    },
+    {
+      name: "updateAddressAssigneeDal",
+      run: () => updateAddressAssigneeDal(ADDRESS, ["user_2"]),
+      db: updateAddressAssigneeDb,
+    },
+    {
+      name: "insertOneTimeServiceDal",
+      run: () =>
+        insertOneTimeServiceDal(ADDRESS, "Aeration", "other", "2026-06-01"),
+      db: insertOneTimeServiceDb,
+    },
+    {
+      name: "deleteOneTimeServiceDal",
+      run: () => deleteOneTimeServiceDal(SERVICE),
+      db: deleteOneTimeServiceDb,
+    },
+  ];
+
+  it.each(adminOnly)("$name rejects org members", async ({ run, db }) => {
+    protect.mockResolvedValue(mockAuth({ orgId: "org_1", userId: "user_1" }));
+    const result = await run();
+    expect(result._unsafeUnwrapErr().reason).toBe("Unauthorized");
+    expect(db).not.toHaveBeenCalled();
+    expect(sql).not.toHaveBeenCalled();
   });
 });
