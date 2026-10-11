@@ -26,6 +26,7 @@ import { completeJobAction } from "./jobs";
 import {
   deleteOneTimeServiceAction,
   insertOneTimeServiceAction,
+  updateOneTimeServiceAction,
 } from "./one-time";
 import { updateRouteOrderAction } from "./routes";
 import { deleteScheduleAction, upsertScheduleAction } from "./schedules";
@@ -54,6 +55,7 @@ vi.mock("@/dal/service", () => ({
   deleteOneTimeServiceDal: vi.fn(),
   deleteScheduleDal: vi.fn(),
   insertOneTimeServiceDal: vi.fn(),
+  updateOneTimeServiceDal: vi.fn(),
   updateAddressAssigneeDal: vi.fn(),
   updateRouteOrderDal: vi.fn(),
   upsertAssignmentDal: vi.fn(),
@@ -202,6 +204,18 @@ const cases: Case[] = [
     dal: serviceDal.insertOneTimeServiceDal,
     run: () =>
       insertOneTimeServiceAction("a1", "Aeration", "other", "2026-06-01"),
+    tags: [
+      `schedules-${ORG}`,
+      `clients-info-${ORG}`,
+      `clients-cutlist-${ORG}`,
+      `clients-search-${ORG}`,
+    ],
+  },
+  {
+    name: "updateOneTimeServiceAction",
+    dal: serviceDal.updateOneTimeServiceDal,
+    run: () =>
+      updateOneTimeServiceAction("s1", "Snow Removal", "snow", "2026-12-01"),
     tags: [
       `schedules-${ORG}`,
       `clients-info-${ORG}`,

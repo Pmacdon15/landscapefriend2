@@ -139,6 +139,24 @@ export const clientInfoReducer = (
         })),
       };
 
+    case "update-one-time-service":
+      return {
+        ...state,
+        clients: state.clients.map((client) => ({
+          ...client,
+          addresses: client.addresses?.map((address) => {
+            if (address.id !== action.addressId) return address;
+            const currentList = address.one_time_services || [];
+            return {
+              ...address,
+              one_time_services: currentList.map((s) =>
+                s.id === action.service.id ? { ...s, ...action.service } : s,
+              ),
+            };
+          }),
+        })),
+      };
+
     case "delete-one-time-service":
       return {
         ...state,

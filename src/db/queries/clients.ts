@@ -1181,6 +1181,30 @@ export async function insertOneTimeServiceDb(
   return result[0] as unknown as OneTimeServiceRow;
 }
 
+export async function updateOneTimeServiceDb(
+  serviceId: string,
+  orgId: string,
+  name: string,
+  serviceType: string,
+  serviceDate: string,
+  notes?: string | null,
+  assignedMemberIds?: string[] | null,
+): Promise<OneTimeServiceRow> {
+  // Only pending services can be edited; completed ones are history.
+  const [row] = (await sql`
+    UPDATE one_time_services
+    SET name = ${name},
+        service_type = ${serviceType},
+        service_date = ${serviceDate},
+        notes = ${notes || null},
+        assigned_member_ids = ${assignedMemberIds || null},
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${serviceId} AND org_id = ${orgId} AND completed_job_id IS NULL
+    RETURNING *
+  `) as unknown as OneTimeServiceRow[];
+  return row;
+}
+
 export async function deleteOneTimeServiceDb(
   serviceId: string,
   orgId: string,
