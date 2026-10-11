@@ -266,3 +266,45 @@ describe("sendEmailWithSes", () => {
     await expect(sendEmailWithSes(base)).rejects.toThrow("rejected");
   });
 });
+
+// Security (#81): the attachment body comes from the browser. A predictable
+// boundary or raw attachment data would let a crafted payload close the PDF
+// part early and add MIME parts of its own.
+describe("sendEmailWithSes MIME hardening (#81)", () => {
+  const base = {
+    senderEmail: "Green Co <no-reply@example.com>",
+    recipientEmail: "jane@example.com",
+    subject: "Invoice INV-0042",
+    htmlBody: "<p>Hello</p>",
+    filename: "INV-0042.pdf",
+  };
+  const rawOf = (call = 0) =>
+    Buffer.from(sesSend.mock.calls[call][0].input.RawMessage.Data).toString(
+      "utf8",
+    );
+
+  beforeEach(() => {
+    sesSend.mockReset();
+    sesSend.mockResolvedValue({});
+  });
+
+  it("uses a different, unpredictable boundary for each message", async () => {
+    await sendEmailWithSes({ ...base, pdfBase64: "AAAA" });
+    await sendEmailWithSes({ ...base, pdfBase64: "AAAA" });
+    const boundary = (raw: string) => raw.match(/boundary="([^"]+)"/)?.[1];
+    const [a, b] = [boundary(rawOf(0)), boundary(rawOf(1))];
+    expect(a).toMatch(/^NextPart_[0-9a-f-]{36}$/);
+    expect(a).not.toBe(b);
+  });
+
+  it.each([
+    ["is not base64", "not base64 at all!"],
+    [
+      "tries to inject a MIME part",
+      "AAAA\n--x\nContent-Type: text/html\n\n<p>hi</p>",
+    ],
+  ])("rejects attachment data that %s", async (_why, pdfBase64) => {
+    await expect(sendEmailWithSes({ ...base, pdfBase64 })).rejects.toThrow();
+    expect(sesSend).not.toHaveBeenCalled();
+  });
+});
