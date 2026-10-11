@@ -6,6 +6,7 @@ import {
   getCompletionPhotoWithOrgDb,
   getSiteMapWithOrgDb,
 } from "@/db/queries/clients";
+import { SAFE_IMAGE_CONTENT_TYPES } from "@/lib/utils/image-upload";
 
 export async function GET(
   request: NextRequest,
@@ -48,10 +49,23 @@ export async function GET(
       });
     }
 
+    // Only raster images are served, so a stored HTML/SVG upload can never
+    // render as a document on the app's origin (#79).
+    const contentType = (result.blob.contentType ?? "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    if (!SAFE_IMAGE_CONTENT_TYPES.has(contentType)) {
+      await result.stream?.cancel().catch(() => undefined);
+      return new NextResponse("Unsupported Media Type", { status: 415 });
+    }
+
     return new NextResponse(result.stream, {
       headers: {
-        "Content-Type": result.blob.contentType,
+        "Content-Type": contentType,
         "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
+        "Content-Disposition": `inline; filename="${type === "sitemap" ? "site-map" : "photo"}"`,
         ETag: result.blob.etag,
         "Cache-Control": "private, no-cache",
       },

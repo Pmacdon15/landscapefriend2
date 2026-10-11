@@ -114,6 +114,50 @@ describe("GET /api/image-view/[id]", () => {
     expect(res.headers.get("cache-control")).toBe("private, no-cache");
   });
 
+  it("serves images sandboxed with a fixed inline disposition (#79)", async () => {
+    vi.mocked(getCompletionPhotoWithOrgDb).mockResolvedValue({
+      id: "img_1",
+      blob_path: "https://blob.example/p.png",
+    });
+    vi.mocked(get).mockResolvedValue(stored as never);
+
+    const res = await imageView(
+      req("/api/image-view/img_1?type=photo"),
+      params(),
+    );
+
+    expect(res.headers.get("content-security-policy")).toBe(
+      "default-src 'none'; sandbox",
+    );
+    expect(res.headers.get("content-disposition")).toBe(
+      'inline; filename="photo"',
+    );
+  });
+
+  // A stored upload must never render as a document on the app origin (#79).
+  it.each(["text/html", "image/svg+xml", "application/xhtml+xml", ""])(
+    "refuses to serve %j content",
+    async (contentType) => {
+      vi.mocked(getCompletionPhotoWithOrgDb).mockResolvedValue({
+        id: "img_1",
+        blob_path: "https://blob.example/p",
+      });
+      vi.mocked(get).mockResolvedValue({
+        ...stored,
+        blob: { etag: '"etag-1"', contentType },
+        stream: new ReadableStream(),
+      } as never);
+
+      const res = await imageView(
+        req("/api/image-view/img_1?type=photo"),
+        params(),
+      );
+
+      expect(res.status).toBe(415);
+      expect(res.headers.get("content-type")).not.toBe(contentType || null);
+    },
+  );
+
   it("returns 304 when the browser's ETag still matches", async () => {
     vi.mocked(getSiteMapWithOrgDb).mockResolvedValue({
       blob_path: "https://blob.example/m.png",
