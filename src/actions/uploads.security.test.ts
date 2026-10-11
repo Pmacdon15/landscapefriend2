@@ -83,21 +83,18 @@ describe("completeJobAction uploads", () => {
   });
 
   // Expected to fail until #79 is fixed.
-  it.fails(
-    "never takes the stored extension from the uploaded file name (#79)",
-    async () => {
-      const photo = new File(["img"], "IMG_0001.html", { type: "image/jpeg" });
-      await completeJobAction(
-        formData({
-          addressId: ADDRESS,
-          serviceType: "grass",
-          photoFile: photo,
-        }),
-      );
-      const [pathname] = vi.mocked(put).mock.calls[0];
-      expect(pathname).not.toMatch(/\.html$/);
-    },
-  );
+  it.fails("never takes the stored extension from the uploaded file name (#79)", async () => {
+    const photo = new File(["img"], "IMG_0001.html", { type: "image/jpeg" });
+    await completeJobAction(
+      formData({
+        addressId: ADDRESS,
+        serviceType: "grass",
+        photoFile: photo,
+      }),
+    );
+    const [pathname] = vi.mocked(put).mock.calls[0];
+    expect(pathname).not.toMatch(/\.html$/);
+  });
 });
 
 describe("saveSiteMapAction uploads", () => {
@@ -141,13 +138,10 @@ describe("saveSiteMapAction uploads", () => {
   });
 
   // Expected to fail until #82 is fixed (JSON.parse is unguarded).
-  it.fails(
-    "returns a validation error for malformed map data (#82)",
-    async () => {
-      const result = await saveSiteMapAction(
-        formData({ addressId: ADDRESS, mapData: "{not json" }),
-      );
-      expect(result.success).toBe(false);
-    },
-  );
+  it.fails("returns a validation error for malformed map data (#82)", async () => {
+    const result = await saveSiteMapAction(
+      formData({ addressId: ADDRESS, mapData: "{not json" }),
+    );
+    expect(result.success).toBe(false);
+  });
 });
