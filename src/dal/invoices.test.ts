@@ -334,6 +334,43 @@ describe("sendInvoiceEmailDal", () => {
   });
 });
 
+// Security (#81): the attachment comes from the browser, so the server must
+// check it really is a PDF before sending it from the platform's SES sender.
+// Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/81
+// is fixed; switch `it.fails` back to `it` then.
+describe("sendInvoiceEmailDal attachment validation (#81)", () => {
+  const canSend = () => admin(["invoices", "send_invoices"]);
+  const toBase64 = (text: string) => Buffer.from(text).toString("base64");
+
+  beforeEach(() => {
+    protect.mockResolvedValue(canSend());
+    vi.mocked(getInvoiceByIdDb).mockResolvedValue(invoiceRow());
+    vi.mocked(sendEmailWithSes).mockResolvedValue();
+    vi.mocked(updateInvoiceStatusDb).mockResolvedValue(
+      invoiceRow({ status: "sent" }),
+    );
+  });
+
+  it.fails.each([
+    ["is not base64", "not base64 at all!"],
+    ["is not a PDF", toBase64("plain text, not a document")],
+  ])("refuses an attachment that %s", async (_why, pdfBase64) => {
+    const result = await settle(
+      sendInvoiceEmailDal(INVOICE, pdfBase64, "INV-0001.pdf"),
+    );
+    expect(result.isErr()).toBe(true);
+    expect(sendEmailWithSes).not.toHaveBeenCalled();
+  });
+
+  it.fails("refuses an attachment name that is not a .pdf", async () => {
+    const result = await settle(
+      sendInvoiceEmailDal(INVOICE, toBase64("%PDF-1.7\n"), "INV-0001.exe"),
+    );
+    expect(result.isErr()).toBe(true);
+    expect(sendEmailWithSes).not.toHaveBeenCalled();
+  });
+});
+
 describe("getOrganizationInfoDal", () => {
   it("returns the org name and logo", async () => {
     vi.mocked(clerkClient).mockResolvedValue({

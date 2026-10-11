@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -264,5 +264,49 @@ describe("sendEmailWithSes", () => {
   it("propagates SES failures", async () => {
     sesSend.mockRejectedValueOnce(new Error("rejected"));
     await expect(sendEmailWithSes(base)).rejects.toThrow("rejected");
+  });
+});
+
+// Security (#81): the attachment body comes from the browser. A predictable
+// boundary lets crafted attachment data close the PDF part early and add
+// parts of its own, and non-base64 data should never reach the raw message.
+// Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/81
+// is fixed; switch `it.fails` back to `it` then.
+describe("sendEmailWithSes MIME hardening (#81)", () => {
+  const base = {
+    senderEmail: "Green Co <no-reply@example.com>",
+    recipientEmail: "jane@example.com",
+    subject: "Invoice INV-0042",
+    htmlBody: "<p>Hello</p>",
+    filename: "INV-0042.pdf",
+  };
+
+  beforeEach(() => {
+    sesSend.mockReset();
+    sesSend.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.fails("does not derive the MIME boundary from the clock", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-06-01T12:00:00.000Z"));
+    const predictable = `NextPart_${Date.now().toString(16)}`;
+
+    await sendEmailWithSes({ ...base, pdfBase64: "AAAA" });
+    const raw = Buffer.from(
+      sesSend.mock.calls[0][0].input.RawMessage.Data,
+    ).toString("utf8");
+
+    expect(raw).not.toContain(predictable);
+  });
+
+  it.fails("rejects attachment data that is not base64", async () => {
+    await expect(
+      sendEmailWithSes({ ...base, pdfBase64: "not base64 at all!" }),
+    ).rejects.toThrow();
+    expect(sesSend).not.toHaveBeenCalled();
   });
 });
