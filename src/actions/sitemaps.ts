@@ -13,9 +13,7 @@ import { addressBelongsToOrgDb } from "@/db/queries/clients";
 
 function parseMapData(
   raw: string | null,
-):
-  | { ok: true; value: Record<string, unknown> | null }
-  | { ok: false } {
+): { ok: true; value: Record<string, unknown> | null } | { ok: false } {
   if (!raw) return { ok: true, value: null };
   try {
     const value = JSON.parse(raw);
