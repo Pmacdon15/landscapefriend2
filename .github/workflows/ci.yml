@@ -31,8 +31,25 @@ jobs:
           sed -E 's/^([^(]+)\(([0-9]+),([0-9]+)\): (.*)$/::error file=\1,line=\2,col=\3::\4/' tsc.log | head -n 50
           exit 1
 
-      - name: Test
-        run: bun run test
+      # Each suite is its own step so the failing one is obvious on the PR.
+      # `success() || failure()` keeps the later suites running after a
+      # failure (so you see every problem at once); any failed step still
+      # fails the job and the PR check.
+      - name: Architecture tests (no async pages)
+        if: success() || failure()
+        run: bun run test:architecture
+
+      - name: Unit tests
+        if: success() || failure()
+        run: bun run test:unit
+
+      - name: Component tests
+        if: success() || failure()
+        run: bun run test:component
+
+      - name: Integration tests
+        if: success() || failure()
+        run: bun run test:integration
 
   e2e:
     # Needs a Clerk dev instance and a throwaway database (see

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     "View and analyze historical landscaping service data, team performance, and lifetime statistics.",
 };
 
-export default async function HistoryPage(props: PageProps<"/admin/history">) {
+export default function HistoryPage(props: PageProps<"/admin/history">) {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
       <PageHeader

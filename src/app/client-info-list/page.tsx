@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "View and manage your entire list of landscaping clients. Keep track of service schedules and property details.",
 };
 
-export default async function ClientInfoListPage(
+export default function ClientInfoListPage(
   props: PageProps<"/client-info-list">,
 ) {
   const clientsPromise = props.searchParams.then((params) =>
