@@ -160,22 +160,17 @@ describe("org members (crew) on their own route", () => {
 
 // The UI only offers these on the admin-only client info page, but server
 // actions can be called directly by any signed-in member.
-// Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/80
-// is fixed; switch `it.fails` back to `it` then.
 describe("admin-only service writes (#80)", () => {
   const adminOnly = writes.filter(
     (w) => !["updateRouteOrderDal", "completeJobDal"].includes(w.name),
   );
 
-  it.fails.each(adminOnly)(
-    "$name rejects non-admin members",
-    async ({ run, db }) => {
-      protect.mockResolvedValue(mockAuth({ orgId: "org_1" }));
-      const result = await run();
-      expect(result.isErr()).toBe(true);
-      expect(db).not.toHaveBeenCalled();
-    },
-  );
+  it.each(adminOnly)("$name rejects non-admin members", async ({ run, db }) => {
+    protect.mockResolvedValue(mockAuth({ orgId: "org_1" }));
+    const result = await run();
+    expect(result.isErr()).toBe(true);
+    expect(db).not.toHaveBeenCalled();
+  });
 
   it.each(adminOnly)("$name still works for admins", async ({ run, db }) => {
     protect.mockResolvedValue(

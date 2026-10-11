@@ -11,6 +11,7 @@ import {
   clientBelongsToOrgDb,
 } from "../db/queries/clients";
 import {
+  countInvoicesSentSinceDb,
   type DbInvoiceResult,
   deleteInvoiceDb,
   getInvoiceByIdDb,
@@ -22,6 +23,7 @@ import {
   updateInvoiceStatusDb,
 } from "../db/queries/invoices";
 import { generateInvoiceEmailHtml, sendEmailWithSes } from "../lib/utils/email";
+import { validateInvoicePdfAttachment } from "../lib/utils/pdf-attachment";
 
 export async function getInvoicesDal(
   page = 1,
@@ -254,6 +256,11 @@ export async function deleteInvoiceDal(
     });
 }
 
+/** Minimum time between two sends of the same invoice. */
+const INVOICE_RESEND_COOLDOWN_MS = 10 * 60 * 1000;
+/** Most invoices one org may email in a rolling 24 hours. */
+const MAX_INVOICE_EMAILS_PER_ORG_PER_DAY = 200;
+
 export async function sendInvoiceEmailDal(
   invoiceId: string,
   pdfBase64?: string,
@@ -273,6 +280,11 @@ export async function sendInvoiceEmailDal(
     });
   }
 
+  // The attachment is built in the browser, so verify it really is a PDF and
+  // re-encode it before it goes out from the platform's SES sender (#81).
+  const attachment = validateInvoicePdfAttachment(pdfBase64, filename);
+  if (!attachment.ok) return errAsync({ reason: attachment.reason });
+
   const loaded = await Promise.all([
     getInvoiceByIdDb(invoiceId),
     getOrganizationInfoDal(),
@@ -287,6 +299,35 @@ export async function sendInvoiceEmailDal(
 
   if (!invoice || invoice.org_id !== orgId)
     return errAsync({ reason: "Invoice not found." });
+
+  // Throttle sends so the shared SES identity can't be used as a relay (#81).
+  if (
+    invoice.sent_at &&
+    Date.now() - new Date(invoice.sent_at).getTime() <
+      INVOICE_RESEND_COOLDOWN_MS
+  ) {
+    return errAsync({
+      reason: "This invoice was just sent. Please wait a few minutes.",
+    });
+  }
+
+  const sentToday = await Promise.resolve()
+    .then(() =>
+      countInvoicesSentSinceDb(
+        orgId,
+        new Date(Date.now() - 24 * 60 * 60 * 1000),
+      ),
+    )
+    .catch((e: Error) => {
+      console.error("Failed to count sent invoices:", e.cause, e.message);
+      return null;
+    });
+  if (sentToday === null)
+    return errAsync({ reason: "Failed to load invoice." });
+  if (sentToday >= MAX_INVOICE_EMAILS_PER_ORG_PER_DAY)
+    return errAsync({
+      reason: "Daily invoice email limit reached. Please try again tomorrow.",
+    });
 
   if (!invoice.client_email)
     return errAsync({
@@ -309,10 +350,15 @@ export async function sendInvoiceEmailDal(
     recipientEmail: invoice.client_email,
     subject: emailSubject,
     htmlBody: emailHtmlBody,
-    pdfBase64,
-    filename,
+    pdfBase64: attachment.value?.pdfBase64,
+    filename: attachment.value?.filename,
   })
-    .then(() => updateInvoiceStatusDb(invoiceId, orgId, "sent"))
+    .then(() => {
+      console.info(
+        `Invoice email sent: org=${orgId} invoice=${invoiceId} attachment=${attachment.value ? "pdf" : "none"}`,
+      );
+      return updateInvoiceStatusDb(invoiceId, orgId, "sent");
+    })
     .then(async (updated) => {
       if (!updated) {
         return errAsync({

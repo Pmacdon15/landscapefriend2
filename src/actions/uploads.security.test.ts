@@ -69,9 +69,7 @@ describe("completeJobAction uploads", () => {
     expect(serviceDal.completeJobDal).not.toHaveBeenCalled();
   });
 
-  // Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/79
-  // is fixed; switch `it.fails` back to `it` then.
-  it.fails("rejects a photo that is not an image (#79)", async () => {
+  it("rejects a photo that is not an image (#79)", async () => {
     await completeJobAction(
       formData({
         addressId: ADDRESS,
@@ -82,9 +80,9 @@ describe("completeJobAction uploads", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  // Expected to fail until #79 is fixed.
-  it.fails("never takes the stored extension from the uploaded file name (#79)", async () => {
-    const photo = new File(["img"], "IMG_0001.html", { type: "image/jpeg" });
+  it("never takes the stored extension from the uploaded file name (#79)", async () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+    const photo = new File([jpeg], "IMG_0001.html", { type: "image/jpeg" });
     await completeJobAction(
       formData({
         addressId: ADDRESS,
@@ -98,9 +96,7 @@ describe("completeJobAction uploads", () => {
 });
 
 describe("saveSiteMapAction uploads", () => {
-  // Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/82
-  // is fixed: the upload happens before the DAL checks auth and role.
-  it.fails.each([
+  it.each([
     [
       "an unauthenticated caller",
       () =>
@@ -127,9 +123,7 @@ describe("saveSiteMapAction uploads", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  // Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/79
-  // is fixed.
-  it.fails("rejects a site map file that is not an image (#79)", async () => {
+  it("rejects a site map file that is not an image (#79)", async () => {
     const result = await saveSiteMapAction(
       formData({ addressId: ADDRESS, file: notAnImage() }),
     );
@@ -137,8 +131,7 @@ describe("saveSiteMapAction uploads", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  // Expected to fail until #82 is fixed (JSON.parse is unguarded).
-  it.fails("returns a validation error for malformed map data (#82)", async () => {
+  it("returns a validation error for malformed map data (#82)", async () => {
     const result = await saveSiteMapAction(
       formData({ addressId: ADDRESS, mapData: "{not json" }),
     );

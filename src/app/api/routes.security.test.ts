@@ -109,11 +109,9 @@ describe("GET /api/image-view/[id] content types", () => {
     },
   );
 
-  // Uploads are not type-checked, so a stored blob can be an active document.
-  // Serving it inline from the app origin would run its script as the viewer.
-  // Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/79
-  // is fixed; switch `it.fails` back to `it` then.
-  it.fails.each(["text/html", "image/svg+xml", "application/xhtml+xml"])(
+  // A stored blob that is an active document must never be served inline from
+  // the app origin, or its script would run as the viewer.
+  it.each(["text/html", "image/svg+xml", "application/xhtml+xml"])(
     "never serves %s as an inline document (#79)",
     async (type) => {
       const res = await serve(type);

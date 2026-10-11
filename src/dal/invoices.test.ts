@@ -6,6 +6,7 @@ import {
   clientBelongsToOrgDb,
 } from "@/db/queries/clients";
 import {
+  countInvoicesSentSinceDb,
   deleteInvoiceDb,
   getInvoiceByIdDb,
   getInvoicesDb,
@@ -38,6 +39,7 @@ vi.mock("@/db/queries/clients", () => ({
   clientBelongsToOrgDb: vi.fn(),
 }));
 vi.mock("@/db/queries/invoices", () => ({
+  countInvoicesSentSinceDb: vi.fn(),
   deleteInvoiceDb: vi.fn(),
   getInvoiceByIdDb: vi.fn(),
   getInvoicesDb: vi.fn(),
@@ -98,6 +100,7 @@ beforeEach(() => {
   protect.mockResolvedValue(admin());
   vi.mocked(clientBelongsToOrgDb).mockResolvedValue(true);
   vi.mocked(addressesBelongToOrgDb).mockResolvedValue(true);
+  vi.mocked(countInvoicesSentSinceDb).mockResolvedValue(0);
   vi.mocked(clerkClient).mockResolvedValue({
     organizations: {
       getOrganization: vi
@@ -290,8 +293,9 @@ describe("sendInvoiceEmailDal", () => {
       invoiceRow({ status: "sent" }),
     );
 
+    const pdf = Buffer.from("%PDF-1.7\n%%EOF\n").toString("base64");
     const result = await settle(
-      sendInvoiceEmailDal(INVOICE, "QUJD", "INV-0001.pdf"),
+      sendInvoiceEmailDal(INVOICE, pdf, "INV-0001.pdf"),
     );
 
     expect(result.isOk()).toBe(true);
@@ -305,7 +309,7 @@ describe("sendInvoiceEmailDal", () => {
         senderEmail: "Green Co <no-reply@landscapefriend.com>",
         recipientEmail: "jane@example.com",
         subject: "Invoice INV-0001 from Green Co",
-        pdfBase64: "QUJD",
+        pdfBase64: pdf,
         filename: "INV-0001.pdf",
       }),
     );
@@ -335,12 +339,11 @@ describe("sendInvoiceEmailDal", () => {
 });
 
 // Security (#81): the attachment comes from the browser, so the server must
-// check it really is a PDF before sending it from the platform's SES sender.
-// Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/81
-// is fixed; switch `it.fails` back to `it` then.
-describe("sendInvoiceEmailDal attachment validation (#81)", () => {
+// check it really is a PDF and throttle sends from the platform's SES sender.
+describe("sendInvoiceEmailDal hardening (#81)", () => {
   const canSend = () => admin(["invoices", "send_invoices"]);
   const toBase64 = (text: string) => Buffer.from(text).toString("base64");
+  const pdf = toBase64("%PDF-1.7\n%%EOF\n");
 
   beforeEach(() => {
     protect.mockResolvedValue(canSend());
@@ -351,22 +354,48 @@ describe("sendInvoiceEmailDal attachment validation (#81)", () => {
     );
   });
 
-  it.fails.each([
-    ["is not base64", "not base64 at all!"],
-    ["is not a PDF", toBase64("plain text, not a document")],
-  ])("refuses an attachment that %s", async (_why, pdfBase64) => {
+  it.each([
+    ["is not base64", "not base64 at all!", "INV-0001.pdf"],
+    ["is not a PDF", toBase64("plain text, not a document"), "INV-0001.pdf"],
+    ["has a name that is not .pdf", pdf, "INV-0001.exe"],
+    ["has no name", pdf, undefined],
+    [
+      "is too large",
+      Buffer.concat([
+        Buffer.from("%PDF-"),
+        Buffer.alloc(5 * 1024 * 1024),
+      ]).toString("base64"),
+      "INV-0001.pdf",
+    ],
+  ])("refuses an attachment that %s", async (_why, pdfBase64, filename) => {
     const result = await settle(
-      sendInvoiceEmailDal(INVOICE, pdfBase64, "INV-0001.pdf"),
+      sendInvoiceEmailDal(INVOICE, pdfBase64, filename),
     );
     expect(result.isErr()).toBe(true);
     expect(sendEmailWithSes).not.toHaveBeenCalled();
   });
 
-  it.fails("refuses an attachment name that is not a .pdf", async () => {
-    const result = await settle(
-      sendInvoiceEmailDal(INVOICE, toBase64("%PDF-1.7\n"), "INV-0001.exe"),
+  it("refuses to resend an invoice within the cooldown", async () => {
+    vi.mocked(getInvoiceByIdDb).mockResolvedValue(
+      invoiceRow({ sent_at: new Date(Date.now() - 60 * 1000) }),
     );
-    expect(result.isErr()).toBe(true);
+    const result = await settle(sendInvoiceEmailDal(INVOICE, pdf, "a.pdf"));
+    expect(result._unsafeUnwrapErr().reason).toMatch(/just sent/);
+    expect(sendEmailWithSes).not.toHaveBeenCalled();
+  });
+
+  it("allows a resend after the cooldown", async () => {
+    vi.mocked(getInvoiceByIdDb).mockResolvedValue(
+      invoiceRow({ sent_at: new Date(Date.now() - 60 * 60 * 1000) }),
+    );
+    const result = await settle(sendInvoiceEmailDal(INVOICE, pdf, "a.pdf"));
+    expect(result.isOk()).toBe(true);
+  });
+
+  it("stops at the org's daily send limit", async () => {
+    vi.mocked(countInvoicesSentSinceDb).mockResolvedValue(200);
+    const result = await settle(sendInvoiceEmailDal(INVOICE, pdf, "a.pdf"));
+    expect(result._unsafeUnwrapErr().reason).toMatch(/limit/);
     expect(sendEmailWithSes).not.toHaveBeenCalled();
   });
 });

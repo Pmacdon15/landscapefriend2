@@ -61,9 +61,12 @@ export async function upsertScheduleDal(
   notes?: string | null,
 ): Promise<Result<ScheduleWithOrgSchema, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
+    const { orgId, orgRole } = await auth.protect();
 
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    // Admin-only: the UI exposes this on admin pages, but server actions can
+    // be posted directly by any org member (#80).
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const memberLimitCheck = await checkOrgMemberLimit(orgId);
     if (memberLimitCheck.isErr()) {
@@ -131,9 +134,12 @@ export async function deleteScheduleDal(
   addressId: string,
 ): Promise<Result<ScheduleWithOrgSchema, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
+    const { orgId, orgRole } = await auth.protect();
 
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    // Admin-only: the UI exposes this on admin pages, but server actions can
+    // be posted directly by any org member (#80).
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const parsedAddressId = z.uuid().safeParse(addressId);
     if (!parsedAddressId.success)
@@ -245,9 +251,12 @@ export async function upsertAssignmentDal(
   date: string,
 ): Promise<Result<Assignment | null, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
+    const { orgId, orgRole } = await auth.protect();
 
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    // Admin-only: the UI exposes this on admin pages, but server actions can
+    // be posted directly by any org member (#80).
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const parsedAddressId = z.uuid().safeParse(addressId);
     if (!parsedAddressId.success)
@@ -298,9 +307,12 @@ export async function updateAddressAssigneeDal(
   userIds: string[] | null,
 ): Promise<Result<AddressRow, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
+    const { orgId, orgRole } = await auth.protect();
 
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    // Admin-only: the UI exposes this on admin pages, but server actions can
+    // be posted directly by any org member (#80).
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const parsedAddressId = z.uuid().safeParse(addressId);
     if (!parsedAddressId.success)
@@ -343,9 +355,12 @@ export async function insertOneTimeServiceDal(
   assignedMemberIds?: string[] | null,
 ): Promise<Result<OneTimeService, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
+    const { orgId, orgRole } = await auth.protect();
 
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    // Admin-only: the UI exposes this on admin pages, but server actions can
+    // be posted directly by any org member (#80).
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const parsedAddressId = z.uuid().safeParse(addressId);
     if (!parsedAddressId.success)
@@ -397,9 +412,12 @@ export async function deleteOneTimeServiceDal(
   serviceId: string,
 ): Promise<Result<OneTimeService, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
+    const { orgId, orgRole } = await auth.protect();
 
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    // Admin-only: the UI exposes this on admin pages, but server actions can
+    // be posted directly by any org member (#80).
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const parsedServiceId = z.uuid().safeParse(serviceId);
     if (!parsedServiceId.success)

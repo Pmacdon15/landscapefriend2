@@ -273,6 +273,22 @@ export async function updateInvoiceStatusDb(
   return getInvoiceByIdDb(invoiceId);
 }
 
+/**
+ * Number of the org's invoices emailed since `since` (used to throttle
+ * invoice emails sent from the shared SES identity).
+ */
+export async function countInvoicesSentSinceDb(
+  orgId: string,
+  since: Date,
+): Promise<number> {
+  const rows = (await sql`
+    SELECT COUNT(*)::int AS count
+    FROM invoices
+    WHERE org_id = ${orgId} AND sent_at >= ${since.toISOString()}
+  `) as unknown as { count: number }[];
+  return Number(rows[0]?.count ?? 0);
+}
+
 export async function deleteInvoiceDb(
   invoiceId: string,
   orgId: string,

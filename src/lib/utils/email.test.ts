@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DbInvoiceResult } from "@/db/queries/invoices";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -268,10 +268,8 @@ describe("sendEmailWithSes", () => {
 });
 
 // Security (#81): the attachment body comes from the browser. A predictable
-// boundary lets crafted attachment data close the PDF part early and add
-// parts of its own, and non-base64 data should never reach the raw message.
-// Expected to fail until https://github.com/Pmacdon15/landscapefriend2/issues/81
-// is fixed; switch `it.fails` back to `it` then.
+// boundary or raw attachment data would let a crafted payload close the PDF
+// part early and add MIME parts of its own.
 describe("sendEmailWithSes MIME hardening (#81)", () => {
   const base = {
     senderEmail: "Green Co <no-reply@example.com>",
@@ -280,33 +278,33 @@ describe("sendEmailWithSes MIME hardening (#81)", () => {
     htmlBody: "<p>Hello</p>",
     filename: "INV-0042.pdf",
   };
+  const rawOf = (call = 0) =>
+    Buffer.from(sesSend.mock.calls[call][0].input.RawMessage.Data).toString(
+      "utf8",
+    );
 
   beforeEach(() => {
     sesSend.mockReset();
     sesSend.mockResolvedValue({});
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it.fails("does not derive the MIME boundary from the clock", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-06-01T12:00:00.000Z"));
-    const predictable = `NextPart_${Date.now().toString(16)}`;
-
+  it("uses a different, unpredictable boundary for each message", async () => {
     await sendEmailWithSes({ ...base, pdfBase64: "AAAA" });
-    const raw = Buffer.from(
-      sesSend.mock.calls[0][0].input.RawMessage.Data,
-    ).toString("utf8");
-
-    expect(raw).not.toContain(predictable);
+    await sendEmailWithSes({ ...base, pdfBase64: "AAAA" });
+    const boundary = (raw: string) => raw.match(/boundary="([^"]+)"/)?.[1];
+    const [a, b] = [boundary(rawOf(0)), boundary(rawOf(1))];
+    expect(a).toMatch(/^NextPart_[0-9a-f-]{36}$/);
+    expect(a).not.toBe(b);
   });
 
-  it.fails("rejects attachment data that is not base64", async () => {
-    await expect(
-      sendEmailWithSes({ ...base, pdfBase64: "not base64 at all!" }),
-    ).rejects.toThrow();
+  it.each([
+    ["is not base64", "not base64 at all!"],
+    [
+      "tries to inject a MIME part",
+      "AAAA\n--x\nContent-Type: text/html\n\n<p>hi</p>",
+    ],
+  ])("rejects attachment data that %s", async (_why, pdfBase64) => {
+    await expect(sendEmailWithSes({ ...base, pdfBase64 })).rejects.toThrow();
     expect(sesSend).not.toHaveBeenCalled();
   });
 });

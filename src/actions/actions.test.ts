@@ -7,6 +7,7 @@ import * as clientsDal from "@/dal/clients";
 import * as invoicesDal from "@/dal/invoices";
 import * as serviceDal from "@/dal/service";
 import * as sitemapDal from "@/dal/sitemap";
+import { addressBelongsToOrgDb } from "@/db/queries/clients";
 import { mockAuth } from "../../tests/helpers/clerk";
 import { upsertAssignmentAction } from "./assignments";
 import {
@@ -63,6 +64,7 @@ vi.mock("@/dal/sitemap", () => ({
   saveSiteMapDal: vi.fn(),
   updateSiteMapDal: vi.fn(),
 }));
+vi.mock("@/db/queries/clients", () => ({ addressBelongsToOrgDb: vi.fn() }));
 
 const ORG = "org_a";
 const row = { id: "row_1", org_id: ORG };
@@ -74,6 +76,20 @@ function formData(fields: Record<string, string | File>) {
   for (const [key, value] of Object.entries(fields)) fd.append(key, value);
   return fd;
 }
+
+// Leading bytes of real image files; uploads are type-checked by content.
+const JPEG_BYTES = new Uint8Array([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46,
+]);
+const PNG_BYTES = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+const jpegFile = (name = "IMG_0001.jpg") =>
+  new File([JPEG_BYTES], name, { type: "image/jpeg" });
+const pngFile = (name = "map.png") =>
+  new File([PNG_BYTES], name, { type: "image/png" });
+const htmlFile = (name = "photo.html") =>
+  new File(["<p>not an image</p>"], name, { type: "text/html" });
 
 beforeEach(() => {
   vi.mocked(auth.protect).mockResolvedValue(mockAuth({ orgId: ORG }));
@@ -318,7 +334,7 @@ describe("completeJobAction", () => {
     vi.mocked(put).mockResolvedValue({
       url: "https://blob.example/completion-a1.jpg",
     } as never);
-    const photo = new File(["img"], "IMG_0001.jpg", { type: "image/jpeg" });
+    const photo = jpegFile();
 
     await completeJobAction(
       formData({ addressId: "a1", serviceType: "grass", photoFile: photo }),
@@ -326,15 +342,59 @@ describe("completeJobAction", () => {
 
     const [name, , options] = vi.mocked(put).mock.calls[0];
     expect(name).toMatch(/^completion-a1-\d+\.jpg$/);
-    expect(options).toEqual({ access: "private" });
+    expect(options).toEqual({ access: "private", contentType: "image/jpeg" });
     expect(vi.mocked(serviceDal.completeJobDal).mock.calls[0][4]).toBe(
       "https://blob.example/completion-a1.jpg",
     );
   });
 
+  it("rejects a photo that is not an image (#79)", async () => {
+    const result = await completeJobAction(
+      formData({
+        addressId: "a1",
+        serviceType: "grass",
+        photoFile: htmlFile(),
+      }),
+    );
+    expect(result.success).toBe(false);
+    expect(put).not.toHaveBeenCalled();
+    expect(serviceDal.completeJobDal).not.toHaveBeenCalled();
+  });
+
+  it("takes the stored extension and type from the bytes, not the name (#79)", async () => {
+    vi.mocked(put).mockResolvedValue({
+      url: "https://blob.example/p",
+    } as never);
+    await completeJobAction(
+      formData({
+        addressId: "a1",
+        serviceType: "grass",
+        photoFile: new File([PNG_BYTES], "IMG_0001.html", {
+          type: "text/html",
+        }),
+      }),
+    );
+    const [name, , options] = vi.mocked(put).mock.calls[0];
+    expect(name).toMatch(/^completion-a1-\d+\.png$/);
+    expect(options).toEqual({ access: "private", contentType: "image/png" });
+  });
+
+  it("rejects photos over 10MB (#79)", async () => {
+    const big = new File(
+      [JPEG_BYTES, new Uint8Array(10 * 1024 * 1024)],
+      "big.jpg",
+      { type: "image/jpeg" },
+    );
+    const result = await completeJobAction(
+      formData({ addressId: "a1", serviceType: "grass", photoFile: big }),
+    );
+    expect(result.success).toBe(false);
+    expect(put).not.toHaveBeenCalled();
+  });
+
   it("still completes the job when the photo upload fails", async () => {
     vi.mocked(put).mockRejectedValue(new Error("blob down"));
-    const photo = new File(["img"], "a.png", { type: "image/png" });
+    const photo = pngFile("a.png");
 
     const result = await completeJobAction(
       formData({ addressId: "a1", serviceType: "grass", photoFile: photo }),
@@ -380,14 +440,85 @@ describe("completeJobAction", () => {
 });
 
 describe("saveSiteMapAction", () => {
+  const ADDRESS = "00000000-0000-4000-8000-000000000001";
+
   beforeEach(() => {
+    vi.mocked(auth.protect).mockResolvedValue(
+      mockAuth({ orgId: ORG, orgRole: "org:admin" }),
+    );
+    vi.mocked(addressBelongsToOrgDb).mockResolvedValue(true);
     vi.mocked(sitemapDal.saveSiteMapDal).mockResolvedValue(ok(row) as never);
+  });
+
+  it.each([
+    ["a non-admin member", { orgId: ORG }],
+    ["a user with no organization", { orgId: null, orgRole: "org:admin" }],
+  ])("does not upload or save for %s (#82)", async (_who, opts) => {
+    vi.mocked(auth.protect).mockResolvedValue(mockAuth(opts));
+    const result = await saveSiteMapAction(
+      formData({ addressId: ADDRESS, file: pngFile() }),
+    );
+    expect(result).toEqual({
+      success: false,
+      siteMap: null,
+      error: "Unauthorized",
+    });
+    expect(put).not.toHaveBeenCalled();
+    expect(sitemapDal.saveSiteMapDal).not.toHaveBeenCalled();
+  });
+
+  it("does not upload for unauthenticated callers (#82)", async () => {
+    vi.mocked(auth.protect).mockRejectedValue(
+      new Error("NEXT_HTTP_ERROR_FALLBACK;404"),
+    );
+    await expect(
+      saveSiteMapAction(formData({ addressId: ADDRESS, file: pngFile() })),
+    ).rejects.toThrow();
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid address ID before uploading (#82)", async () => {
+    const result = await saveSiteMapAction(
+      formData({ addressId: "../x", file: pngFile() }),
+    );
+    expect(result.error).toBe("Invalid address ID");
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("does not upload for an address outside the org (#82)", async () => {
+    vi.mocked(addressBelongsToOrgDb).mockResolvedValue(false);
+    const result = await saveSiteMapAction(
+      formData({ addressId: ADDRESS, file: pngFile() }),
+    );
+    expect(result.error).toBe("Address not found");
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("returns a validation error for malformed map data (#82)", async () => {
+    const result = await saveSiteMapAction(
+      formData({ addressId: ADDRESS, mapData: "{not json" }),
+    );
+    expect(result).toEqual({
+      success: false,
+      siteMap: null,
+      error: "Invalid map data",
+    });
+    expect(sitemapDal.saveSiteMapDal).not.toHaveBeenCalled();
+  });
+
+  it("rejects a site map file that is not an image (#79)", async () => {
+    const result = await saveSiteMapAction(
+      formData({ addressId: ADDRESS, file: htmlFile("map.png") }),
+    );
+    expect(result.success).toBe(false);
+    expect(put).not.toHaveBeenCalled();
+    expect(sitemapDal.saveSiteMapDal).not.toHaveBeenCalled();
   });
 
   it("rejects files over 1MB without uploading", async () => {
     const big = new File([new Uint8Array(1024 * 1024 + 1)], "map.png");
     const result = await saveSiteMapAction(
-      formData({ addressId: "a1", file: big }),
+      formData({ addressId: ADDRESS, file: big }),
     );
     expect(result).toEqual({
       success: false,
@@ -398,15 +529,15 @@ describe("saveSiteMapAction", () => {
     expect(sitemapDal.saveSiteMapDal).not.toHaveBeenCalled();
   });
 
-  it("uploads with a sanitized file name and saves the parsed map data", async () => {
+  it("uploads with a server-chosen name and saves the parsed map data", async () => {
     vi.mocked(put).mockResolvedValue({
       url: "https://blob.example/sitemap.png",
     } as never);
-    const file = new File(["x"], "../my map (1).png");
+    const file = pngFile("../my map (1).html");
 
     const result = await saveSiteMapAction(
       formData({
-        addressId: "a1",
+        addressId: ADDRESS,
         name: "Front yard",
         notes: "Dog",
         mapData: JSON.stringify({ shapes: [1] }),
@@ -416,11 +547,11 @@ describe("saveSiteMapAction", () => {
 
     expect(result.success).toBe(true);
     const [name, , options] = vi.mocked(put).mock.calls[0];
-    expect(name).toMatch(/^sitemap-a1-\d+-\.\._my_map__1_\.png$/);
+    expect(name).toMatch(new RegExp(`^sitemap-${ADDRESS}-\\d+\\.png$`));
     expect(name).not.toContain("/");
-    expect(options).toEqual({ access: "private" });
+    expect(options).toEqual({ access: "private", contentType: "image/png" });
     expect(sitemapDal.saveSiteMapDal).toHaveBeenCalledWith(
-      "a1",
+      ADDRESS,
       "Front yard",
       "Dog",
       "https://blob.example/sitemap.png",
@@ -436,7 +567,7 @@ describe("saveSiteMapAction", () => {
   it("returns an error and saves nothing when the upload fails", async () => {
     vi.mocked(put).mockRejectedValue(new Error("blob down"));
     const result = await saveSiteMapAction(
-      formData({ addressId: "a1", file: new File(["x"], "map.png") }),
+      formData({ addressId: ADDRESS, file: pngFile() }),
     );
     expect(result).toEqual({
       success: false,
@@ -447,10 +578,10 @@ describe("saveSiteMapAction", () => {
   });
 
   it("saves a drawn map with no file", async () => {
-    await saveSiteMapAction(formData({ addressId: "a1" }));
+    await saveSiteMapAction(formData({ addressId: ADDRESS }));
     expect(put).not.toHaveBeenCalled();
     expect(sitemapDal.saveSiteMapDal).toHaveBeenCalledWith(
-      "a1",
+      ADDRESS,
       null,
       null,
       null,
@@ -462,12 +593,26 @@ describe("saveSiteMapAction", () => {
     vi.mocked(sitemapDal.saveSiteMapDal).mockResolvedValue(
       err({ reason: "Address not found" }) as never,
     );
-    const result = await saveSiteMapAction(formData({ addressId: "a1" }));
+    const result = await saveSiteMapAction(formData({ addressId: ADDRESS }));
     expect(result).toEqual({
       success: false,
       siteMap: null,
       error: "Address not found",
     });
     expect(updateTag).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateSiteMapAction", () => {
+  it("returns a validation error for malformed map data (#82)", async () => {
+    const result = await updateSiteMapAction(
+      formData({ siteMapId: "m1", mapData: "{not json" }),
+    );
+    expect(result).toEqual({
+      success: false,
+      siteMap: null,
+      error: "Invalid map data",
+    });
+    expect(sitemapDal.updateSiteMapDal).not.toHaveBeenCalled();
   });
 });
