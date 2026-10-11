@@ -7,6 +7,7 @@ import * as clientsDal from "@/dal/clients";
 import * as invoicesDal from "@/dal/invoices";
 import * as serviceDal from "@/dal/service";
 import * as sitemapDal from "@/dal/sitemap";
+import { addressBelongsToOrgDb } from "@/db/queries/clients";
 import { mockAuth } from "../../tests/helpers/clerk";
 import { upsertAssignmentAction } from "./assignments";
 import {
@@ -63,6 +64,7 @@ vi.mock("@/dal/sitemap", () => ({
   saveSiteMapDal: vi.fn(),
   updateSiteMapDal: vi.fn(),
 }));
+vi.mock("@/db/queries/clients", () => ({ addressBelongsToOrgDb: vi.fn() }));
 
 const ORG = "org_a";
 const row = { id: "row_1", org_id: ORG };
@@ -380,14 +382,78 @@ describe("completeJobAction", () => {
 });
 
 describe("saveSiteMapAction", () => {
+  const ADDRESS = "00000000-0000-4000-8000-000000000001";
+
   beforeEach(() => {
+    vi.mocked(auth.protect).mockResolvedValue(
+      mockAuth({ orgId: ORG, orgRole: "org:admin" }),
+    );
+    vi.mocked(addressBelongsToOrgDb).mockResolvedValue(true);
     vi.mocked(sitemapDal.saveSiteMapDal).mockResolvedValue(ok(row) as never);
+  });
+
+  it.each([
+    ["a non-admin member", { orgId: ORG }],
+    ["a user with no organization", { orgId: null, orgRole: "org:admin" }],
+  ])("does not upload or save for %s (#82)", async (_who, opts) => {
+    vi.mocked(auth.protect).mockResolvedValue(mockAuth(opts));
+    const result = await saveSiteMapAction(
+      formData({ addressId: ADDRESS, file: new File(["x"], "map.png") }),
+    );
+    expect(result).toEqual({
+      success: false,
+      siteMap: null,
+      error: "Unauthorized",
+    });
+    expect(put).not.toHaveBeenCalled();
+    expect(sitemapDal.saveSiteMapDal).not.toHaveBeenCalled();
+  });
+
+  it("does not upload for unauthenticated callers (#82)", async () => {
+    vi.mocked(auth.protect).mockRejectedValue(
+      new Error("NEXT_HTTP_ERROR_FALLBACK;404"),
+    );
+    await expect(
+      saveSiteMapAction(
+        formData({ addressId: ADDRESS, file: new File(["x"], "map.png") }),
+      ),
+    ).rejects.toThrow();
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid address ID before uploading (#82)", async () => {
+    const result = await saveSiteMapAction(
+      formData({ addressId: "../x", file: new File(["x"], "map.png") }),
+    );
+    expect(result.error).toBe("Invalid address ID");
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("does not upload for an address outside the org (#82)", async () => {
+    vi.mocked(addressBelongsToOrgDb).mockResolvedValue(false);
+    const result = await saveSiteMapAction(
+      formData({ addressId: ADDRESS, file: new File(["x"], "map.png") }),
+    );
+    expect(result.error).toBe("Address not found");
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("returns a validation error for malformed map data (#82)", async () => {
+    const result = await saveSiteMapAction(
+      formData({ addressId: ADDRESS, mapData: "{not json" }),
+    );
+    expect(result).toEqual({
+      success: false,
+      siteMap: null,
+      error: "Invalid map data",
+    });
+    expect(sitemapDal.saveSiteMapDal).not.toHaveBeenCalled();
   });
 
   it("rejects files over 1MB without uploading", async () => {
     const big = new File([new Uint8Array(1024 * 1024 + 1)], "map.png");
     const result = await saveSiteMapAction(
-      formData({ addressId: "a1", file: big }),
+      formData({ addressId: ADDRESS, file: big }),
     );
     expect(result).toEqual({
       success: false,
@@ -406,7 +472,7 @@ describe("saveSiteMapAction", () => {
 
     const result = await saveSiteMapAction(
       formData({
-        addressId: "a1",
+        addressId: ADDRESS,
         name: "Front yard",
         notes: "Dog",
         mapData: JSON.stringify({ shapes: [1] }),
@@ -416,11 +482,13 @@ describe("saveSiteMapAction", () => {
 
     expect(result.success).toBe(true);
     const [name, , options] = vi.mocked(put).mock.calls[0];
-    expect(name).toMatch(/^sitemap-a1-\d+-\.\._my_map__1_\.png$/);
+    expect(name).toMatch(
+      new RegExp(`^sitemap-${ADDRESS}-\\d+-\\.\\._my_map__1_\\.png$`),
+    );
     expect(name).not.toContain("/");
     expect(options).toEqual({ access: "private" });
     expect(sitemapDal.saveSiteMapDal).toHaveBeenCalledWith(
-      "a1",
+      ADDRESS,
       "Front yard",
       "Dog",
       "https://blob.example/sitemap.png",
@@ -436,7 +504,7 @@ describe("saveSiteMapAction", () => {
   it("returns an error and saves nothing when the upload fails", async () => {
     vi.mocked(put).mockRejectedValue(new Error("blob down"));
     const result = await saveSiteMapAction(
-      formData({ addressId: "a1", file: new File(["x"], "map.png") }),
+      formData({ addressId: ADDRESS, file: new File(["x"], "map.png") }),
     );
     expect(result).toEqual({
       success: false,
@@ -447,10 +515,10 @@ describe("saveSiteMapAction", () => {
   });
 
   it("saves a drawn map with no file", async () => {
-    await saveSiteMapAction(formData({ addressId: "a1" }));
+    await saveSiteMapAction(formData({ addressId: ADDRESS }));
     expect(put).not.toHaveBeenCalled();
     expect(sitemapDal.saveSiteMapDal).toHaveBeenCalledWith(
-      "a1",
+      ADDRESS,
       null,
       null,
       null,
@@ -462,12 +530,26 @@ describe("saveSiteMapAction", () => {
     vi.mocked(sitemapDal.saveSiteMapDal).mockResolvedValue(
       err({ reason: "Address not found" }) as never,
     );
-    const result = await saveSiteMapAction(formData({ addressId: "a1" }));
+    const result = await saveSiteMapAction(formData({ addressId: ADDRESS }));
     expect(result).toEqual({
       success: false,
       siteMap: null,
       error: "Address not found",
     });
     expect(updateTag).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateSiteMapAction", () => {
+  it("returns a validation error for malformed map data (#82)", async () => {
+    const result = await updateSiteMapAction(
+      formData({ siteMapId: "m1", mapData: "{not json" }),
+    );
+    expect(result).toEqual({
+      success: false,
+      siteMap: null,
+      error: "Invalid map data",
+    });
+    expect(sitemapDal.updateSiteMapDal).not.toHaveBeenCalled();
   });
 });
