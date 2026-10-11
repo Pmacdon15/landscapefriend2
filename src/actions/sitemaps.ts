@@ -10,6 +10,7 @@ import {
   updateSiteMapDal,
 } from "@/dal/sitemap";
 import { addressBelongsToOrgDb } from "@/db/queries/clients";
+import { detectUploadedImage } from "@/lib/utils/image-upload";
 
 function parseMapData(
   raw: string | null,
@@ -57,20 +58,31 @@ export async function saveSiteMapAction(formData: FormData) {
     };
   }
 
+  // Only real images may be stored; type and extension come from the bytes,
+  // never from the uploaded file name (#79).
+  const image = file ? await detectUploadedImage(file) : null;
+  if (file && !image) {
+    return {
+      success: false,
+      siteMap: null,
+      error: "Site map must be a JPEG, PNG, WebP or HEIC image",
+    };
+  }
+
   let blobPath: string | null = null;
 
-  if (file) {
+  if (file && image) {
     if (!(await addressBelongsToOrgDb(addressId, orgId))) {
       return { success: false, siteMap: null, error: "Address not found" };
     }
 
     try {
       const timestamp = Date.now();
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const betterFileName = `sitemap-${addressId}-${timestamp}-${sanitizedName}`;
+      const betterFileName = `sitemap-${addressId}-${timestamp}.${image.extension}`;
 
       const blob = await put(betterFileName, file, {
         access: "private",
+        contentType: image.contentType,
       });
 
       blobPath = blob.url;

@@ -5,6 +5,10 @@ import { put } from "@vercel/blob";
 import { format } from "date-fns";
 import { updateTag } from "next/cache";
 import { completeJobDal } from "@/dal/service";
+import {
+  detectUploadedImage,
+  MAX_COMPLETION_PHOTO_BYTES,
+} from "@/lib/utils/image-upload";
 
 export async function completeJobAction(formData: FormData) {
   const { orgId } = await auth.protect();
@@ -30,12 +34,26 @@ export async function completeJobAction(formData: FormData) {
   let photoBlobPath: string | null = null;
 
   if (photoFile && photoFile.size > 0) {
+    // Never trust the client's file type or name: detect the image type from
+    // its bytes and store it with a server-chosen extension and type (#79).
+    if (photoFile.size > MAX_COMPLETION_PHOTO_BYTES) {
+      return { success: false, job: null, error: "Photo is too large" };
+    }
+    const image = await detectUploadedImage(photoFile);
+    if (!image) {
+      return {
+        success: false,
+        job: null,
+        error: "Photo must be a JPEG, PNG, WebP or HEIC image",
+      };
+    }
+
     try {
       const timestamp = Date.now();
-      const ext = photoFile.name.split(".").pop() || "png";
-      const fileName = `completion-${addressId}-${timestamp}.${ext}`;
+      const fileName = `completion-${addressId}-${timestamp}.${image.extension}`;
       const blob = await put(fileName, photoFile, {
         access: "private",
+        contentType: image.contentType,
       });
       photoBlobPath = blob.url;
     } catch (error) {
