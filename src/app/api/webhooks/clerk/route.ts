@@ -12,7 +12,9 @@ export async function POST(req: NextRequest) {
       signingSecret: process.env.CLERK_WEBHOOK_SIGNING_SECRET,
     })) as WebhookEvent;
 
-    console.log("Web Hook :", evt.type, " ", evt.data);
+    // Log only non-personal identifiers; the payload carries emails, names
+    // and phone numbers that must not end up in runtime logs (#98).
+    console.log(`[Clerk Webhook] ${evt.type} id=${evt.data.id ?? "?"}`);
 
     try {
       switch (evt.type) {

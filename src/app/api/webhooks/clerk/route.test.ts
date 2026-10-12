@@ -92,8 +92,7 @@ describe("POST /api/webhooks/clerk", () => {
     expect((await POST(request)).status).toBe(200);
   });
 
-  // Expected to fail until #98 is fixed: the route logs the whole payload.
-  it.fails("never logs the user's personal data (#98)", async () => {
+  it("never logs the user's personal data (#98)", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     deliver("user.created", {
       id: "user_1",
