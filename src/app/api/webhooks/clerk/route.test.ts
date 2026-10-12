@@ -91,4 +91,22 @@ describe("POST /api/webhooks/clerk", () => {
     vi.mocked(handleOrganizationCreatedDal).mockRejectedValue(new Error("db"));
     expect((await POST(request)).status).toBe(200);
   });
+
+  // Expected to fail until #98 is fixed: the route logs the whole payload.
+  it.fails("never logs the user's personal data (#98)", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    deliver("user.created", {
+      id: "user_1",
+      first_name: "Jane",
+      last_name: "Doe",
+      email_addresses: [{ email_address: "jane@example.com" }],
+      phone_numbers: [{ phone_number: "+15555550100" }],
+    });
+
+    await POST(request);
+
+    const logged = JSON.stringify(log.mock.calls);
+    expect(logged).not.toContain("jane@example.com");
+    expect(logged).not.toContain("+15555550100");
+  });
 });
