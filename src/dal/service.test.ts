@@ -400,6 +400,13 @@ describe("insertOneTimeServiceDal", () => {
 });
 
 describe("updateOneTimeServiceDal", () => {
+  // Admin-only write (#90).
+  beforeEach(() => {
+    protect.mockResolvedValue(
+      mockAuth({ orgId: "org_1", userId: "user_1", orgRole: "org:admin" }),
+    );
+  });
+
   it.each([
     [["nope", "Aeration", "other", "2026-06-20"], "Invalid service ID"],
     [[SERVICE, "", "other", "2026-06-20"], "Invalid name"],
@@ -508,6 +515,12 @@ describe("admin-only service writes (#80)", () => {
       run: () =>
         insertOneTimeServiceDal(ADDRESS, "Aeration", "other", "2026-06-01"),
       db: insertOneTimeServiceDb,
+    },
+    {
+      name: "updateOneTimeServiceDal",
+      run: () =>
+        updateOneTimeServiceDal(SERVICE, "Aeration", "other", "2026-06-01"),
+      db: updateOneTimeServiceDb,
     },
     {
       name: "deleteOneTimeServiceDal",

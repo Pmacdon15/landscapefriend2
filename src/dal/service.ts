@@ -418,9 +418,11 @@ export async function updateOneTimeServiceDal(
   assignedMemberIds?: string[] | null,
 ): Promise<Result<OneTimeService, { reason: string }>> {
   try {
-    const { orgId } = await auth.protect();
+    const { orgId, orgRole } = await auth.protect();
 
-    if (!orgId) return errAsync({ reason: "Unauthorized" });
+    // Admin-only, like the other one-time service writes (#80, #90).
+    if (!orgId || orgRole !== "org:admin")
+      return errAsync({ reason: "Unauthorized" });
 
     const parsedServiceId = z.uuid().safeParse(serviceId);
     if (!parsedServiceId.success)
