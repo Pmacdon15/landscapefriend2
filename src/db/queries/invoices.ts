@@ -213,25 +213,54 @@ export async function insertInvoiceDb(
     unit_price: number;
   }[],
 ): Promise<DbInvoiceResult> {
-  // 1. Insert Invoice
-  const invoiceResult = await sql`
-    INSERT INTO invoices (org_id, client_id, invoice_number, issue_date, due_date, notes, tax_rate)
-    VALUES (${orgId}, ${clientId}, ${invoiceNumber}, ${issueDate}::date, ${dueDate}::date, ${notes || null}, ${taxRate})
-    RETURNING *
-  `;
+  // One statement, so the invoice and its items commit together or not at
+  // all (#92). Neon's HTTP driver runs each query as its own transaction, so
+  // separate item inserts could leave a half-written invoice behind. Amounts
+  // are computed in NUMERIC to avoid float rounding, and each item gets a
+  // created_at offset by its index so the read keeps the entered order.
+  const itemsJson = JSON.stringify(
+    items.map((item, index) => ({
+      item_index: index,
+      service_type: item.service_type,
+      address_id: item.address_id || null,
+      description: item.description || null,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+    })),
+  );
 
-  const newInvoice = invoiceResult[0];
+  const [newInvoice] = (await sql`
+    WITH new_invoice AS (
+      INSERT INTO invoices (org_id, client_id, invoice_number, issue_date, due_date, notes, tax_rate)
+      VALUES (${orgId}, ${clientId}, ${invoiceNumber}, ${issueDate}::date, ${dueDate}::date, ${notes || null}, ${taxRate})
+      RETURNING id
+    ),
+    new_items AS (
+      INSERT INTO invoice_items (invoice_id, service_type, address_id, description, quantity, unit_price, amount, created_at)
+      SELECT
+        new_invoice.id,
+        item.service_type,
+        item.address_id,
+        item.description,
+        item.quantity,
+        item.unit_price,
+        item.quantity * item.unit_price,
+        CURRENT_TIMESTAMP + item.item_index * INTERVAL '1 microsecond'
+      FROM new_invoice,
+        jsonb_to_recordset(${itemsJson}::jsonb) AS item(
+          item_index INT,
+          service_type TEXT,
+          address_id UUID,
+          description TEXT,
+          quantity NUMERIC,
+          unit_price NUMERIC
+        )
+      RETURNING id
+    )
+    SELECT id FROM new_invoice
+  `) as unknown as { id: string }[];
 
-  // 2. Insert Items
-  for (const item of items) {
-    const amount = item.quantity * item.unit_price;
-    await sql`
-      INSERT INTO invoice_items (invoice_id, service_type, address_id, description, quantity, unit_price, amount)
-      VALUES (${newInvoice.id}, ${item.service_type}, ${item.address_id || null}, ${item.description || null}, ${item.quantity}, ${item.unit_price}, ${amount})
-    `;
-  }
-
-  // 3. Return full populated invoice
+  // Return the full populated invoice
   const fullInvoice = await getInvoiceByIdDb(newInvoice.id);
   if (!fullInvoice) throw new Error("Failed to retrieve created invoice");
 
