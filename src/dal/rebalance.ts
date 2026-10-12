@@ -65,10 +65,20 @@ export async function rebalanceClientsForOrg(orgId: string): Promise<{
       );
     }
   } catch (error) {
+    // Without the plan we can't know the real limit. Falling back to the
+    // default would disable a paying org's clients past the 50th (#91), so
+    // leave every client as it is and let the next run try again.
     console.error(
-      `[Rebalance] Failed to fetch Clerk details or check member limit for org ${orgId}:`,
+      `[Rebalance] Failed to fetch Clerk details or check member limit for org ${orgId}; skipping:`,
       error,
     );
+    return {
+      success: false,
+      limit,
+      totalClients: 0,
+      activatedCount: 0,
+      disabledCount: 0,
+    };
   }
 
   try {

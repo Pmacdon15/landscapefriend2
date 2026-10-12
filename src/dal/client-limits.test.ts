@@ -114,6 +114,31 @@ describe("rebalanceClientsForOrg plan limit", () => {
     expect((await rebalanceClientsForOrg("org_1")).limit).toBe(0);
   });
 
+  // Regression (#91): a Clerk outage used to fall back to the 50-client
+  // default and disable a paying org's clients past the 50th.
+  it("leaves clients untouched when the plan can't be read from Clerk", async () => {
+    vi.mocked(clerkClient).mockResolvedValue({
+      organizations: {
+        getOrganizationMembershipList: vi
+          .fn()
+          .mockRejectedValue(new Error("Clerk 429")),
+        getOrganization: vi.fn().mockRejectedValue(new Error("Clerk 429")),
+      },
+      billing: {
+        getOrganizationBillingSubscription: vi.fn().mockResolvedValue(null),
+      },
+    } as never);
+
+    const result = await rebalanceClientsForOrg("org_1");
+
+    expect(result).toMatchObject({
+      success: false,
+      activatedCount: 0,
+      disabledCount: 0,
+    });
+    expect(sql).not.toHaveBeenCalled();
+  });
+
   it("keeps the oldest clients active and disables the rest", async () => {
     mockClerk();
     const clients = Array.from({ length: 52 }, (_, i) => ({
