@@ -4,6 +4,7 @@ import { ok } from "neverthrow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as serviceDal from "@/dal/service";
 import * as sitemapDal from "@/dal/sitemap";
+import { addressBelongsToOrgDb } from "@/db/queries/clients";
 import { mockAuth } from "../../tests/helpers/clerk";
 import { completeJobAction } from "./jobs";
 import { saveSiteMapAction } from "./sitemaps";
@@ -22,6 +23,7 @@ vi.mock("@/dal/sitemap", () => ({
   saveSiteMapDal: vi.fn(),
   updateSiteMapDal: vi.fn(),
 }));
+vi.mock("@/db/queries/clients", () => ({ addressBelongsToOrgDb: vi.fn() }));
 
 const ADDRESS = "00000000-0000-4000-8000-000000000001";
 const row = { id: "row_1", org_id: "org_a" };
@@ -36,6 +38,10 @@ function formData(fields: Record<string, string | File>) {
 const notAnImage = () =>
   new File(["<p>not an image</p>"], "photo.html", { type: "text/html" });
 
+// A file whose bytes really are a JPEG.
+const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+const jpegPhoto = () => new File([JPEG_BYTES], "a.jpg", { type: "image/jpeg" });
+
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.mocked(auth.protect).mockResolvedValue(
@@ -46,6 +52,7 @@ beforeEach(() => {
   } as never);
   vi.mocked(serviceDal.completeJobDal).mockResolvedValue(ok(row) as never);
   vi.mocked(sitemapDal.saveSiteMapDal).mockResolvedValue(ok(row) as never);
+  vi.mocked(addressBelongsToOrgDb).mockResolvedValue(true);
 });
 
 describe("completeJobAction uploads", () => {
@@ -92,6 +99,56 @@ describe("completeJobAction uploads", () => {
     );
     const [pathname] = vi.mocked(put).mock.calls[0];
     expect(pathname).not.toMatch(/\.html$/);
+  });
+
+  // The tests below are expected to fail until #96 is fixed: the photo is
+  // uploaded before completeJobDal checks the org and the address.
+  it.fails("does not upload for a user with no org (#96)", async () => {
+    vi.mocked(auth.protect).mockResolvedValue(mockAuth({ orgId: null }));
+    await completeJobAction(
+      formData({
+        addressId: ADDRESS,
+        serviceType: "grass",
+        photoFile: jpegPhoto(),
+      }),
+    ).catch(() => undefined);
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it.fails("does not upload for another org's address (#96)", async () => {
+    vi.mocked(auth.protect).mockResolvedValue(mockAuth({ orgId: "org_b" }));
+    vi.mocked(addressBelongsToOrgDb).mockResolvedValue(false);
+    await completeJobAction(
+      formData({
+        addressId: ADDRESS,
+        serviceType: "grass",
+        photoFile: jpegPhoto(),
+      }),
+    ).catch(() => undefined);
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it.fails("rejects assignedMemberIds that is not JSON (#96)", async () => {
+    const result = await completeJobAction(
+      formData({
+        addressId: ADDRESS,
+        serviceType: "grass",
+        assignedMemberIds: "{not json",
+      }),
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it.fails("rejects assignedMemberIds that is not a list (#96)", async () => {
+    const result = await completeJobAction(
+      formData({
+        addressId: ADDRESS,
+        serviceType: "grass",
+        assignedMemberIds: JSON.stringify({ id: "user_1" }),
+      }),
+    );
+    expect(result.success).toBe(false);
+    expect(serviceDal.completeJobDal).not.toHaveBeenCalled();
   });
 });
 
