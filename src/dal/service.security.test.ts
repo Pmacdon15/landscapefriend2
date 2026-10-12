@@ -11,6 +11,7 @@ import {
   insertCompletedJobDb,
   insertOneTimeServiceDb,
   updateAddressAssigneeDb,
+  updateOneTimeServiceDb,
   updateRouteOrderDb,
   upsertAssignmentDb,
   upsertScheduleDb,
@@ -22,6 +23,7 @@ import {
   deleteScheduleDal,
   insertOneTimeServiceDal,
   updateAddressAssigneeDal,
+  updateOneTimeServiceDal,
   updateRouteOrderDal,
   upsertAssignmentDal,
   upsertScheduleDal,
@@ -44,6 +46,7 @@ vi.mock("@/db/queries/clients", () => ({
   insertCompletionPhotoDb: vi.fn(),
   insertOneTimeServiceDb: vi.fn(),
   updateAddressAssigneeDb: vi.fn(),
+  updateOneTimeServiceDb: vi.fn(),
   updateRouteOrderDb: vi.fn(),
   upsertAssignmentDb: vi.fn(),
   upsertScheduleDb: vi.fn(),
@@ -66,6 +69,7 @@ beforeEach(() => {
     insertCompletedJobDb,
     insertOneTimeServiceDb,
     updateAddressAssigneeDb,
+    updateOneTimeServiceDb,
     updateRouteOrderDb,
     upsertAssignmentDb,
     upsertScheduleDb,
@@ -117,6 +121,12 @@ const writes: Write[] = [
     run: () =>
       insertOneTimeServiceDal(ADDRESS, "Aeration", "other", "2026-06-01"),
     db: insertOneTimeServiceDb,
+  },
+  {
+    name: "updateOneTimeServiceDal",
+    run: () =>
+      updateOneTimeServiceDal(SERVICE, "Aeration", "other", "2026-06-01"),
+    db: updateOneTimeServiceDb,
   },
   {
     name: "deleteOneTimeServiceDal",
