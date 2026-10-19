@@ -136,33 +136,30 @@ export async function createClientDal(
     return errAsync({ reason: limitCheck.error.reason });
   }
 
+  // The client and its addresses are written in one statement, so a failed
+  // address never leaves a half-created client behind.
   return ResultAsync.fromPromise(
     (async () => {
-      const client = await insertClientDb(
+      const { addresses: createdAddresses, ...client } = await insertClientDb(
         orgId,
         name,
         email ?? null,
         phone ?? null,
-      );
-
-      const createdAddresses = await Promise.all(
-        addresses.map((addr) =>
-          insertAddressDb(
-            client.id,
-            addr.street,
-            addr.city,
-            addr.state,
-            addr.zip,
-            addr.status,
+        addresses.map((addr) => ({
+          street: addr.street,
+          city: addr.city,
+          state: addr.state,
+          zip: addr.zip,
+          status: addr.status,
+          assignedMemberIds:
             addr.assigned_member_ids ||
-              (addr.assigned_to ? [addr.assigned_to] : []),
-          ),
-        ),
+            (addr.assigned_to ? [addr.assigned_to] : []),
+        })),
       );
 
       return {
         ...client,
-        addresses: createdAddresses.map((addr) => ({
+        addresses: (createdAddresses ?? []).map((addr) => ({
           ...addr,
           sort_order: 0,
           schedule: null,

@@ -28,18 +28,84 @@ export async function getClientsDb(orgId: string): Promise<ClientRow[]> {
   return result as unknown as ClientRow[];
 }
 
+export interface NewAddressInput {
+  street: string;
+  city: string;
+  state?: string | null;
+  zip?: string | null;
+  status: "active" | "disabled" | "deleted";
+  assignedMemberIds?: string[] | null;
+}
+
+/**
+ * Inserts a client and all of its addresses in one statement, so they commit
+ * together or not at all. Neon's HTTP driver runs each query as its own
+ * transaction, so separate address inserts could leave a client with missing
+ * addresses behind (counted against the plan limit, and duplicated when the
+ * user retries). Each address gets a created_at offset by its index so the
+ * entered order is kept.
+ */
 export async function insertClientDb(
   orgId: string,
   name: string,
-  email?: string | null,
-  phone?: string | null,
-): Promise<ClientRow> {
-  const result = await sql`
-    INSERT INTO clients (org_id, name, email, phone)
-    VALUES (${orgId}, ${name}, ${email || null}, ${phone || null})
-    RETURNING *
-  `;
-  return result[0] as unknown as ClientRow;
+  email: string | null | undefined,
+  phone: string | null | undefined,
+  addresses: NewAddressInput[],
+): Promise<ClientRow & { addresses: AddressRow[] }> {
+  const addressesJson = JSON.stringify(
+    addresses.map((addr, index) => ({
+      address_index: index,
+      street: addr.street,
+      city: addr.city,
+      state: addr.state || null,
+      zip: addr.zip || null,
+      status: addr.status,
+      assigned_member_ids: addr.assignedMemberIds || [],
+    })),
+  );
+
+  const [row] = (await sql`
+    WITH new_client AS (
+      INSERT INTO clients (org_id, name, email, phone)
+      VALUES (${orgId}, ${name}, ${email || null}, ${phone || null})
+      RETURNING *
+    ),
+    new_addresses AS (
+      INSERT INTO addresses (client_id, street, city, state, zip, status, assigned_member_ids, created_at)
+      SELECT
+        new_client.id,
+        addr.street,
+        addr.city,
+        addr.state,
+        addr.zip,
+        addr.status,
+        COALESCE(addr.assigned_member_ids, '{}'),
+        CURRENT_TIMESTAMP + addr.address_index * INTERVAL '1 microsecond'
+      FROM new_client,
+        jsonb_to_recordset(${addressesJson}::jsonb) AS addr(
+          address_index INT,
+          street TEXT,
+          city TEXT,
+          state TEXT,
+          zip TEXT,
+          status TEXT,
+          assigned_member_ids TEXT[]
+        )
+      RETURNING *
+    )
+    SELECT
+      new_client.*,
+      COALESCE(
+        (
+          SELECT jsonb_agg(new_addresses ORDER BY new_addresses.created_at)
+          FROM new_addresses
+        ),
+        '[]'::jsonb
+      ) AS addresses
+    FROM new_client
+  `) as unknown as (ClientRow & { addresses: AddressRow[] })[];
+
+  return row;
 }
 
 export async function updateClientDb(
