@@ -85,6 +85,18 @@ describe("clients", () => {
     expect(await countRows("clients")).toBe(2);
   });
 
+  it("deleteClientDb returns the client's stored site map files", async () => {
+    const { addressA, addressB, clientA } = seed;
+    await insertSiteMapDb(addressA.id, "Pic", null, "https://b.x/a.png", null);
+    await insertSiteMapDb(addressA.id, "Drawn", null, null, null);
+    await insertSiteMapDb(addressB.id, "Bob", null, "https://b.x/b.png", null);
+
+    const deleted = await deleteClientDb(clientA.id, "org_a");
+
+    expect(deleted?.site_map_blob_paths).toEqual(["https://b.x/a.png"]);
+    expect(await countRows("site_maps")).toBe(1);
+  });
+
   it("checkClientLimit only counts the org's active clients", async () => {
     await sql`INSERT INTO clients (org_id, name) VALUES ('org_b', 'Bob 2'), ('org_b', 'Bob 3')`;
     await sql`INSERT INTO clients (org_id, name, status) VALUES ('org_a', 'Old', 'disabled')`;

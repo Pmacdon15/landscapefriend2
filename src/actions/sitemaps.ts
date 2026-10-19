@@ -10,6 +10,7 @@ import {
   updateSiteMapDal,
 } from "@/dal/sitemap";
 import { addressBelongsToOrgDb } from "@/db/queries/clients";
+import { deleteBlobsQuietly } from "@/lib/utils/blob-cleanup";
 import { detectUploadedImage } from "@/lib/utils/image-upload";
 
 function parseMapData(
@@ -148,6 +149,12 @@ export async function updateSiteMapAction(formData: FormData) {
 
 export async function deleteSiteMapAction(siteMapId: string) {
   const result = await deleteSiteMapDal(siteMapId);
+
+  // The row is gone, so remove the stored image too. Otherwise the client's
+  // property image stays in Blob storage forever after it was deleted.
+  if (result.isOk()) {
+    await deleteBlobsQuietly([result.value.blob_path]);
+  }
 
   return result.match(
     (siteMap) => {

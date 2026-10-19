@@ -290,7 +290,9 @@ export async function updateClientDal(
 
 export async function deleteClientDal(
   clientId: string,
-): Promise<Result<ClientRow, { reason: string }>> {
+): Promise<
+  Result<ClientRow & { site_map_blob_paths?: string[] }, { reason: string }>
+> {
   const { orgId, orgRole } = await auth.protect();
 
   if (!orgId || orgRole !== "org:admin")

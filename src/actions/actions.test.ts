@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { put } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import { err, ok } from "neverthrow";
 import { updateTag } from "next/cache";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -38,7 +38,7 @@ import {
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: { protect: vi.fn() } }));
 vi.mock("next/cache", () => ({ updateTag: vi.fn() }));
-vi.mock("@vercel/blob", () => ({ put: vi.fn() }));
+vi.mock("@vercel/blob", () => ({ del: vi.fn(), put: vi.fn() }));
 vi.mock("@/dal/clients", () => ({
   createClientDal: vi.fn(),
   updateClientDal: vi.fn(),
@@ -628,5 +628,76 @@ describe("updateSiteMapAction", () => {
       error: "Invalid map data",
     });
     expect(sitemapDal.updateSiteMapDal).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteSiteMapAction", () => {
+  const MAP_URL = "https://blob.example/sitemap-a1-1.png";
+
+  it("removes the stored image after deleting the site map", async () => {
+    vi.mocked(sitemapDal.deleteSiteMapDal).mockResolvedValue(
+      ok({ ...row, blob_path: MAP_URL }) as never,
+    );
+    const result = await deleteSiteMapAction("m1");
+    expect(result.success).toBe(true);
+    expect(del).toHaveBeenCalledWith([MAP_URL]);
+  });
+
+  it("keeps the image when the site map wasn't deleted", async () => {
+    vi.mocked(sitemapDal.deleteSiteMapDal).mockResolvedValue(
+      err({ reason: "Failed to delete site map" }) as never,
+    );
+    await deleteSiteMapAction("m1");
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("doesn't touch storage for a drawn map with no file", async () => {
+    vi.mocked(sitemapDal.deleteSiteMapDal).mockResolvedValue(
+      ok({ ...row, blob_path: null }) as never,
+    );
+    await deleteSiteMapAction("m1");
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("still succeeds when storage can't delete the image", async () => {
+    vi.mocked(sitemapDal.deleteSiteMapDal).mockResolvedValue(
+      ok({ ...row, blob_path: MAP_URL }) as never,
+    );
+    vi.mocked(del).mockRejectedValue(new Error("blob down"));
+    const result = await deleteSiteMapAction("m1");
+    expect(result.success).toBe(true);
+    expect(tags()).toEqual([
+      `sitemaps-${ORG}`,
+      `clients-info-${ORG}`,
+      `clients-cutlist-${ORG}`,
+    ]);
+  });
+});
+
+describe("deleteClientAction", () => {
+  it("removes the stored images of the client's site maps", async () => {
+    vi.mocked(clientsDal.deleteClientDal).mockResolvedValue(
+      ok({
+        ...row,
+        site_map_blob_paths: [
+          "https://blob.example/sitemap-a1-1.png",
+          "https://blob.example/sitemap-a2-2.png",
+        ],
+      }) as never,
+    );
+    const result = await deleteClientAction("c1");
+    expect(del).toHaveBeenCalledWith([
+      "https://blob.example/sitemap-a1-1.png",
+      "https://blob.example/sitemap-a2-2.png",
+    ]);
+    expect(result).toEqual({ success: true, client: row, error: null });
+  });
+
+  it("doesn't touch storage when the client wasn't deleted", async () => {
+    vi.mocked(clientsDal.deleteClientDal).mockResolvedValue(
+      err({ reason: "Client not found or already deleted" }) as never,
+    );
+    await deleteClientAction("c1");
+    expect(del).not.toHaveBeenCalled();
   });
 });
