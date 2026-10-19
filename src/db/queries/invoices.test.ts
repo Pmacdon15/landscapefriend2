@@ -2,8 +2,13 @@
  * Real SQL against src/db/schema.sql (PGlite) for creating invoices (#92).
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { countRows, resetDb, seedTwoOrgs } from "../../../tests/helpers/db";
-import { insertInvoiceDb } from "./invoices";
+import {
+  countRows,
+  resetDb,
+  seedTwoOrgs,
+  sql,
+} from "../../../tests/helpers/db";
+import { getRevenueGraphStatsDb, insertInvoiceDb } from "./invoices";
 
 vi.mock("@/db/client", () => import("../../../tests/helpers/db"));
 vi.mock("next/cache", () => ({ cacheTag: vi.fn(), cacheLife: vi.fn() }));
@@ -75,5 +80,59 @@ describe("insertInvoiceDb", () => {
     await expect(
       create("INV-0001", [item({ description: "Retry" })]),
     ).resolves.toMatchObject({ invoice_number: "INV-0001" });
+  });
+});
+
+describe("getRevenueGraphStatsDb", () => {
+  // Regression: the query sorted months ascending before LIMIT 12, so an org
+  // with more than a year of invoices only ever saw its 12 oldest months.
+  it("returns the 12 most recent months, oldest first", async () => {
+    const months = Array.from({ length: 14 }, (_, i) => {
+      const date = new Date(Date.UTC(2025, i, 15));
+      return date.toISOString().slice(0, 7);
+    });
+
+    for (const [index, month] of months.entries()) {
+      const invoice = await insertInvoiceDb(
+        "org_a",
+        seed.clientA.id,
+        `INV-${String(index + 1).padStart(4, "0")}`,
+        `${month}-15`,
+        `${month}-28`,
+        null,
+        5,
+        [item({ unit_price: 100 })],
+      );
+      await sql`UPDATE invoices SET status = 'sent' WHERE id = ${invoice.id}`;
+    }
+
+    // Drafts never count as revenue.
+    await insertInvoiceDb(
+      "org_a",
+      seed.clientA.id,
+      "INV-DRAFT",
+      "2026-03-15",
+      "2026-03-28",
+      null,
+      0,
+      [item({ unit_price: 999 })],
+    );
+
+    const stats = await getRevenueGraphStatsDb("org_a");
+
+    expect(stats.map((s) => s.month)).toEqual(months.slice(2));
+    expect(stats[0].month).toBe("2025-03");
+    expect(stats.at(-1)?.month).toBe("2026-02");
+    expect(stats.every((s) => Number(s.revenue) === 105)).toBe(true);
+  });
+
+  it("only counts the org's own invoices", async () => {
+    const invoice = await create("INV-0001", [item()]);
+    await sql`UPDATE invoices SET status = 'paid' WHERE id = ${invoice.id}`;
+
+    expect(await getRevenueGraphStatsDb("org_b")).toEqual([]);
+    expect(await getRevenueGraphStatsDb("org_a")).toEqual([
+      { month: "2026-06", revenue: 42 },
+    ]);
   });
 });

@@ -343,22 +343,29 @@ export async function getRevenueGraphStatsDb(
   "use cache";
   cacheTag(`invoices-${orgId}`, `invoices-revenue-${orgId}`);
 
+  // The 12 most recent months, returned oldest first for the graph. Sorting
+  // ascending before the LIMIT kept the 12 oldest months instead, so orgs with
+  // more than a year of invoices never saw their recent revenue.
   const result = await sql`
-    SELECT 
-      to_char(issue_date, 'YYYY-MM') AS month,
-      COALESCE(SUM(
-        (
-          SELECT SUM(amount) * (1 + COALESCE(i.tax_rate, 0) / 100.0)
-          FROM invoice_items 
-          WHERE invoice_id = i.id
-        )
-      ), 0)::float AS revenue
-    FROM invoices i
-    WHERE i.org_id = ${orgId}
-    AND i.status IN ('sent', 'paid')
-    GROUP BY month
-    ORDER BY month ASC
-    LIMIT 12;
+    SELECT month, revenue
+    FROM (
+      SELECT
+        to_char(issue_date, 'YYYY-MM') AS month,
+        COALESCE(SUM(
+          (
+            SELECT SUM(amount) * (1 + COALESCE(i.tax_rate, 0) / 100.0)
+            FROM invoice_items
+            WHERE invoice_id = i.id
+          )
+        ), 0)::float AS revenue
+      FROM invoices i
+      WHERE i.org_id = ${orgId}
+      AND i.status IN ('sent', 'paid')
+      GROUP BY month
+      ORDER BY month DESC
+      LIMIT 12
+    ) recent_months
+    ORDER BY month ASC;
   `;
 
   return result as unknown as RevenueStats[];
