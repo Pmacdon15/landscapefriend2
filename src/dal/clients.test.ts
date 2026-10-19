@@ -199,7 +199,7 @@ describe("createClientDal", () => {
 
     const client = result._unsafeUnwrap();
     expect(client.id).toBe(CLIENT);
-    expect(client.addresses.map((a) => a.id)).toEqual([ADDRESS, "a2"]);
+    expect(client.addresses?.map((a) => a.id)).toEqual([ADDRESS, "a2"]);
   });
 
   it("returns an error when the write fails", async () => {
