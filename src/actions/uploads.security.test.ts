@@ -16,7 +16,7 @@ import { saveSiteMapAction } from "./sitemaps";
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: { protect: vi.fn() } }));
 vi.mock("next/cache", () => ({ updateTag: vi.fn() }));
-vi.mock("@vercel/blob", () => ({ put: vi.fn() }));
+vi.mock("@vercel/blob", () => ({ del: vi.fn(), put: vi.fn() }));
 vi.mock("@/dal/service", () => ({ completeJobDal: vi.fn() }));
 vi.mock("@/dal/sitemap", () => ({
   deleteSiteMapDal: vi.fn(),
@@ -101,9 +101,9 @@ describe("completeJobAction uploads", () => {
     expect(pathname).not.toMatch(/\.html$/);
   });
 
-  // The tests below are expected to fail until #96 is fixed: the photo is
-  // uploaded before completeJobDal checks the org and the address.
-  it.fails("does not upload for a user with no org (#96)", async () => {
+  // #96: the org and the address are checked before the photo is uploaded,
+  // and assignedMemberIds is validated before anything is saved.
+  it("does not upload for a user with no org (#96)", async () => {
     vi.mocked(auth.protect).mockResolvedValue(mockAuth({ orgId: null }));
     await completeJobAction(
       formData({
@@ -115,7 +115,7 @@ describe("completeJobAction uploads", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it.fails("does not upload for another org's address (#96)", async () => {
+  it("does not upload for another org's address (#96)", async () => {
     vi.mocked(auth.protect).mockResolvedValue(mockAuth({ orgId: "org_b" }));
     vi.mocked(addressBelongsToOrgDb).mockResolvedValue(false);
     await completeJobAction(
@@ -128,7 +128,7 @@ describe("completeJobAction uploads", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it.fails("rejects assignedMemberIds that is not JSON (#96)", async () => {
+  it("rejects assignedMemberIds that is not JSON (#96)", async () => {
     const result = await completeJobAction(
       formData({
         addressId: ADDRESS,
@@ -139,7 +139,7 @@ describe("completeJobAction uploads", () => {
     expect(result.success).toBe(false);
   });
 
-  it.fails("rejects assignedMemberIds that is not a list (#96)", async () => {
+  it("rejects assignedMemberIds that is not a list (#96)", async () => {
     const result = await completeJobAction(
       formData({
         addressId: ADDRESS,
