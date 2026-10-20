@@ -11,7 +11,7 @@ import {
   clientBelongsToOrgDb,
 } from "../db/queries/clients";
 import {
-  countInvoicesSentSinceDb,
+  claimInvoiceEmailSendDb,
   type DbInvoiceResult,
   deleteInvoiceDb,
   getInvoiceByIdDb,
@@ -20,6 +20,8 @@ import {
   getRevenueGraphStatsDb,
   insertInvoiceDb,
   type RevenueStats,
+  releaseInvoiceEmailSendDb,
+  reserveInvoiceEmailQuotaDb,
   updateInvoiceStatusDb,
 } from "../db/queries/invoices";
 import { generateInvoiceEmailHtml, sendEmailWithSes } from "../lib/utils/email";
@@ -258,8 +260,9 @@ export async function deleteInvoiceDal(
 
 /** Minimum time between two sends of the same invoice. */
 const INVOICE_RESEND_COOLDOWN_MS = 10 * 60 * 1000;
-/** Most invoices one org may email in a rolling 24 hours. */
+/** Most invoice emails one org may send in a rolling 24 hours. */
 const MAX_INVOICE_EMAILS_PER_ORG_PER_DAY = 200;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function sendInvoiceEmailDal(
   invoiceId: string,
@@ -311,28 +314,59 @@ export async function sendInvoiceEmailDal(
     });
   }
 
-  const sentToday = await Promise.resolve()
-    .then(() =>
-      countInvoicesSentSinceDb(
-        orgId,
-        new Date(Date.now() - 24 * 60 * 60 * 1000),
-      ),
-    )
-    .catch((e: Error) => {
-      console.error("Failed to count sent invoices:", e.cause, e.message);
-      return null;
-    });
-  if (sentToday === null)
-    return errAsync({ reason: "Failed to load invoice." });
-  if (sentToday >= MAX_INVOICE_EMAILS_PER_ORG_PER_DAY)
-    return errAsync({
-      reason: "Daily invoice email limit reached. Please try again tomorrow.",
-    });
-
   if (!invoice.client_email)
     return errAsync({
       reason: "Client does not have a configured email address.",
     } as const);
+
+  // The check above is only a fast path. Claim the cooldown and a quota slot
+  // atomically before calling SES, so resends, deleted invoices and parallel
+  // requests can't get past the limits (#97).
+  const now = new Date();
+  const claimedAt = await claimInvoiceEmailSendDb(
+    invoiceId,
+    orgId,
+    now,
+    new Date(now.getTime() - INVOICE_RESEND_COOLDOWN_MS),
+  ).catch((e: Error) => {
+    console.error("Failed to claim invoice send:", e.cause, e.message);
+    return undefined;
+  });
+  if (claimedAt === undefined)
+    return errAsync({ reason: "Failed to load invoice." });
+  if (claimedAt === null)
+    return errAsync({
+      reason: "This invoice was just sent. Please wait a few minutes.",
+    });
+
+  const releaseClaim = () =>
+    releaseInvoiceEmailSendDb(
+      invoiceId,
+      orgId,
+      claimedAt,
+      invoice.sent_at,
+    ).catch((e: Error) => {
+      console.error("Failed to release invoice send:", e.cause, e.message);
+    });
+
+  const reserved = await reserveInvoiceEmailQuotaDb(
+    orgId,
+    now,
+    new Date(now.getTime() - DAY_MS),
+    MAX_INVOICE_EMAILS_PER_ORG_PER_DAY,
+  ).catch((e: Error) => {
+    console.error("Failed to reserve invoice email:", e.cause, e.message);
+    return null;
+  });
+  if (!reserved) {
+    await releaseClaim();
+    return errAsync({
+      reason:
+        reserved === false
+          ? "Daily invoice email limit reached. Please try again tomorrow."
+          : "Failed to load invoice.",
+    });
+  }
 
   const orgName = orgInfo?.name || "Landscape Friend";
   const orgLogo = orgInfo?.logoUrl || null;
@@ -345,7 +379,7 @@ export async function sendInvoiceEmailDal(
 
   const emailHtmlBody = generateInvoiceEmailHtml(invoice, orgName, orgLogo);
 
-  return sendEmailWithSes({
+  const sent = await sendEmailWithSes({
     senderEmail: formattedSender,
     recipientEmail: invoice.client_email,
     subject: emailSubject,
@@ -353,12 +387,26 @@ export async function sendInvoiceEmailDal(
     pdfBase64: attachment.value?.pdfBase64,
     filename: attachment.value?.filename,
   })
-    .then(() => {
-      console.info(
-        `Invoice email sent: org=${orgId} invoice=${invoiceId} attachment=${attachment.value ? "pdf" : "none"}`,
-      );
-      return updateInvoiceStatusDb(invoiceId, orgId, "sent");
-    })
+    .then(() => true)
+    .catch((e: Error) => {
+      console.error("Failed to send AWS SES email:", e.cause, e.message);
+      return false;
+    });
+
+  if (!sent) {
+    // Nothing went out, so the invoice can be retried straight away. The
+    // quota slot stays used, so failed attempts still count toward the cap.
+    await releaseClaim();
+    return errAsync({
+      reason: "SES connection failed or email rejected.",
+    } as const);
+  }
+
+  console.info(
+    `Invoice email sent: org=${orgId} invoice=${invoiceId} attachment=${attachment.value ? "pdf" : "none"}`,
+  );
+
+  return updateInvoiceStatusDb(invoiceId, orgId, "sent")
     .then(async (updated) => {
       if (!updated) {
         return errAsync({
@@ -369,12 +417,12 @@ export async function sendInvoiceEmailDal(
     })
     .catch((e: Error) => {
       console.error(
-        "Failed to send AWS SES email or update status:",
+        "Failed to update invoice status after sending:",
         e.cause,
         e.message,
       );
       return errAsync({
-        reason: "SES connection failed or email rejected.",
+        reason: "Failed to update invoice status after sending.",
       } as const);
     });
 }

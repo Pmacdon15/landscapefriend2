@@ -303,19 +303,86 @@ export async function updateInvoiceStatusDb(
 }
 
 /**
- * Number of the org's invoices emailed since `since` (used to throttle
- * invoice emails sent from the shared SES identity).
+ * Atomically claims the per-invoice resend cooldown before an email is sent
+ * (#97). Sets `sent_at` to `now` only if the invoice was never sent or was
+ * last sent at or before `cooldownStart`. Parallel sends of one invoice queue
+ * on the row lock and re-check `sent_at`, so only one of them gets the claim.
+ *
+ * Returns the claimed `sent_at`, or null when the invoice is still cooling
+ * down or isn't the org's.
  */
-export async function countInvoicesSentSinceDb(
+export async function claimInvoiceEmailSendDb(
+  invoiceId: string,
   orgId: string,
-  since: Date,
-): Promise<number> {
+  now: Date,
+  cooldownStart: Date,
+): Promise<Date | null> {
+  const claimedAt = now.toISOString();
   const rows = (await sql`
-    SELECT COUNT(*)::int AS count
-    FROM invoices
-    WHERE org_id = ${orgId} AND sent_at >= ${since.toISOString()}
-  `) as unknown as { count: number }[];
-  return Number(rows[0]?.count ?? 0);
+    UPDATE invoices
+    SET sent_at = ${claimedAt}
+    WHERE id = ${invoiceId} AND org_id = ${orgId}
+      AND (sent_at IS NULL OR sent_at <= ${cooldownStart.toISOString()})
+    RETURNING id
+  `) as unknown as { id: string }[];
+  return rows.length > 0 ? now : null;
+}
+
+/**
+ * Gives back a cooldown claim when the email wasn't sent, restoring the
+ * previous `sent_at`. Does nothing if another send has since replaced it.
+ */
+export async function releaseInvoiceEmailSendDb(
+  invoiceId: string,
+  orgId: string,
+  claimedAt: Date,
+  previousSentAt: Date | string | null,
+): Promise<void> {
+  const previous = previousSentAt
+    ? new Date(previousSentAt).toISOString()
+    : null;
+  await sql`
+    UPDATE invoices
+    SET sent_at = ${previous}
+    WHERE id = ${invoiceId} AND org_id = ${orgId}
+      AND sent_at = ${claimedAt.toISOString()}
+  `;
+}
+
+/**
+ * Takes one slot of the org's invoice email quota (#97): at most `limit`
+ * sends with a time after `windowStart`. Every send is recorded, resends
+ * included, and deleting invoices doesn't give slots back.
+ *
+ * The check and the append are one upsert on the org's quota row. Postgres
+ * locks that row and evaluates the WHERE against its latest version, so
+ * parallel sends can't all pass the check. Returns false when the quota is
+ * used up.
+ */
+export async function reserveInvoiceEmailQuotaDb(
+  orgId: string,
+  now: Date,
+  windowStart: Date,
+  limit: number,
+): Promise<boolean> {
+  const sentAt = now.toISOString();
+  const since = windowStart.toISOString();
+  const rows = (await sql`
+    INSERT INTO invoice_email_quotas AS q (org_id, recent_sends)
+    VALUES (${orgId}, ARRAY[${sentAt}::timestamptz])
+    ON CONFLICT (org_id) DO UPDATE
+    SET recent_sends = ARRAY(
+      SELECT t FROM unnest(q.recent_sends) AS t
+      WHERE t > ${since}::timestamptz
+      ORDER BY t
+    ) || ${sentAt}::timestamptz
+    WHERE (
+      SELECT COUNT(*) FROM unnest(q.recent_sends) AS t
+      WHERE t > ${since}::timestamptz
+    ) < ${limit}
+    RETURNING q.org_id
+  `) as unknown as { org_id: string }[];
+  return rows.length > 0;
 }
 
 export async function deleteInvoiceDb(
