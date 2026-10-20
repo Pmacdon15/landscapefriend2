@@ -4,11 +4,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   countRows,
+  query,
   resetDb,
   seedTwoOrgs,
   sql,
 } from "../../../tests/helpers/db";
-import { getRevenueGraphStatsDb, insertInvoiceDb } from "./invoices";
+import {
+  claimInvoiceEmailSendDb,
+  deleteInvoiceDb,
+  getRevenueGraphStatsDb,
+  insertInvoiceDb,
+  releaseInvoiceEmailSendDb,
+  reserveInvoiceEmailQuotaDb,
+} from "./invoices";
 
 vi.mock("@/db/client", () => import("../../../tests/helpers/db"));
 vi.mock("next/cache", () => ({ cacheTag: vi.fn(), cacheLife: vi.fn() }));
@@ -134,5 +142,152 @@ describe("getRevenueGraphStatsDb", () => {
     expect(await getRevenueGraphStatsDb("org_a")).toEqual([
       { month: "2026-06", revenue: 42 },
     ]);
+  });
+});
+
+// Security (#97): the send limits are claimed in the database, so they hold
+// for resends, deleted invoices and parallel requests.
+describe("invoice email send limits (#97)", () => {
+  const NOW = new Date("2026-06-10T12:00:00.000Z");
+  const minutes = (n: number) => n * 60 * 1000;
+  const at = (offsetMs: number) => new Date(NOW.getTime() + offsetMs);
+  const COOLDOWN = minutes(10);
+  const DAY = minutes(24 * 60);
+
+  const sentAt = async (invoiceId: string) => {
+    const [row] = await query("SELECT sent_at FROM invoices WHERE id = $1", [
+      invoiceId,
+    ]);
+    return row.sent_at ? new Date(row.sent_at as string).getTime() : null;
+  };
+  const claim = (invoiceId: string, now: Date, orgId = "org_a") =>
+    claimInvoiceEmailSendDb(
+      invoiceId,
+      orgId,
+      now,
+      new Date(now.getTime() - COOLDOWN),
+    );
+  const reserve = (now: Date, limit: number, orgId = "org_a") =>
+    reserveInvoiceEmailQuotaDb(
+      orgId,
+      now,
+      new Date(now.getTime() - DAY),
+      limit,
+    );
+
+  describe("claimInvoiceEmailSendDb", () => {
+    it("claims an unsent invoice and blocks a resend within the cooldown", async () => {
+      const invoice = await create("INV-0001", [item()]);
+
+      expect(await claim(invoice.id, NOW)).toEqual(NOW);
+      expect(await sentAt(invoice.id)).toBe(NOW.getTime());
+
+      expect(await claim(invoice.id, at(minutes(5)))).toBeNull();
+      expect(await sentAt(invoice.id)).toBe(NOW.getTime());
+    });
+
+    it("allows a resend once the cooldown has passed", async () => {
+      const invoice = await create("INV-0001", [item()]);
+      await claim(invoice.id, NOW);
+
+      expect(await claim(invoice.id, at(COOLDOWN))).toEqual(at(COOLDOWN));
+    });
+
+    it("lets only one of many parallel sends claim the invoice", async () => {
+      const invoice = await create("INV-0001", [item()]);
+      const results = await Promise.all(
+        Array.from({ length: 5 }, () => claim(invoice.id, NOW)),
+      );
+      expect(results.filter((r) => r !== null)).toHaveLength(1);
+    });
+
+    it("won't claim another org's invoice", async () => {
+      const invoice = await create("INV-0001", [item()]);
+      expect(await claim(invoice.id, NOW, "org_b")).toBeNull();
+      expect(await sentAt(invoice.id)).toBeNull();
+    });
+  });
+
+  describe("releaseInvoiceEmailSendDb", () => {
+    it("restores the previous sent_at", async () => {
+      const invoice = await create("INV-0001", [item()]);
+      const previous = at(-minutes(60));
+      await claim(invoice.id, previous);
+      await claim(invoice.id, NOW);
+
+      await releaseInvoiceEmailSendDb(invoice.id, "org_a", NOW, previous);
+      expect(await sentAt(invoice.id)).toBe(previous.getTime());
+    });
+
+    it("leaves a newer send alone", async () => {
+      const invoice = await create("INV-0001", [item()]);
+      const newer = at(minutes(20));
+      await claim(invoice.id, NOW);
+      await claim(invoice.id, newer);
+
+      await releaseInvoiceEmailSendDb(invoice.id, "org_a", NOW, null);
+      expect(await sentAt(invoice.id)).toBe(newer.getTime());
+    });
+  });
+
+  describe("reserveInvoiceEmailQuotaDb", () => {
+    it("allows sends up to the limit, then refuses", async () => {
+      expect(await reserve(NOW, 3)).toBe(true);
+      expect(await reserve(at(1), 3)).toBe(true);
+      expect(await reserve(at(2), 3)).toBe(true);
+      expect(await reserve(at(3), 3)).toBe(false);
+    });
+
+    it("counts resends of the same invoice", async () => {
+      const invoice = await create("INV-0001", [item()]);
+      for (let send = 0; send < 3; send++) {
+        const now = at(send * COOLDOWN);
+        expect(await claim(invoice.id, now)).toEqual(now);
+        expect(await reserve(now, 3)).toBe(true);
+      }
+      const now = at(3 * COOLDOWN);
+      expect(await claim(invoice.id, now)).toEqual(now);
+      expect(await reserve(now, 3)).toBe(false);
+    });
+
+    it("doesn't give sends back when invoices are deleted", async () => {
+      const first = await create("INV-0001", [item()]);
+      const second = await create("INV-0002", [item()]);
+      expect(await reserve(NOW, 2)).toBe(true);
+      expect(await reserve(at(1), 2)).toBe(true);
+
+      await deleteInvoiceDb(first.id, "org_a");
+      await deleteInvoiceDb(second.id, "org_a");
+
+      expect(await reserve(at(2), 2)).toBe(false);
+    });
+
+    it("frees sends older than the window", async () => {
+      expect(await reserve(NOW, 2)).toBe(true);
+      expect(await reserve(at(minutes(60)), 2)).toBe(true);
+      expect(await reserve(at(minutes(120)), 2)).toBe(false);
+
+      // A day after the first send, only the second one is in the window.
+      expect(await reserve(at(DAY + 1), 2)).toBe(true);
+      expect(await reserve(at(DAY + 2), 2)).toBe(false);
+
+      const [row] = await query(
+        "SELECT cardinality(recent_sends) AS n FROM invoice_email_quotas WHERE org_id = 'org_a'",
+      );
+      expect(row.n).toBe(2);
+    });
+
+    it("never lets parallel sends past the limit", async () => {
+      const results = await Promise.all(
+        Array.from({ length: 6 }, (_, i) => reserve(at(i), 3)),
+      );
+      expect(results.filter(Boolean)).toHaveLength(3);
+    });
+
+    it("keeps each org's quota separate", async () => {
+      expect(await reserve(NOW, 1)).toBe(true);
+      expect(await reserve(at(1), 1)).toBe(false);
+      expect(await reserve(at(2), 1, "org_b")).toBe(true);
+    });
   });
 });

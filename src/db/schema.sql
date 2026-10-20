@@ -188,3 +188,11 @@ CREATE TABLE IF NOT EXISTS invoice_items (
 
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items(invoice_id);
 
+
+-- Invoice email quota (#97): when each org's recent invoice emails were sent,
+-- resends included. Kept apart from invoices so deleting an invoice doesn't
+-- give sends back; the daily cap is checked and recorded on this one row.
+CREATE TABLE IF NOT EXISTS invoice_email_quotas (
+    org_id TEXT PRIMARY KEY REFERENCES organizations(org_id) ON DELETE CASCADE,
+    recent_sends TIMESTAMP WITH TIME ZONE[] NOT NULL DEFAULT '{}'
+);

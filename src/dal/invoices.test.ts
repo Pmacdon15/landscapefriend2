@@ -6,13 +6,15 @@ import {
   clientBelongsToOrgDb,
 } from "@/db/queries/clients";
 import {
-  countInvoicesSentSinceDb,
+  claimInvoiceEmailSendDb,
   deleteInvoiceDb,
   getInvoiceByIdDb,
   getInvoicesDb,
   getNextInvoiceNumberDb,
   getRevenueGraphStatsDb,
   insertInvoiceDb,
+  releaseInvoiceEmailSendDb,
+  reserveInvoiceEmailQuotaDb,
   updateInvoiceStatusDb,
 } from "@/db/queries/invoices";
 import { generateInvoiceEmailHtml, sendEmailWithSes } from "@/lib/utils/email";
@@ -39,13 +41,15 @@ vi.mock("@/db/queries/clients", () => ({
   clientBelongsToOrgDb: vi.fn(),
 }));
 vi.mock("@/db/queries/invoices", () => ({
-  countInvoicesSentSinceDb: vi.fn(),
+  claimInvoiceEmailSendDb: vi.fn(),
   deleteInvoiceDb: vi.fn(),
   getInvoiceByIdDb: vi.fn(),
   getInvoicesDb: vi.fn(),
   getNextInvoiceNumberDb: vi.fn(),
   getRevenueGraphStatsDb: vi.fn(),
   insertInvoiceDb: vi.fn(),
+  releaseInvoiceEmailSendDb: vi.fn(),
+  reserveInvoiceEmailQuotaDb: vi.fn(),
   updateInvoiceStatusDb: vi.fn(),
 }));
 vi.mock("@/lib/utils/email", () => ({
@@ -100,7 +104,11 @@ beforeEach(() => {
   protect.mockResolvedValue(admin());
   vi.mocked(clientBelongsToOrgDb).mockResolvedValue(true);
   vi.mocked(addressesBelongToOrgDb).mockResolvedValue(true);
-  vi.mocked(countInvoicesSentSinceDb).mockResolvedValue(0);
+  vi.mocked(claimInvoiceEmailSendDb).mockImplementation(
+    async (_i, _o, now) => now,
+  );
+  vi.mocked(reserveInvoiceEmailQuotaDb).mockResolvedValue(true);
+  vi.mocked(releaseInvoiceEmailSendDb).mockResolvedValue();
   vi.mocked(clerkClient).mockResolvedValue({
     organizations: {
       getOrganization: vi
@@ -393,9 +401,110 @@ describe("sendInvoiceEmailDal hardening (#81)", () => {
   });
 
   it("stops at the org's daily send limit", async () => {
-    vi.mocked(countInvoicesSentSinceDb).mockResolvedValue(200);
+    vi.mocked(reserveInvoiceEmailQuotaDb).mockResolvedValue(false);
     const result = await settle(sendInvoiceEmailDal(INVOICE, pdf, "a.pdf"));
     expect(result._unsafeUnwrapErr().reason).toMatch(/limit/);
+    expect(sendEmailWithSes).not.toHaveBeenCalled();
+  });
+});
+
+// Security (#97): the cooldown and the daily cap are claimed atomically in the
+// database before SES is called, and every send counts toward the cap.
+describe("sendInvoiceEmailDal send limits (#97)", () => {
+  const canSend = () => admin(["invoices", "send_invoices"]);
+  const previousSend = new Date("2026-06-01T12:00:00.000Z");
+
+  beforeEach(() => {
+    protect.mockResolvedValue(canSend());
+    vi.mocked(getInvoiceByIdDb).mockResolvedValue(
+      invoiceRow({ sent_at: previousSend }),
+    );
+    vi.mocked(sendEmailWithSes).mockResolvedValue();
+    vi.mocked(updateInvoiceStatusDb).mockResolvedValue(
+      invoiceRow({ status: "sent" }),
+    );
+  });
+
+  it("claims the cooldown and a quota slot before sending", async () => {
+    const result = await settle(sendInvoiceEmailDal(INVOICE));
+    expect(result.isOk()).toBe(true);
+
+    const [invoiceId, orgId, now, cooldownStart] = vi.mocked(
+      claimInvoiceEmailSendDb,
+    ).mock.calls[0];
+    expect([invoiceId, orgId]).toEqual([INVOICE, "org_1"]);
+    expect(now.getTime() - cooldownStart.getTime()).toBe(10 * 60 * 1000);
+
+    const [quotaOrg, quotaNow, windowStart, limit] = vi.mocked(
+      reserveInvoiceEmailQuotaDb,
+    ).mock.calls[0];
+    expect(quotaOrg).toBe("org_1");
+    expect(quotaNow.getTime() - windowStart.getTime()).toBe(
+      24 * 60 * 60 * 1000,
+    );
+    expect(limit).toBe(200);
+
+    const sesOrder = vi.mocked(sendEmailWithSes).mock.invocationCallOrder[0];
+    expect(
+      vi.mocked(claimInvoiceEmailSendDb).mock.invocationCallOrder[0],
+    ).toBeLessThan(sesOrder);
+    expect(
+      vi.mocked(reserveInvoiceEmailQuotaDb).mock.invocationCallOrder[0],
+    ).toBeLessThan(sesOrder);
+    expect(releaseInvoiceEmailSendDb).not.toHaveBeenCalled();
+  });
+
+  it("refuses when a parallel send already claimed the invoice", async () => {
+    vi.mocked(claimInvoiceEmailSendDb).mockResolvedValue(null);
+    const result = await settle(sendInvoiceEmailDal(INVOICE));
+    expect(result._unsafeUnwrapErr().reason).toMatch(/just sent/);
+    expect(reserveInvoiceEmailQuotaDb).not.toHaveBeenCalled();
+    expect(sendEmailWithSes).not.toHaveBeenCalled();
+  });
+
+  it("gives the cooldown back when the daily limit is reached", async () => {
+    vi.mocked(reserveInvoiceEmailQuotaDb).mockResolvedValue(false);
+    const result = await settle(sendInvoiceEmailDal(INVOICE));
+    expect(result._unsafeUnwrapErr().reason).toMatch(/limit/);
+    const [, , claimedAt, previous] = vi.mocked(releaseInvoiceEmailSendDb).mock
+      .calls[0];
+    expect(claimedAt).toBe(vi.mocked(claimInvoiceEmailSendDb).mock.calls[0][2]);
+    expect(previous).toBe(previousSend);
+    expect(sendEmailWithSes).not.toHaveBeenCalled();
+  });
+
+  it("gives the cooldown back when SES fails", async () => {
+    vi.mocked(sendEmailWithSes).mockRejectedValue(new Error("rejected"));
+    const result = await settle(sendInvoiceEmailDal(INVOICE));
+    expect(result._unsafeUnwrapErr().reason).toMatch(/SES/);
+    expect(releaseInvoiceEmailSendDb).toHaveBeenCalledWith(
+      INVOICE,
+      "org_1",
+      expect.any(Date),
+      previousSend,
+    );
+    expect(updateInvoiceStatusDb).not.toHaveBeenCalled();
+  });
+
+  it("keeps the claim when the email went out but the status update failed", async () => {
+    vi.mocked(updateInvoiceStatusDb).mockRejectedValue(new Error("db"));
+    const result = await settle(sendInvoiceEmailDal(INVOICE));
+    expect(result._unsafeUnwrapErr().reason).toMatch(/update invoice status/);
+    expect(releaseInvoiceEmailSendDb).not.toHaveBeenCalled();
+  });
+
+  it("doesn't send when claiming the cooldown fails", async () => {
+    vi.mocked(claimInvoiceEmailSendDb).mockRejectedValue(new Error("db"));
+    const result = await settle(sendInvoiceEmailDal(INVOICE));
+    expect(result.isErr()).toBe(true);
+    expect(sendEmailWithSes).not.toHaveBeenCalled();
+  });
+
+  it("doesn't send when reserving the quota fails", async () => {
+    vi.mocked(reserveInvoiceEmailQuotaDb).mockRejectedValue(new Error("db"));
+    const result = await settle(sendInvoiceEmailDal(INVOICE));
+    expect(result.isErr()).toBe(true);
+    expect(releaseInvoiceEmailSendDb).toHaveBeenCalled();
     expect(sendEmailWithSes).not.toHaveBeenCalled();
   });
 });
