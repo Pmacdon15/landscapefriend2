@@ -7,6 +7,7 @@ import {
   updateClientDal,
 } from "@/dal/clients";
 import { updateAddressAssigneeDal } from "@/dal/service";
+import { deleteBlobsQuietly } from "@/lib/utils/blob-cleanup";
 import type { CreateClientInput } from "@/zod/schemas";
 
 export async function createClientAction(data: CreateClientInput) {
@@ -87,8 +88,14 @@ export async function updateAddressAssigneeAction(
 export async function deleteClientAction(clientId: string) {
   const result = await deleteClientDal(clientId);
 
+  // The client's site maps were deleted with it; remove their stored images
+  // too so photos of the property don't stay in Blob storage forever.
+  if (result.isOk()) {
+    await deleteBlobsQuietly(result.value.site_map_blob_paths ?? []);
+  }
+
   return result.match(
-    (client) => {
+    ({ site_map_blob_paths: _blobPaths, ...client }) => {
       updateTag(`clients-info-${client.org_id}`);
       updateTag(`clients-cutlist-${client.org_id}`);
       updateTag(`job-history-${client.org_id}`);

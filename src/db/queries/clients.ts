@@ -105,15 +105,34 @@ export async function deleteAddressDb(
   `;
 }
 
+/**
+ * Deletes the client (its addresses and site maps cascade) and returns the
+ * stored site map files that belonged to it, so the caller can remove them
+ * from Blob storage. The CTE reads the site maps before the delete applies.
+ */
 export async function deleteClientDb(
   clientId: string,
   orgId: string,
-): Promise<ClientRow> {
+): Promise<(ClientRow & { site_map_blob_paths: string[] }) | undefined> {
   const [client] = (await sql`
-    DELETE FROM clients
-    WHERE id = ${clientId} AND org_id = ${orgId} 
-    RETURNING *
-  `) as unknown as ClientRow[];
+    WITH client_site_maps AS (
+      SELECT sm.blob_path FROM site_maps sm
+      JOIN addresses a ON a.id = sm.address_id
+      WHERE a.client_id = ${clientId} AND sm.blob_path IS NOT NULL
+    ),
+    deleted AS (
+      DELETE FROM clients
+      WHERE id = ${clientId} AND org_id = ${orgId}
+      RETURNING *
+    )
+    SELECT
+      deleted.*,
+      COALESCE(
+        (SELECT array_agg(blob_path) FROM client_site_maps),
+        '{}'
+      ) AS site_map_blob_paths
+    FROM deleted
+  `) as unknown as (ClientRow & { site_map_blob_paths: string[] })[];
 
   return client;
 }
