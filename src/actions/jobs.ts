@@ -4,22 +4,52 @@ import { auth } from "@clerk/nextjs/server";
 import { put } from "@vercel/blob";
 import { format } from "date-fns";
 import { updateTag } from "next/cache";
+import z from "zod";
 import { completeJobDal } from "@/dal/service";
+import { addressBelongsToOrgDb } from "@/db/queries/clients";
+import { deleteBlobsQuietly } from "@/lib/utils/blob-cleanup";
 import {
   detectUploadedImage,
   MAX_COMPLETION_PHOTO_BYTES,
 } from "@/lib/utils/image-upload";
 
+const AssignedMemberIdsSchema = z.array(z.string()).nullable();
+
+function parseAssignedMemberIds(
+  raw: string | null,
+): { ok: true; value: string[] | null } | { ok: false } {
+  if (!raw) return { ok: true, value: null };
+  try {
+    const parsed = AssignedMemberIdsSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? { ok: true, value: parsed.data } : { ok: false };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export async function completeJobAction(formData: FormData) {
+  // Authenticate and validate before touching storage, so callers the DAL
+  // will reject can't leave orphaned blobs behind (#96, same as #82).
   const { orgId } = await auth.protect();
-  const addressId = formData.get("addressId") as string;
+  if (!orgId) {
+    return { success: false, job: null, error: "Unauthorized" };
+  }
+
+  const parsedAddressId = z.uuid().safeParse(formData.get("addressId"));
+  if (!parsedAddressId.success) {
+    return { success: false, job: null, error: "Invalid address ID" };
+  }
+  const addressId = parsedAddressId.data;
+
+  const parsedAssignedMemberIds = parseAssignedMemberIds(
+    formData.get("assignedMemberIds") as string | null,
+  );
+  if (!parsedAssignedMemberIds.ok) {
+    return { success: false, job: null, error: "Invalid assigned members" };
+  }
+  const assignedMemberIds = parsedAssignedMemberIds.value;
+
   const serviceType = formData.get("serviceType") as string;
-  const assignedMemberIdsStr = formData.get("assignedMemberIds") as
-    | string
-    | null;
-  const assignedMemberIds = assignedMemberIdsStr
-    ? JSON.parse(assignedMemberIdsStr)
-    : null;
   const notes = formData.get("notes") as string | null;
   const photoFile = formData.get("photoFile") as File | null;
   const capturedAtRaw = formData.get("capturedAt") as string | null;
@@ -48,6 +78,10 @@ export async function completeJobAction(formData: FormData) {
       };
     }
 
+    if (!(await addressBelongsToOrgDb(addressId, orgId))) {
+      return { success: false, job: null, error: "Address not found" };
+    }
+
     try {
       const timestamp = Date.now();
       const fileName = `completion-${addressId}-${timestamp}.${image.extension}`;
@@ -72,6 +106,12 @@ export async function completeJobAction(formData: FormData) {
     scheduledDate,
     oneTimeServiceId,
   );
+
+  // The job wasn't saved, so nothing references the photo: remove it rather
+  // than leave it in storage until the monthly cleanup.
+  if (result.isErr()) {
+    await deleteBlobsQuietly([photoBlobPath]);
+  }
 
   return result.match(
     (job) => {

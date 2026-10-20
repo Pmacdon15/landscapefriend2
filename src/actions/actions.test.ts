@@ -298,14 +298,17 @@ describe.each(cases)("$name", ({ dal, run, tags: expected }) => {
 });
 
 describe("completeJobAction", () => {
+  const ADDRESS = "00000000-0000-4000-8000-0000000000a1";
+
   beforeEach(() => {
     vi.mocked(serviceDal.completeJobDal).mockResolvedValue(ok(row) as never);
+    vi.mocked(addressBelongsToOrgDb).mockResolvedValue(true);
   });
 
   it("parses the form and passes every field to the DAL", async () => {
     await completeJobAction(
       formData({
-        addressId: "a1",
+        addressId: ADDRESS,
         serviceType: "grass",
         assignedMemberIds: JSON.stringify(["user_1", "user_2"]),
         notes: "Gate code 1234",
@@ -316,7 +319,7 @@ describe("completeJobAction", () => {
       }),
     );
     expect(serviceDal.completeJobDal).toHaveBeenCalledWith(
-      "a1",
+      ADDRESS,
       "grass",
       ["user_1", "user_2"],
       "Gate code 1234",
@@ -329,9 +332,11 @@ describe("completeJobAction", () => {
   });
 
   it("uses nulls for missing optional fields", async () => {
-    await completeJobAction(formData({ addressId: "a1", serviceType: "snow" }));
+    await completeJobAction(
+      formData({ addressId: ADDRESS, serviceType: "snow" }),
+    );
     expect(serviceDal.completeJobDal).toHaveBeenCalledWith(
-      "a1",
+      ADDRESS,
       "snow",
       null,
       null,
@@ -351,11 +356,11 @@ describe("completeJobAction", () => {
     const photo = jpegFile();
 
     await completeJobAction(
-      formData({ addressId: "a1", serviceType: "grass", photoFile: photo }),
+      formData({ addressId: ADDRESS, serviceType: "grass", photoFile: photo }),
     );
 
     const [name, , options] = vi.mocked(put).mock.calls[0];
-    expect(name).toMatch(/^completion-a1-\d+\.jpg$/);
+    expect(name).toMatch(new RegExp(`^completion-${ADDRESS}-\\d+\\.jpg$`));
     expect(options).toEqual({ access: "private", contentType: "image/jpeg" });
     expect(vi.mocked(serviceDal.completeJobDal).mock.calls[0][4]).toBe(
       "https://blob.example/completion-a1.jpg",
@@ -365,7 +370,7 @@ describe("completeJobAction", () => {
   it("rejects a photo that is not an image (#79)", async () => {
     const result = await completeJobAction(
       formData({
-        addressId: "a1",
+        addressId: ADDRESS,
         serviceType: "grass",
         photoFile: htmlFile(),
       }),
@@ -381,7 +386,7 @@ describe("completeJobAction", () => {
     } as never);
     await completeJobAction(
       formData({
-        addressId: "a1",
+        addressId: ADDRESS,
         serviceType: "grass",
         photoFile: new File([PNG_BYTES], "IMG_0001.html", {
           type: "text/html",
@@ -389,7 +394,7 @@ describe("completeJobAction", () => {
       }),
     );
     const [name, , options] = vi.mocked(put).mock.calls[0];
-    expect(name).toMatch(/^completion-a1-\d+\.png$/);
+    expect(name).toMatch(new RegExp(`^completion-${ADDRESS}-\\d+\\.png$`));
     expect(options).toEqual({ access: "private", contentType: "image/png" });
   });
 
@@ -400,7 +405,7 @@ describe("completeJobAction", () => {
       { type: "image/jpeg" },
     );
     const result = await completeJobAction(
-      formData({ addressId: "a1", serviceType: "grass", photoFile: big }),
+      formData({ addressId: ADDRESS, serviceType: "grass", photoFile: big }),
     );
     expect(result.success).toBe(false);
     expect(put).not.toHaveBeenCalled();
@@ -411,7 +416,7 @@ describe("completeJobAction", () => {
     const photo = pngFile("a.png");
 
     const result = await completeJobAction(
-      formData({ addressId: "a1", serviceType: "grass", photoFile: photo }),
+      formData({ addressId: ADDRESS, serviceType: "grass", photoFile: photo }),
     );
 
     expect(result.success).toBe(true);
@@ -421,7 +426,7 @@ describe("completeJobAction", () => {
   it("clears the history tags for the completed and scheduled days", async () => {
     await completeJobAction(
       formData({
-        addressId: "a1",
+        addressId: ADDRESS,
         serviceType: "grass",
         // Local (America/Edmonton) dates, not UTC dates, name the tags.
         completedAt: "2026-06-02T03:00:00.000Z", // Jun 1, 9pm local
@@ -442,7 +447,7 @@ describe("completeJobAction", () => {
       err({ reason: "Address not found" }) as never,
     );
     const result = await completeJobAction(
-      formData({ addressId: "a1", serviceType: "grass" }),
+      formData({ addressId: ADDRESS, serviceType: "grass" }),
     );
     expect(result).toEqual({
       success: false,
@@ -450,6 +455,72 @@ describe("completeJobAction", () => {
       error: "Address not found",
     });
     expect(updateTag).not.toHaveBeenCalled();
+  });
+
+  it("checks the address belongs to the org before uploading (#96)", async () => {
+    vi.mocked(put).mockResolvedValue({
+      url: "https://blob.example/p",
+    } as never);
+    await completeJobAction(
+      formData({
+        addressId: ADDRESS,
+        serviceType: "grass",
+        photoFile: jpegFile(),
+      }),
+    );
+    expect(addressBelongsToOrgDb).toHaveBeenCalledWith(ADDRESS, ORG);
+    expect(
+      vi.mocked(addressBelongsToOrgDb).mock.invocationCallOrder[0],
+    ).toBeLessThan(vi.mocked(put).mock.invocationCallOrder[0]);
+  });
+
+  it("rejects an address ID that is not a UUID (#96)", async () => {
+    const result = await completeJobAction(
+      formData({
+        addressId: "a1",
+        serviceType: "grass",
+        photoFile: jpegFile(),
+      }),
+    );
+    expect(result).toEqual({
+      success: false,
+      job: null,
+      error: "Invalid address ID",
+    });
+    expect(put).not.toHaveBeenCalled();
+    expect(serviceDal.completeJobDal).not.toHaveBeenCalled();
+  });
+
+  it("removes the uploaded photo when the job can't be saved (#96)", async () => {
+    vi.mocked(put).mockResolvedValue({
+      url: "https://blob.example/orphan.jpg",
+    } as never);
+    vi.mocked(serviceDal.completeJobDal).mockResolvedValue(
+      err({ reason: "Failed to complete job" }) as never,
+    );
+    const result = await completeJobAction(
+      formData({
+        addressId: ADDRESS,
+        serviceType: "grass",
+        photoFile: jpegFile(),
+      }),
+    );
+    expect(result.success).toBe(false);
+    expect(del).toHaveBeenCalledWith(["https://blob.example/orphan.jpg"]);
+  });
+
+  it("doesn't delete anything when the job is saved", async () => {
+    vi.mocked(put).mockResolvedValue({
+      url: "https://blob.example/p",
+    } as never);
+    await completeJobAction(
+      formData({
+        addressId: ADDRESS,
+        serviceType: "grass",
+        photoFile: jpegFile(),
+      }),
+    );
+    expect(del).not.toHaveBeenCalled();
   });
 });
 
