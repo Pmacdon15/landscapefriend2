@@ -4,11 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sql } from "@/db/client";
 import { checkOrgMemberLimit } from "@/db/queries/clerk";
 import {
+  checkClientLimit,
   deleteAddressDb,
   deleteClientDb,
   getClientsForCutListDb,
   getClientsForInfoDb,
   insertAddressDb,
+  insertClientDb,
   searchClientsDb,
   updateAddressDb,
   updateClientDb,
@@ -16,6 +18,7 @@ import {
 import { mockAuth } from "../../tests/helpers/clerk";
 import { getOrganizationMembersDal } from "./clerk";
 import {
+  createClientDal,
   deleteClientDal,
   getClientsForCutListDal,
   getClientsForInfoDal,
@@ -133,6 +136,85 @@ describe("getClientsForCutListDal", () => {
 
     await getClientsForCutListDal("2026-06-15", undefined, "all");
     expect(vi.mocked(getClientsForCutListDb).mock.calls[1][3]).toBe(true);
+  });
+});
+
+describe("createClientDal", () => {
+  const data = {
+    name: "Jane Doe",
+    email: null,
+    phone: null,
+    addresses: [
+      {
+        street: "1 Main",
+        city: "Calgary",
+        status: "active" as const,
+        assigned_to: "user_1",
+      },
+      { street: "2 New St", city: "Calgary", status: "active" as const },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.mocked(checkClientLimit).mockResolvedValue(ok(undefined));
+    vi.mocked(insertClientDb).mockResolvedValue({
+      id: CLIENT,
+      org_id: "org_1",
+      name: "Jane Doe",
+      addresses: [{ id: ADDRESS }, { id: "a2" }],
+    } as never);
+  });
+
+  // Regression: addresses used to be inserted one by one after the client,
+  // so a failed address left a half-created client behind.
+  it("writes the client and all its addresses in one call", async () => {
+    const result = await createClientDal(data);
+
+    expect(insertClientDb).toHaveBeenCalledTimes(1);
+    expect(insertClientDb).toHaveBeenCalledWith(
+      "org_1",
+      "Jane Doe",
+      null,
+      null,
+      [
+        {
+          street: "1 Main",
+          city: "Calgary",
+          state: undefined,
+          zip: undefined,
+          status: "active",
+          assignedMemberIds: ["user_1"],
+        },
+        {
+          street: "2 New St",
+          city: "Calgary",
+          state: undefined,
+          zip: undefined,
+          status: "active",
+          assignedMemberIds: [],
+        },
+      ],
+    );
+    expect(insertAddressDb).not.toHaveBeenCalled();
+
+    const client = result._unsafeUnwrap();
+    expect(client.id).toBe(CLIENT);
+    expect(client.addresses?.map((a) => a.id)).toEqual([ADDRESS, "a2"]);
+  });
+
+  it("returns an error when the write fails", async () => {
+    vi.mocked(insertClientDb).mockRejectedValue(new Error("db down"));
+    const result = await createClientDal(data);
+    expect(result._unsafeUnwrapErr().reason).toBe("Database command failed");
+  });
+
+  it("writes nothing over the plan's client limit", async () => {
+    vi.mocked(checkClientLimit).mockResolvedValue(
+      err({ reason: "Limit reached" }) as never,
+    );
+    const result = await createClientDal(data);
+    expect(result._unsafeUnwrapErr().reason).toBe("Limit reached");
+    expect(insertClientDb).not.toHaveBeenCalled();
   });
 });
 
